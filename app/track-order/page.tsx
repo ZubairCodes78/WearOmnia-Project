@@ -120,13 +120,13 @@ export default function TrackOrderPage() {
                 >
                   <div>
                     <label className="text-[10px] uppercase font-bold text-charcoal tracking-wider block mb-1.5">
-                      Order Number <span className="text-red-600">*</span>
+                      Order Number or Tracking ID <span className="text-red-600">*</span>
                     </label>
                     <div className="relative">
                       <ShoppingBag className="absolute left-3.5 top-3.5 w-4 h-4 text-charcoal-muted" />
                       <input
                         type="text"
-                        placeholder="e.g. OMNIA-10025"
+                        placeholder="e.g. OMNIA-10025 or POSTEX-12345"
                         value={orderNumber}
                         onChange={(e) => setOrderNumber(e.target.value.toUpperCase())}
                         className="w-full pl-10 pr-4 py-3 bg-sand/50 rounded-xl text-sm text-charcoal border border-sand/80 focus:outline-none focus:ring-2 focus:ring-teal/20 focus:border-teal/40 uppercase font-mono font-semibold transition-all duration-300"
@@ -376,7 +376,7 @@ export default function TrackOrderPage() {
                 <div className="text-center text-xs text-charcoal-muted space-y-2 pt-4">
                   <p>Need help? Contact our WhatsApp concierge for live assistance.</p>
                   <a
-                    href={`https://wa.me/923001234567?text=${encodeURIComponent(`Hi! I need help with my order #${order.orderNumber}`)}`}
+                    href={`https://wa.me/923180633323?text=${encodeURIComponent(`Hi! I need help with my order #${order.orderNumber}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 bg-green-700 text-white px-5 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider hover:bg-green-800 transition-all duration-300"

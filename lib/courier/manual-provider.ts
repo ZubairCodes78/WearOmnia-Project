@@ -1,43 +1,68 @@
-import { CourierProvider, ShipmentRequest, ShipmentResult, TrackingResult } from './types';
+import {
+  CourierProvider,
+  ShipmentRequest,
+  ShipmentResult,
+  TrackingResult,
+  PrintLabelResult,
+  CancelShipmentResult,
+} from './types';
 
-/**
- * ManualCourierProvider - Admin manually manages tracking via the dashboard.
- * This is the default provider until PostEx API is connected.
- * 
- * Future: Replace with PostExCourierProvider that calls the PostEx REST API.
- */
-export class ManualCourierProvider implements CourierProvider {
-  name = 'Manual';
+export class ManualProvider implements CourierProvider {
+  name = 'MANUAL';
+
+  isConfigured(): boolean {
+    return true;
+  }
 
   async createShipment(request: ShipmentRequest): Promise<ShipmentResult> {
-    // Manual provider: Admin enters tracking number manually in the dashboard
+    const generatedTracking = `OMNIA-TRK-${Math.floor(100000 + Math.random() * 900000)}`;
     return {
       success: true,
-      trackingNumber: undefined, // Will be added manually by admin
+      provider: this.name,
+      trackingNumber: generatedTracking,
+      externalShipmentId: `MANUAL-${request.orderNumber}`,
+      status: 'CONFIRMED',
+      message: 'Manual shipment record generated successfully.',
     };
   }
 
-  async getTrackingStatus(trackingNumber: string): Promise<TrackingResult> {
-    // Manual provider: Status is controlled via the admin dashboard
-    // In the future, this would call PostEx API: GET /api/v1/tracking/{trackingNumber}
+  async getShipment(trackingNumberOrId: string): Promise<ShipmentResult> {
     return {
       success: true,
-      currentStatus: 'MANUAL_TRACKING',
-      history: [],
+      provider: this.name,
+      trackingNumber: trackingNumberOrId,
+      status: 'CONFIRMED',
+      message: 'Manual shipment information retrieved.',
     };
   }
 
-  async getTrackingHistory(trackingNumber: string): Promise<TrackingResult> {
-    // Manual provider: Timeline is built from OrderTimeline records in the database
+  async getTracking(trackingNumber: string): Promise<TrackingResult> {
     return {
       success: true,
-      currentStatus: 'MANUAL_TRACKING',
-      history: [],
+      provider: this.name,
+      trackingNumber,
+      status: 'CONFIRMED',
+      courierName: 'Manual Courier Dispatch',
+      message: 'Package registered for manual dispatch.',
     };
   }
 
-  async cancelShipment(trackingNumber: string): Promise<{ success: boolean; error?: string }> {
-    // Manual provider: Admin cancels via dashboard
-    return { success: true };
+  async cancelShipment(trackingNumberOrId: string): Promise<CancelShipmentResult> {
+    return {
+      success: true,
+      message: 'Manual shipment status updated to CANCELLED.',
+    };
+  }
+
+  async printLabel(trackingNumberOrId: string): Promise<PrintLabelResult> {
+    return {
+      success: true,
+      labelFormat: 'HTML',
+      message: 'Using standard WearOMNIA printable label.',
+    };
+  }
+
+  async getShipmentStatus(trackingNumberOrId: string): Promise<string> {
+    return 'CONFIRMED';
   }
 }

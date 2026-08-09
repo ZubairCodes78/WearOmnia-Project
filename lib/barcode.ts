@@ -1,6 +1,7 @@
 export function generateSVGBarcode(text: string): string {
+  const safeText = (text || 'OMNIA-00000').trim();
   // Generates clean SVG barcode pattern for labels
-  const bars = text
+  const bars = safeText
     .split('')
     .map((char, index) => {
       const width = (char.charCodeAt(0) % 3) + 2;
@@ -8,13 +9,14 @@ export function generateSVGBarcode(text: string): string {
     })
     .join('');
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${text.length * 8 + 10} 45" width="100%" height="45">
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${safeText.length * 8 + 10} 45" width="100%" height="45">
     <g fill="#000">${bars}</g>
-    <text x="50%" y="44" font-family="monospace" font-size="8" text-anchor="middle" fill="#000">${text}</text>
+    <text x="50%" y="44" font-family="monospace" font-size="8" text-anchor="middle" fill="#000">${safeText}</text>
   </svg>`;
 }
 
 export function generateSVGQRCode(text: string): string {
+  const safeText = text || 'https://wearomnia.com';
   // Generates clean SVG QR Code matrix representation for shipping labels
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="80" height="80">
     <rect width="100" height="100" fill="#ffffff" />

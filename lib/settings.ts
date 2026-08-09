@@ -32,13 +32,22 @@ export interface SiteSettingsData {
   whatsapp_customer_notify_enabled: boolean;
   whatsapp_admin_notify_enabled: boolean;
   whatsapp_sound_enabled: boolean;
+  // PostEx Courier Settings
+  postex_enabled: boolean;
+  postex_api_url: string;
+  postex_api_key: string;
+  postex_api_token: string;
+  postex_merchant_id: string;
+  postex_account_id: string;
+  postex_webhook_url: string;
+  postex_environment: 'TEST' | 'PRODUCTION';
 }
 
 export const DEFAULT_SITE_SETTINGS: SiteSettingsData = {
   businessName: 'WearOMNIA',
   whatsappNumber: '03180633323',
   storePhone: '03180633323',
-  storeEmail: 'wearomniaofficial@gmail.com',
+  storeEmail: 'wearomniaa@gmail.com',
   storeAddress: 'Lahore, Pakistan',
   logoUrl: '/logo.png',
   instagramUrl: 'https://www.instagram.com/wearomnia_/',
@@ -66,6 +75,15 @@ export const DEFAULT_SITE_SETTINGS: SiteSettingsData = {
   whatsapp_customer_notify_enabled: true,
   whatsapp_admin_notify_enabled: true,
   whatsapp_sound_enabled: true,
+  // PostEx Courier Settings Default (EMPTY credentials)
+  postex_enabled: false,
+  postex_api_url: '',
+  postex_api_key: '',
+  postex_api_token: '',
+  postex_merchant_id: '',
+  postex_account_id: '',
+  postex_webhook_url: '',
+  postex_environment: 'TEST',
 };
 
 export async function getSiteSettings(): Promise<SiteSettingsData> {

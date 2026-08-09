@@ -8,7 +8,7 @@ export default function ContactPage() {
   const [formData, setFormData] = useState({ name: '', phone: '', email: '', message: '' });
   const [settings, setSettings] = useState({
     whatsappNumber: '03180633323',
-    storeEmail: 'wearomniaofficial@gmail.com',
+    storeEmail: 'wearomniaa@gmail.com',
     supportHours: 'Monday – Saturday: 10:00 AM – 8:00 PM',
     instagramUrl: 'https://www.instagram.com/wearomnia_/',
     facebookUrl: 'https://www.facebook.com/profile.php?id=61579169068040',
@@ -22,7 +22,7 @@ export default function ContactPage() {
         if (data.settings) {
           setSettings({
             whatsappNumber: data.settings.whatsappNumber || '03180633323',
-            storeEmail: data.settings.storeEmail || 'wearomniaofficial@gmail.com',
+            storeEmail: data.settings.storeEmail || 'wearomniaa@gmail.com',
             supportHours: data.settings.supportHours || 'Monday – Saturday: 10:00 AM – 8:00 PM',
             instagramUrl: data.settings.instagramUrl || 'https://www.instagram.com/wearomnia_/',
             facebookUrl: data.settings.facebookUrl || 'https://www.facebook.com/profile.php?id=61579169068040',
@@ -71,7 +71,9 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-teal">Phone & WhatsApp Support</h4>
-                    <p className="text-charcoal-muted">{settings.whatsappNumber} ({settings.supportHours})</p>
+                    <a href="tel:+923180633323" className="text-charcoal-muted hover:text-teal transition-colors">
+                      {settings.whatsappNumber} ({settings.supportHours})
+                    </a>
                   </div>
                 </div>
 
@@ -81,7 +83,9 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-teal">Email Inquiries</h4>
-                    <p className="text-charcoal-muted">{settings.storeEmail}</p>
+                    <a href={`mailto:${settings.storeEmail}`} className="text-charcoal-muted hover:text-teal transition-colors">
+                      {settings.storeEmail}
+                    </a>
                   </div>
                 </div>
 

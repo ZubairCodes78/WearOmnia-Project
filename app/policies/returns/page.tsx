@@ -39,7 +39,7 @@ export default function ReturnsPolicyPage() {
               <ShieldCheck className="w-5 h-5 text-champagne-700" /> 3. Exchange Procedure
             </h3>
             <p>
-              To initiate an exchange, message our WhatsApp Support at <strong>03180633323</strong> with your Order Number (#OMNIA-XXXXX) and clear photos of the item. Our team will arrange reverse pickup or provide courier return details.
+              To initiate an exchange, message our WhatsApp Support at <strong>03180633323</strong> or email <a href="mailto:wearomniaa@gmail.com" className="underline font-bold">wearomniaa@gmail.com</a> with your Order Number (#OMNIA-XXXXX) and clear photos of the item. Our team will arrange reverse pickup or provide courier return details.
             </p>
           </div>
         </div>

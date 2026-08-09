@@ -45,7 +45,7 @@ export default function ShippingPolicyPage() {
               <Clock className="w-5 h-5 text-champagne-700" /> 3. Cash On Delivery (COD) Inspection
             </h3>
             <p>
-              Payment must be made in full to the courier representative (TCS or Leopard Courier) prior to opening the sealed outer box. If you suspect tampering or outer envelope damage, please contact our WhatsApp concierge (+92 300 1234567) immediately before accepting delivery.
+              Payment must be made in full to the courier representative (TCS or Leopard Courier) prior to opening the sealed outer box. If you suspect tampering or outer envelope damage, please contact our WhatsApp concierge (03180633323) or email wearomniaa@gmail.com immediately before accepting delivery.
             </p>
           </div>
         </div>

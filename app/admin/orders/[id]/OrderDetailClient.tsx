@@ -26,6 +26,55 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   const [adminNote, setAdminNote] = useState(order.internalAdminNote || '');
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [creatingShipment, setCreatingShipment] = useState(false);
+  const [shipmentMessage, setShipmentMessage] = useState('');
+  const [copySuccess, setCopySuccess] = useState(false);
+
+  const handleCreateShipment = async (providerName: string = 'POSTEX') => {
+    setCreatingShipment(true);
+    setError('');
+    setShipmentMessage('');
+    try {
+      const res = await fetch('/api/admin/courier/shipments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId: order.id,
+          providerName,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        if (data.unconfigured) {
+          setShipmentMessage('PostEx integration is not configured yet.');
+        } else {
+          setError(data.error || 'Failed to create shipment');
+        }
+      } else {
+        setShipmentMessage(data.message || 'Shipment created successfully!');
+        if (data.shipment?.trackingNumber) {
+          setTrackingNumber(data.shipment.trackingNumber);
+        }
+        if (data.shipment?.provider) {
+          setCourier(data.shipment.provider);
+        }
+        router.refresh();
+      }
+    } catch (e) {
+      setError('Failed to create shipment. Network error.');
+    } finally {
+      setCreatingShipment(false);
+    }
+  };
+
+  const handleCopyTracking = () => {
+    if (trackingNumber && typeof window !== 'undefined') {
+      navigator.clipboard.writeText(trackingNumber);
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2000);
+    }
+  };
 
   const validNextStatuses = getValidNextStatuses(order.status);
   const currentStepIndex = getTimelineStepIndex(order.status);
@@ -389,15 +438,26 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             </div>
           </div>
 
-          {/* Courier & Tracking */}
+          {/* Courier & Shipping Section */}
           <div className="bg-[#0A2528]/70 backdrop-blur-xl rounded-3xl border border-champagne/15 p-6 space-y-4">
-            <h3 className="text-xs font-bold text-champagne uppercase tracking-wider flex items-center gap-2">
-              <Truck className="w-4 h-4" /> Courier & Tracking
-            </h3>
+            <div className="flex items-center justify-between border-b border-champagne/15 pb-3">
+              <h3 className="text-xs font-bold text-champagne uppercase tracking-wider flex items-center gap-2">
+                <Truck className="w-4 h-4" /> Courier & Shipping
+              </h3>
+              <span className="text-[10px] font-mono uppercase bg-champagne/10 text-champagne px-2.5 py-0.5 rounded-full border border-champagne/20">
+                {courier || 'PostEx'}
+              </span>
+            </div>
+
+            {shipmentMessage && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 text-amber-300 rounded-xl text-xs font-medium">
+                {shipmentMessage}
+              </div>
+            )}
 
             <div className="space-y-3">
               <div>
-                <label className="text-[10px] text-offwhite/50 uppercase tracking-wider block mb-1.5">Courier</label>
+                <label className="text-[10px] text-offwhite/50 uppercase tracking-wider block mb-1.5">Courier Provider</label>
                 <select
                   value={courier}
                   onChange={(e) => setCourier(e.target.value)}
@@ -411,14 +471,61 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
               </div>
 
               <div>
-                <label className="text-[10px] text-offwhite/50 uppercase tracking-wider block mb-1.5">Tracking Number</label>
-                <input
-                  type="text"
-                  value={trackingNumber}
-                  onChange={(e) => setTrackingNumber(e.target.value)}
-                  placeholder="Enter tracking number..."
-                  className="w-full px-3 py-2.5 bg-[#06191B] rounded-xl text-xs text-offwhite border border-champagne/20 focus:outline-none focus:ring-1 focus:ring-champagne font-mono"
-                />
+                <label className="text-[10px] text-offwhite/50 uppercase tracking-wider block mb-1.5">Tracking ID</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={trackingNumber}
+                    onChange={(e) => setTrackingNumber(e.target.value)}
+                    placeholder="Enter or generate tracking ID..."
+                    className="flex-1 px-3 py-2.5 bg-[#06191B] rounded-xl text-xs text-offwhite border border-champagne/20 focus:outline-none focus:ring-1 focus:ring-champagne font-mono"
+                  />
+                  {trackingNumber && (
+                    <button
+                      type="button"
+                      onClick={handleCopyTracking}
+                      className="bg-champagne/10 hover:bg-champagne/20 text-champagne border border-champagne/30 px-3 py-2.5 rounded-xl text-xs font-semibold shrink-0 transition-colors"
+                    >
+                      {copySuccess ? 'Copied!' : 'Copy Tracking ID'}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Action Buttons Grid */}
+              <div className="pt-2 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleCreateShipment('POSTEX')}
+                  disabled={creatingShipment}
+                  className="bg-amber-600 hover:bg-amber-500 text-teal-950 font-bold px-3 py-2.5 rounded-xl text-[11px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                >
+                  {creatingShipment ? 'Creating...' : 'Create PostEx Shipment'}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => router.refresh()}
+                  className="bg-[#06191B] hover:bg-teal-900 text-offwhite border border-champagne/20 px-3 py-2.5 rounded-xl text-[11px] uppercase font-bold tracking-wider transition-colors"
+                >
+                  Refresh Status
+                </button>
+
+                <Link
+                  href={`/admin/orders/${order.id}/label`}
+                  target="_blank"
+                  className="bg-teal-800 hover:bg-teal-700 text-champagne border border-champagne/20 px-3 py-2.5 rounded-xl text-[11px] uppercase font-bold tracking-wider text-center transition-colors"
+                >
+                  Print Label
+                </Link>
+
+                <Link
+                  href={`/track-order?orderNumber=${encodeURIComponent(order.orderNumber)}`}
+                  target="_blank"
+                  className="bg-[#06191B] hover:bg-teal-900 text-offwhite border border-champagne/20 px-3 py-2.5 rounded-xl text-[11px] uppercase font-bold tracking-wider text-center transition-colors"
+                >
+                  Track Shipment
+                </Link>
               </div>
             </div>
           </div>

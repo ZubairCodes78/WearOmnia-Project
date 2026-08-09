@@ -21,7 +21,7 @@ export const Footer = () => {
   const pathname = usePathname();
   const [settings, setSettings] = useState<SiteSettings>({
     whatsappNumber: '03180633323',
-    storeEmail: 'wearomniaofficial@gmail.com',
+    storeEmail: 'wearomniaa@gmail.com',
     storeAddress: 'Lahore, Pakistan',
     instagramUrl: 'https://www.instagram.com/wearomnia_/',
     facebookUrl: 'https://www.facebook.com/profile.php?id=61579169068040',
@@ -147,10 +147,13 @@ export const Footer = () => {
                 <MessageCircle className="w-4 h-4 text-champagne shrink-0" />
                 <span>{settings.whatsappNumber} (WhatsApp)</span>
               </a>
-              <p className="flex items-center gap-2">
+              <a
+                href={`mailto:${settings.storeEmail}`}
+                className="flex items-center gap-2 hover:text-champagne transition-colors duration-300"
+              >
                 <Mail className="w-4 h-4 text-champagne shrink-0" />
                 <span>{settings.storeEmail}</span>
-              </p>
+              </a>
               {settings.supportHours && (
                 <p className="flex items-center gap-2">
                   <Clock className="w-4 h-4 text-champagne shrink-0" />

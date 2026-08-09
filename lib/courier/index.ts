@@ -1,11 +1,18 @@
 import { CourierProvider } from './types';
-import { ManualCourierProvider } from './manual-provider';
+import { PostExProvider } from './postex-provider';
+import { ManualProvider } from './manual-provider';
 
-// Factory: Returns the active courier provider
-// When PostEx API is enabled, swap this to PostExCourierProvider
-export function getCourierProvider(): CourierProvider {
-  return new ManualCourierProvider();
-}
-
-export { ManualCourierProvider } from './manual-provider';
 export * from './types';
+export * from './postex-provider';
+export * from './manual-provider';
+
+const postexProvider = new PostExProvider();
+const manualProvider = new ManualProvider();
+
+export function getCourierProvider(providerName?: string | null): CourierProvider {
+  const normalized = (providerName || '').toUpperCase();
+  if (normalized === 'POSTEX') {
+    return postexProvider;
+  }
+  return manualProvider;
+}

@@ -271,7 +271,7 @@ export const Header: React.FC = () => {
 
               <div className="border-t border-sand pt-6 mt-6 text-center text-xs text-charcoal-muted font-sans space-y-2">
                 <p>📍 Lahore, Pakistan</p>
-                <p>📞 Helpline: 03180633323</p>
+                <a href="tel:+923180633323" className="hover:text-champagne-700 transition-colors">📞 Helpline: 03180633323</a>
               </div>
             </motion.div>
           </>

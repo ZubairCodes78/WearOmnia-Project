@@ -127,7 +127,7 @@ export async function POST(req: Request) {
           fullName: fullName.trim(),
           phone: finalPhone,
           whatsapp: whatsapp ? normalizePhone(whatsapp) : finalPhone,
-          email: email ? email.trim() : 'wearomniaofficial@gmail.com',
+          email: email ? email.trim() : 'wearomniaa@gmail.com',
           province,
           city,
           address,
@@ -149,7 +149,7 @@ export async function POST(req: Request) {
         data: {
           fullName: fullName.trim(),
           whatsapp: whatsapp ? normalizePhone(whatsapp) : customer.whatsapp,
-          email: email ? email.trim() : customer.email || 'wearomniaofficial@gmail.com',
+          email: email ? email.trim() : customer.email || 'wearomniaa@gmail.com',
           province,
           city,
           address,

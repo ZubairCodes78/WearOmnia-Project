@@ -26,7 +26,7 @@ const FAQS = [
   },
   {
     q: 'Can I exchange an item if it doesn’t fit?',
-    a: 'Yes, we provide a 7-day hassle-free exchange window. Simply contact our WhatsApp concierge (+92 300 1234567) with your order number.',
+    a: 'Yes, we provide a 7-day hassle-free exchange window. Simply contact our WhatsApp concierge (03180633323) or email us at wearomniaa@gmail.com with your order number.',
   },
 ];
 

@@ -35,18 +35,26 @@ export async function POST(req: Request) {
       );
     }
 
-    const { orderNumber, phone } = await req.json();
+    const { orderNumber, trackingId, phone } = await req.json();
 
-    if (!orderNumber || !phone) {
+    const searchTerm = (orderNumber || trackingId || '').trim().toUpperCase();
+
+    if (!searchTerm) {
       return NextResponse.json(
-        { error: 'Please provide both your order number and phone number.' },
+        { error: 'Please enter your Order Number or Courier Tracking ID.' },
         { status: 400 }
       );
     }
 
-    // Find order by order number AND verify phone
-    const order = await prisma.order.findUnique({
-      where: { orderNumber: orderNumber.trim().toUpperCase() },
+    // Find order by orderNumber OR trackingNumber OR Shipment.trackingNumber
+    const order = await prisma.order.findFirst({
+      where: {
+        OR: [
+          { orderNumber: searchTerm },
+          { trackingNumber: searchTerm },
+          { shipments: { some: { OR: [{ trackingNumber: searchTerm }, { externalShipmentId: searchTerm }] } } },
+        ],
+      },
       include: {
         items: {
           select: {
@@ -57,6 +65,9 @@ export async function POST(req: Request) {
             quantity: true,
             subtotal: true,
           },
+        },
+        shipments: {
+          orderBy: { createdAt: 'desc' },
         },
         timeline: {
           orderBy: { createdAt: 'asc' },
@@ -72,34 +83,37 @@ export async function POST(req: Request) {
 
     if (!order) {
       return NextResponse.json(
-        { error: 'We could not find an order with that order number. Please check and try again.' },
+        { error: 'We could not find an order with that Order Number or Tracking ID. Please verify and try again.' },
         { status: 404 }
       );
     }
 
-    // Verify phone number matches using normalized comparison
-    const cleanPhone = normalizePhone(phone);
-    const orderPhone = normalizePhone(order.customerPhone);
-    if (cleanPhone !== orderPhone) {
-      return NextResponse.json(
-        { error: 'The phone number does not match our records. Please use the phone number you provided during checkout.' },
-        { status: 403 }
-      );
+    // Optional phone verification if phone is provided
+    if (phone && phone.trim()) {
+      const cleanPhone = normalizePhone(phone);
+      const orderPhone = normalizePhone(order.customerPhone);
+      if (cleanPhone !== orderPhone) {
+        return NextResponse.json(
+          { error: 'The phone number does not match our records. Please use the phone number used during checkout.' },
+          { status: 403 }
+        );
+      }
     }
 
-    // Return only safe customer-facing information
-    // DO NOT expose: internalAdminNote, customerId, database IDs, email, isReadByAdmin
+    const activeShipment = order.shipments && order.shipments.length > 0 ? order.shipments[0] : null;
+
+    // Return safe customer-facing information
     return NextResponse.json({
       success: true,
       order: {
         orderNumber: order.orderNumber,
-        status: order.status,
+        status: activeShipment?.status || order.status,
         customerName: order.customerName,
         orderDate: order.createdAt,
         shippingCity: order.shippingCity,
         shippingProvince: order.shippingProvince,
-        trackingNumber: order.trackingNumber,
-        courier: order.courier,
+        trackingNumber: activeShipment?.trackingNumber || order.trackingNumber,
+        courier: activeShipment?.provider === 'POSTEX' ? 'PostEx Courier' : (order.courier || 'PostEx Express'),
         paymentMethod: order.paymentMethod,
         subtotal: order.subtotal,
         discountAmount: order.discountAmount,
@@ -114,7 +128,6 @@ export async function POST(req: Request) {
           subtotal: item.subtotal,
         })),
         timeline: order.timeline
-          // Filter out internal admin notes from timeline
           .filter((t) => !t.note?.toLowerCase().includes('admin'))
           .map((t) => ({
             status: t.status,

@@ -172,9 +172,9 @@ async function main() {
   const initialSiteConfig = {
     announcementText: 'Nationwide Express Cash On Delivery Across Pakistan • Free Delivery On Orders Above Rs. 10,000',
     announcementEnabled: true,
-    storePhone: '+92 300 1234567',
-    storeEmail: 'concierge@wearomnia.com',
-    storeAddress: 'WearOMNIA Flagship Atelier, M.M. Alam Road, Gulberg III, Lahore, Pakistan',
+    storePhone: '03180633323',
+    storeEmail: 'wearomniaa@gmail.com',
+    storeAddress: 'Lahore, Pakistan',
     instagramUrl: 'https://instagram.com',
     facebookUrl: 'https://facebook.com',
     flatShippingFee: 250,

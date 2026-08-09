@@ -25,6 +25,10 @@ export function SettingsClient({ initialSettings, initialShippingRules }: Settin
   const [savingSettings, setSavingSettings] = useState(false);
   const [message, setMessage] = useState('');
   
+  // PostEx test connection state
+  const [testingPostEx, setTestingPostEx] = useState(false);
+  const [postExTestMessage, setPostExTestMessage] = useState('');
+  
   // Password change state
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
@@ -128,6 +132,28 @@ export function SettingsClient({ initialSettings, initialShippingRules }: Settin
       setPasswordMessage('Network error');
     } finally {
       setChangingPassword(false);
+    }
+  };
+
+  const handleTestPostExConnection = async () => {
+    setTestingPostEx(true);
+    setPostExTestMessage('');
+    try {
+      const res = await fetch('/api/admin/courier/postex/test-connection', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          postex_enabled: settings.postex_enabled,
+          postex_api_key: settings.postex_api_key,
+          postex_api_token: settings.postex_api_token,
+        }),
+      });
+      const data = await res.json();
+      setPostExTestMessage(data.message || 'PostEx API is not configured.');
+    } catch (e) {
+      setPostExTestMessage('PostEx API is not configured.');
+    } finally {
+      setTestingPostEx(false);
     }
   };
 
@@ -461,6 +487,147 @@ export function SettingsClient({ initialSettings, initialShippingRules }: Settin
               />
               <span className="text-xs font-semibold text-[#FAF8F5]">Dashboard Audio Sound</span>
             </label>
+          </div>
+        </div>
+
+        {/* Section: PostEx Courier Integration Settings */}
+        <div className="bg-[#141414] border border-[#262626] rounded-xl p-6 space-y-5 lg:col-span-2">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#262626] pb-3 text-[#D4AF37]">
+            <div className="flex items-center gap-2">
+              <Truck className="w-5 h-5 text-amber-400" />
+              <h2 className="font-serif text-lg font-semibold text-[#FAF8F5]">Shipping / PostEx Courier Settings</h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest border ${
+                settings.postex_enabled
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30'
+                  : 'bg-gray-500/10 text-gray-400 border-gray-500/30'
+              }`}>
+                {settings.postex_enabled ? 'PostEx Enabled' : 'PostEx Disabled'}
+              </span>
+              <button
+                type="button"
+                onClick={handleTestPostExConnection}
+                disabled={testingPostEx}
+                className="bg-[#262626] hover:bg-[#333333] text-amber-400 border border-amber-500/30 px-4 py-1.5 rounded-lg text-xs font-semibold transition-colors disabled:opacity-50"
+              >
+                {testingPostEx ? 'Testing...' : 'Test Connection'}
+              </button>
+            </div>
+          </div>
+
+          {postExTestMessage && (
+            <div className={`p-3 rounded-lg text-xs font-medium ${
+              postExTestMessage.includes('detected') ? 'bg-emerald-900/30 text-emerald-400 border border-emerald-500/30' : 'bg-amber-900/30 text-amber-300 border border-amber-500/30'
+            }`}>
+              {postExTestMessage}
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="sm:col-span-2 flex items-center gap-3 bg-[#1A1A1A] p-3 rounded-xl border border-[#262626]">
+              <input
+                type="checkbox"
+                id="postexEnableToggle"
+                checked={settings.postex_enabled ?? false}
+                onChange={(e) => setSettings({ ...settings, postex_enabled: e.target.checked })}
+                className="w-4 h-4 accent-amber-500 rounded"
+              />
+              <label htmlFor="postexEnableToggle" className="text-xs font-semibold text-[#FAF8F5] cursor-pointer">
+                Enable PostEx Courier Integration
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-xs text-[#A3A3A3] uppercase mb-1">Environment</label>
+              <select
+                value={settings.postex_environment || 'TEST'}
+                onChange={(e) => setSettings({ ...settings, postex_environment: e.target.value as any })}
+                className="w-full bg-[#1A1A1A] border border-[#262626] rounded-lg px-3.5 py-2.5 text-sm text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]"
+              >
+                <option value="TEST">Test Environment</option>
+                <option value="PRODUCTION">Production Live</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs text-[#A3A3A3] uppercase mb-1">API Base URL</label>
+              <input
+                type="text"
+                value={settings.postex_api_url || ''}
+                onChange={(e) => setSettings({ ...settings, postex_api_url: e.target.value })}
+                placeholder="Leave empty by default"
+                className="w-full bg-[#1A1A1A] border border-[#262626] rounded-lg px-3.5 py-2.5 text-sm text-[#FAF8F5] font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-[#A3A3A3] uppercase mb-1">API Key</label>
+              <input
+                type="password"
+                value={settings.postex_api_key || ''}
+                onChange={(e) => setSettings({ ...settings, postex_api_key: e.target.value })}
+                placeholder="Leave empty by default"
+                className="w-full bg-[#1A1A1A] border border-[#262626] rounded-lg px-3.5 py-2.5 text-sm text-[#FAF8F5] font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-[#A3A3A3] uppercase mb-1">API Token</label>
+              <input
+                type="password"
+                value={settings.postex_api_token || ''}
+                onChange={(e) => setSettings({ ...settings, postex_api_token: e.target.value })}
+                placeholder="Leave empty by default"
+                className="w-full bg-[#1A1A1A] border border-[#262626] rounded-lg px-3.5 py-2.5 text-sm text-[#FAF8F5] font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-[#A3A3A3] uppercase mb-1">Merchant ID</label>
+              <input
+                type="text"
+                value={settings.postex_merchant_id || ''}
+                onChange={(e) => setSettings({ ...settings, postex_merchant_id: e.target.value })}
+                placeholder="Leave empty by default"
+                className="w-full bg-[#1A1A1A] border border-[#262626] rounded-lg px-3.5 py-2.5 text-sm text-[#FAF8F5] font-mono"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs text-[#A3A3A3] uppercase mb-1">Account ID</label>
+              <input
+                type="text"
+                value={settings.postex_account_id || ''}
+                onChange={(e) => setSettings({ ...settings, postex_account_id: e.target.value })}
+                placeholder="Leave empty by default"
+                className="w-full bg-[#1A1A1A] border border-[#262626] rounded-lg px-3.5 py-2.5 text-sm text-[#FAF8F5] font-mono"
+              />
+            </div>
+
+            <div className="sm:col-span-2">
+              <label className="block text-xs text-[#A3A3A3] uppercase mb-1">Webhook URL</label>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={typeof window !== 'undefined' ? `${window.location.origin}/api/webhooks/postex` : '/api/webhooks/postex'}
+                  className="flex-1 bg-[#1A1A1A] border border-[#262626] rounded-lg px-3.5 py-2 text-xs text-amber-400 font-mono"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (typeof window !== 'undefined') {
+                      navigator.clipboard.writeText(`${window.location.origin}/api/webhooks/postex`);
+                      alert('PostEx Webhook URL copied to clipboard!');
+                    }
+                  }}
+                  className="bg-[#262626] hover:bg-[#333333] text-[#FAF8F5] px-3 py-2 rounded-lg text-xs font-medium"
+                >
+                  Copy
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
