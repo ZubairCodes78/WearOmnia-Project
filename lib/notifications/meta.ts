@@ -1,4 +1,5 @@
 import { NotificationProvider, NotificationPayload, NotificationResult } from './types';
+import { normalizePhone } from '@/lib/phone';
 
 export class MetaWhatsAppCloudApiProvider implements NotificationProvider {
   name = 'MetaWhatsAppCloudAPI';
@@ -9,11 +10,7 @@ export class MetaWhatsAppCloudApiProvider implements NotificationProvider {
   private apiVersion = 'v18.0';
 
   private formatRecipient(phone: string): string {
-    let cleaned = phone.replace(/[^\d]/g, '');
-    if (cleaned.startsWith('0')) {
-      cleaned = '92' + cleaned.substring(1);
-    }
-    return cleaned;
+    return normalizePhone(phone);
   }
 
   async send(payload: NotificationPayload): Promise<NotificationResult> {

@@ -113,11 +113,11 @@ export default function CheckoutPage() {
     if (!formData.phone.trim()) {
       errors.phone = 'Mobile number is required';
     } else if (!validatePhone(formData.phone)) {
-      errors.phone = 'Please enter a valid Pakistani mobile number (03XXXXXXXXX)';
+      errors.phone = 'Please enter a valid Pakistani mobile number.';
     }
 
     if (formData.whatsapp && !validatePhone(formData.whatsapp)) {
-      errors.whatsapp = 'Please enter a valid Pakistani WhatsApp number';
+      errors.whatsapp = 'Please enter a valid Pakistani mobile number.';
     }
 
     if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -289,7 +289,7 @@ export default function CheckoutPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="text-[10px] uppercase font-bold text-charcoal tracking-wider block mb-1.5">
-                        Mobile Phone <span className="text-red-600">*</span>
+                        Phone Number <span className="text-red-600">*</span>
                       </label>
                       <input
                         type="tel"

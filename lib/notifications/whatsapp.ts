@@ -1,18 +1,13 @@
 import { NotificationProvider, NotificationPayload, NotificationResult } from './types';
 import { getSiteSettings } from '@/lib/settings';
+import { normalizePhone } from '@/lib/phone';
 
 export class WhatsAppNotificationProvider implements NotificationProvider {
   name = 'WhatsApp';
   isEnabled = true;
 
   private formatPhoneNumber(phone: string): string {
-    let cleaned = phone.replace(/[^\d+]/g, '');
-    if (cleaned.startsWith('0')) {
-      cleaned = '+92' + cleaned.substring(1);
-    } else if (!cleaned.startsWith('+')) {
-      cleaned = '+' + cleaned;
-    }
-    return cleaned.replace('+', '');
+    return normalizePhone(phone);
   }
 
   generateMessageText(payload: NotificationPayload): { text: string; recipientPhone: string } {

@@ -1,4 +1,5 @@
 import { NotificationProvider, NotificationPayload, NotificationResult } from './types';
+import { normalizePhone } from '@/lib/phone';
 
 export class TwilioWhatsAppProvider implements NotificationProvider {
   name = 'TwilioWhatsApp';
@@ -9,13 +10,7 @@ export class TwilioWhatsAppProvider implements NotificationProvider {
   private fromNumber = process.env.TWILIO_WHATSAPP_NUMBER || 'whatsapp:+14155238886';
 
   private formatRecipient(phone: string): string {
-    let cleaned = phone.replace(/[^\d+]/g, '');
-    if (cleaned.startsWith('0')) {
-      cleaned = '+92' + cleaned.substring(1);
-    } else if (!cleaned.startsWith('+')) {
-      cleaned = '+' + cleaned;
-    }
-    return `whatsapp:${cleaned}`;
+    return `whatsapp:+${normalizePhone(phone)}`;
   }
 
   async send(payload: NotificationPayload): Promise<NotificationResult> {

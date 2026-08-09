@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { normalizePhone } from '@/lib/phone';
 
 // Simple in-memory rate limiter
 const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
@@ -43,9 +44,6 @@ export async function POST(req: Request) {
       );
     }
 
-    // Clean phone number for comparison
-    const cleanPhone = phone.trim().replace(/[\s-]/g, '');
-
     // Find order by order number AND verify phone
     const order = await prisma.order.findUnique({
       where: { orderNumber: orderNumber.trim().toUpperCase() },
@@ -79,9 +77,10 @@ export async function POST(req: Request) {
       );
     }
 
-    // Verify phone number matches (strip formatting for comparison)
-    const orderPhone = order.customerPhone.replace(/[\s-]/g, '');
-    if (!orderPhone.endsWith(cleanPhone.slice(-10)) && cleanPhone !== orderPhone) {
+    // Verify phone number matches using normalized comparison
+    const cleanPhone = normalizePhone(phone);
+    const orderPhone = normalizePhone(order.customerPhone);
+    if (cleanPhone !== orderPhone) {
       return NextResponse.json(
         { error: 'The phone number does not match our records. Please use the phone number you provided during checkout.' },
         { status: 403 }

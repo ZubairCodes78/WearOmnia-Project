@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { getValidNextStatuses, STATUS_LABELS, TIMELINE_STEPS, getTimelineStepIndex, isTerminalStatus } from '@/lib/order-status';
 import { COURIER_OPTIONS } from '@/lib/courier/types';
+import { normalizePhone } from '@/lib/phone';
 
 interface OrderDetailClientProps {
   order: any;
@@ -131,7 +132,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
           </Link>
           <button
             onClick={() => {
-              const cleanPhone = order.customerPhone.replace(/[^\d+]/g, '').replace(/^0/, '92');
+              const cleanPhone = normalizePhone(order.customerPhone);
               const msg = encodeURIComponent(`Hi ${order.customerName},\nRegarding your WearOMNIA order #${order.orderNumber}.`);
               window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
             }}

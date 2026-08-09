@@ -32,7 +32,11 @@ export async function POST(req: Request) {
     const finalPhone = normalizePhone(phone);
     
     if (!validatePhone(phone)) {
-      return NextResponse.json({ error: 'Please enter a valid Pakistani mobile number (03XXXXXXXXX)' }, { status: 400 });
+      return NextResponse.json({ error: 'Please enter a valid Pakistani mobile number.' }, { status: 400 });
+    }
+
+    if (whatsapp && !validatePhone(whatsapp)) {
+      return NextResponse.json({ error: 'Please enter a valid Pakistani mobile number.' }, { status: 400 });
     }
 
     // Check for duplicate order submission (same phone + same items within 1 minute)
@@ -181,7 +185,7 @@ export async function POST(req: Request) {
         customerId: customer.id,
         customerName: fullName.trim(),
         customerPhone: finalPhone,
-        customerWhatsapp: whatsapp ? whatsapp.replace(/\D/g, '').replace(/^0/, '92') : finalPhone,
+        customerWhatsapp: whatsapp ? normalizePhone(whatsapp) : finalPhone,
         customerEmail: email || null,
         shippingProvince: province,
         shippingCity: city,

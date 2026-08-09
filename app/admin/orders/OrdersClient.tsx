@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Search, Printer, Download, Eye, FileText, Truck, Package } from 'lucide-react';
 import { OrderStatusBadge } from './OrderStatusBadge';
+import { normalizePhone } from '@/lib/phone';
 
 interface OrderItem {
   id: string;
@@ -238,7 +239,7 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
 
                       <button
                         onClick={() => {
-                          const cleanPhone = order.customerPhone.replace(/[^\d+]/g, '').replace(/^0/, '92');
+                          const cleanPhone = normalizePhone(order.customerPhone);
                           const msg = encodeURIComponent(`Hi ${order.customerName},\nRegarding your WearOMNIA order #${order.orderNumber}.`);
                           window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
                         }}
