@@ -300,7 +300,7 @@ export const SupportAssistant = () => {
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.95 }}
         transition={{ duration: 0.3 }}
-        className="fixed bottom-20 right-4 sm:bottom-8 sm:right-8 z-29 flex items-center gap-2.5 bg-gradient-to-r from-[#D4AF37] to-[#C5A028] text-black p-3 sm:px-4 sm:py-3 rounded-full shadow-2xl hover:shadow-[#D4AF37]/40 font-sans"
+        className="fixed bottom-16 right-6 sm:bottom-20 sm:right-6 z-40 flex items-center gap-2.5 bg-gradient-to-r from-[#D4AF37] to-[#C5A028] text-black p-3 sm:px-4 sm:py-3 rounded-full shadow-2xl hover:shadow-[#D4AF37]/40 font-sans"
         title="Customer Support"
         aria-label="Open Customer Support Assistant"
       >

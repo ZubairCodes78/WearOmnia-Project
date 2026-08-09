@@ -88,7 +88,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     setTimeout(() => {
       setIsCartOpen(true);
-    }, 600);
+    }, 400);
   };
 
   const removeFromCart = (id: string) => {

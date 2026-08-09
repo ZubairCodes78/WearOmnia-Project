@@ -38,12 +38,24 @@ export const WhatsAppFloat = () => {
       whileHover={{ scale: 1.08 }}
       whileTap={{ scale: 0.95 }}
       transition={{ duration: 0.3 }}
-      className="fixed bottom-20 right-4 sm:bottom-6 sm:right-6 z-40 flex items-center gap-2.5 bg-[#25D366] text-white p-3 sm:px-4 sm:py-3 rounded-full shadow-2xl hover:shadow-[#25D366]/40 group border-2 border-white/20 font-sans"
+      className="fixed bottom-6 right-6 sm:bottom-6 sm:right-6 z-30 flex items-center gap-2.5 bg-[#25D366] text-white p-3 sm:px-4 sm:py-3 rounded-full shadow-2xl hover:shadow-[#25D366]/40 group border-2 border-white/20 font-sans"
       title="Chat on WhatsApp"
       aria-label="Chat with WearOMNIA on WhatsApp"
     >
-      {/* Pulse ring animation */}
-      <span className="absolute -inset-1 rounded-full bg-[#25D366] opacity-40 animate-ping -z-10" />
+      {/* Subtle pulse ring - optimized */}
+      <motion.span
+        className="absolute -inset-1 rounded-full bg-[#25D366] opacity-30"
+        animate={{
+          scale: [1, 1.15, 1],
+          opacity: [0.3, 0.15, 0.3],
+        }}
+        transition={{
+          duration: 2,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        style={{ zIndex: -1 }}
+      />
 
       {/* WhatsApp SVG Icon */}
       <svg

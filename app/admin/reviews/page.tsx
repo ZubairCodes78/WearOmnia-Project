@@ -1,12 +1,7 @@
-import React from 'react';
-import { prisma } from '@/lib/prisma';
 import { ReviewsClient } from './ReviewsClient';
 
-export default async function AdminReviewsPage() {
-  const reviews = await prisma.review.findMany({
-    include: { product: true },
-    orderBy: { createdAt: 'desc' },
-  });
+export const dynamic = 'force-dynamic';
 
-  return <ReviewsClient initialReviews={reviews} />;
+export default function AdminReviewsPage() {
+  return <ReviewsClient initialReviews={[]} />;
 }

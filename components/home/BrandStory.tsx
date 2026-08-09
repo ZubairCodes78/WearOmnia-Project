@@ -18,6 +18,9 @@ export const BrandStory: React.FC = () => {
                 src="https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=1200&auto=format&fit=crop"
                 alt="WearOMNIA Craftsmanship"
                 fill
+                sizes="(max-width: 1024px) 100vw, 50vw"
+                loading="lazy"
+                quality={85}
                 className="object-cover object-center"
               />
             </div>
@@ -26,6 +29,9 @@ export const BrandStory: React.FC = () => {
                 src="https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=800&auto=format&fit=crop"
                 alt="Hand Embroidery Detail"
                 fill
+                sizes="25vw"
+                loading="lazy"
+                quality={85}
                 className="object-cover object-center"
               />
             </div>

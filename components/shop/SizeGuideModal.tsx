@@ -168,15 +168,16 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({ isOpen, onClose,
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-charcoal/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-charcoal/60"
           />
 
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, y: 40, scale: 0.97 }}
+            initial={{ opacity: 0, y: 30, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 40, scale: 0.97 }}
+            exit={{ opacity: 0, y: 30, scale: 0.98 }}
             transition={{ duration: 0.3, ease: [0.16, 1, 0.3, 1] }}
             className="fixed inset-x-4 top-[5vh] bottom-[5vh] sm:inset-x-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-full sm:max-w-2xl sm:max-h-[85vh] z-50 bg-offwhite rounded-3xl shadow-2xl border border-sand overflow-hidden flex flex-col"
           >

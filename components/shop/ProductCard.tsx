@@ -115,14 +115,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       initial={{ opacity: 0, y: 15 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
-      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       className="group relative bg-offwhite flex flex-col justify-between"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div>
         {/* Image Container with Smooth Crossfade Hover */}
-        <div className="relative aspect-[3/4] w-full bg-sand/60 overflow-hidden rounded-2xl border border-sand/40 transition-all duration-500 group-hover:border-champagne/50 group-hover:shadow-lg">
+        <div className="relative aspect-[3/4] w-full bg-sand/60 overflow-hidden rounded-2xl border border-sand/40 transition-all duration-400 group-hover:border-champagne/50 group-hover:shadow-lg group-hover:shadow-champagne/10">
           <Link href={`/product/${slug}`} className="block w-full h-full">
             {/* Primary Image */}
             <Image
@@ -130,7 +130,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               alt={title}
               fill
               sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-              className={`object-cover object-center transition-all duration-700 ease-premium ${
+              loading="lazy"
+              quality={85}
+              className={`object-cover object-center transition-all duration-500 ${
                 isHovered ? 'opacity-0 scale-105' : 'opacity-100 scale-100'
               }`}
             />
@@ -140,7 +142,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               alt={`${title} - alternate`}
               fill
               sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-              className={`object-cover object-center transition-all duration-700 ease-premium absolute inset-0 ${
+              loading="lazy"
+              quality={85}
+              className={`object-cover object-center transition-all duration-500 absolute inset-0 ${
                 isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
               }`}
             />

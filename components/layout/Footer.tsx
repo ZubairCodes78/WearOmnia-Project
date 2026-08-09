@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { Mail, Phone, Instagram, Facebook, ShieldCheck, Truck, RotateCcw, Clock, Package, MessageCircle } from 'lucide-react';
+import { ScrollReveal } from '@/components/layout/ScrollReveal';
 
 interface SiteSettings {
   whatsappNumber: string;
@@ -23,7 +24,7 @@ export const Footer = () => {
     storeEmail: 'Wearomniaa@gmail.com',
     storeAddress: '',
     instagramUrl: 'https://www.instagram.com/wearomnia_/',
-    facebookUrl: 'https://www.facebook.com/profile.php?id=61579169068040',
+    facebookUrl: 'https://www.facebook.com/profile.php?id=61579168069040',
     tiktokUrl: 'https://www.tiktok.com/@wearomnia_',
     supportHours: 'Monday – Saturday: 10:00 AM – 8:00 PM',
     copyrightText: '© 2026 WearOMNIA. All rights reserved.'
@@ -48,7 +49,7 @@ export const Footer = () => {
     <footer className="bg-teal text-offwhite border-t border-teal-800 pt-16 pb-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Top Feature Highlights Bar */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-12 border-b border-teal-700/60 text-center md:text-left">
+        <ScrollReveal className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-12 border-b border-teal-700/60 text-center md:text-left">
           <div className="flex flex-col items-center md:items-start gap-2">
             <Truck className="w-7 h-7 text-champagne" />
             <h4 className="font-serif text-lg font-medium text-champagne">Nationwide Delivery</h4>
@@ -69,7 +70,7 @@ export const Footer = () => {
             <h4 className="font-serif text-lg font-medium text-champagne">Customer Support</h4>
             <p className="text-xs text-offwhite/70">WhatsApp assistance available {settings.supportHours}.</p>
           </div>
-        </div>
+        </ScrollReveal>
 
         {/* Middle Footer Navigation Links */}
         <div className="grid grid-cols-1 md:grid-cols-12 gap-10 py-14 border-b border-teal-700/60">

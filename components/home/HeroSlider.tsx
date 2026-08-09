@@ -43,26 +43,26 @@ export const HeroSlider = () => {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrent((prev) => (prev + 1) % SLIDES.length);
-    }, 7000);
+    }, 6000);
     return () => clearInterval(timer);
   }, []);
 
   const imageVariants = {
     enter: {
       opacity: 0,
-      scale: 1.08,
+      scale: 1.05,
     },
     center: {
       opacity: 1,
       scale: 1,
       transition: {
-        opacity: { duration: 1.2, ease: [0.16, 1, 0.3, 1] as const },
-        scale: { duration: 8, ease: 'linear' as const },
+        opacity: { duration: 1, ease: [0.16, 1, 0.3, 1] as const },
+        scale: { duration: 7, ease: 'linear' as const },
       },
     },
     exit: {
       opacity: 0,
-      transition: { duration: 0.8 },
+      transition: { duration: 0.6 },
     },
   };
 

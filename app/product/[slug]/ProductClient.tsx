@@ -160,7 +160,15 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
                         : 'border-sand opacity-70 hover:opacity-100'
                     }`}
                   >
-                    <Image src={img.url} alt="thumb" fill className="object-cover" />
+                    <Image 
+                      src={img.url} 
+                      alt="thumb" 
+                      fill 
+                      sizes="80px"
+                      loading="lazy"
+                      quality={80}
+                      className="object-cover" 
+                    />
                   </button>
                 ))}
               </div>
@@ -173,12 +181,14 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
                 alt={product.title}
                 fill
                 priority
-                className="object-cover transition-transform duration-700 group-hover:scale-105 cursor-zoom-in"
+                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 40vw"
+                quality={90}
+                className="object-cover transition-transform duration-300 group-hover:scale-105 cursor-zoom-in"
                 onClick={() => setLightboxOpen(true)}
               />
               <button
                 onClick={() => setLightboxOpen(true)}
-                className="absolute top-4 right-4 bg-offwhite/80 backdrop-blur-md p-2.5 rounded-full text-teal hover:bg-champagne transition-all shadow"
+                className="absolute top-4 right-4 bg-offwhite/90 p-2.5 rounded-full text-teal hover:bg-champagne transition-all shadow"
                 title="Fullscreen Lightbox View"
               >
                 <Maximize2 className="w-5 h-5" />

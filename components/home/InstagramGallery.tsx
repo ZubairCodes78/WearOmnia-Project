@@ -30,7 +30,7 @@ export const InstagramGallery = () => {
         {INSTA_PHOTOS.map((src, i) => (
           <a
             key={i}
-            href="https://instagram.com"
+            href="https://www.instagram.com/wearomnia_/"
             target="_blank"
             rel="noopener noreferrer"
             className="group relative aspect-square overflow-hidden bg-sand block"
@@ -39,9 +39,12 @@ export const InstagramGallery = () => {
               src={src}
               alt={`Instagram post ${i + 1}`}
               fill
+              sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 16vw"
+              loading="lazy"
+              quality={85}
               className="object-cover group-hover:scale-110 transition-transform duration-500"
             />
-            <div className="absolute inset-0 bg-teal-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-champagne">
+            <div className="absolute inset-0 bg-teal-950/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center text-champagne">
               <Instagram className="w-8 h-8" />
             </div>
           </a>

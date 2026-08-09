@@ -47,7 +47,7 @@ export const ReviewsCarousel = () => {
           Loved Across Pakistan
         </h2>
 
-        <div className="bg-teal-900/60 backdrop-blur-md p-8 sm:p-12 rounded-3xl border border-champagne/30 shadow-2xl relative">
+        <div className="bg-teal-900/80 p-8 sm:p-12 rounded-3xl border border-champagne/30 shadow-2xl relative">
           <div className="flex justify-center gap-1 mb-4 text-champagne">
             {[...Array(REVIEWS[index].rating)].map((_, i) => (
               <Star key={i} className="w-5 h-5 fill-current" />

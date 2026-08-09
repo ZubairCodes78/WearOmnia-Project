@@ -60,23 +60,23 @@ export const CartDrawer: React.FC = () => {
     <AnimatePresence>
       {isCartOpen && (
         <>
-          {/* Backdrop Overlay with Glass Blur */}
+          {/* Backdrop Overlay */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.3 }}
             onClick={() => setIsCartOpen(false)}
-            className="fixed inset-0 z-50 bg-teal-950/60 backdrop-blur-sm"
+            className="fixed inset-0 z-50 bg-teal-950/60"
           />
 
-          {/* Slide-over Cart Drawer Panel with Glass Effect */}
+          {/* Slide-over Cart Drawer Panel */}
           <motion.aside
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 32, stiffness: 300 }}
-            className="fixed top-0 right-0 z-50 w-full max-w-md h-full bg-offwhite/[0.94] backdrop-blur-xl text-teal flex flex-col shadow-2xl border-l border-champagne/15"
+            transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            className="fixed top-0 right-0 z-50 w-full max-w-md h-full bg-offwhite text-teal flex flex-col shadow-2xl border-l border-champagne/15"
           >
             {/* Drawer Header */}
             <div className="p-6 border-b border-sand/80 flex items-center justify-between">

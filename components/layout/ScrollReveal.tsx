@@ -46,7 +46,7 @@ export const ScrollReveal: React.FC<ScrollRevealProps> = ({
   children,
   variant = 'fade-up',
   delay = 0,
-  duration = 0.7,
+  duration = 0.6,
   className = '',
   once = true,
 }) => {
@@ -58,7 +58,7 @@ export const ScrollReveal: React.FC<ScrollRevealProps> = ({
     <motion.div
       initial="hidden"
       whileInView="visible"
-      viewport={{ once, margin: '-40px' }}
+      viewport={{ once, margin: '-50px' }}
       variants={selectedVariant}
       transition={{
         duration: prefersReducedMotion ? 0 : duration,
