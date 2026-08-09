@@ -6,7 +6,7 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
 import { WhatsAppFloat } from '@/components/layout/WhatsAppFloat';
-import { Chatbot } from '@/components/layout/Chatbot';
+import { SupportAssistant } from '@/components/layout/SupportAssistant';
 import { ToastProvider } from '@/components/layout/ToastProvider';
 
 export const metadata: Metadata = {
@@ -67,7 +67,7 @@ export default function RootLayout({
               <main className="flex-1">{children}</main>
               <CartDrawer />
               <WhatsAppFloat />
-              <Chatbot />
+              <SupportAssistant />
               <Footer />
             </ToastProvider>
           </WishlistProvider>

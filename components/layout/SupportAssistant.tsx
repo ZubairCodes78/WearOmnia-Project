@@ -11,7 +11,7 @@ interface ChatMessage {
   text: string;
   timestamp: string;
   quickReplies?: string[];
-  actionLink?: { label: string; url: string };
+  actionLink?: { label: string; url: string } | null;
 }
 
 const INITIAL_MESSAGES: ChatMessage[] = [
@@ -32,7 +32,7 @@ const INITIAL_MESSAGES: ChatMessage[] = [
 // Tracking conversation state machine
 type TrackingState = 'idle' | 'awaiting_order_number' | 'awaiting_phone' | 'loading';
 
-export const Chatbot = () => {
+export const SupportAssistant = () => {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
@@ -44,7 +44,7 @@ export const Chatbot = () => {
   const [trackingState, setTrackingState] = useState<TrackingState>('idle');
   const [pendingOrderNumber, setPendingOrderNumber] = useState('');
 
-  // Hide Chatbot on admin routes
+  // Hide SupportAssistant on admin routes
   if (pathname?.startsWith('/admin')) {
     return null;
   }
@@ -59,7 +59,7 @@ export const Chatbot = () => {
     }
   }, [messages, isOpen, isTyping]);
 
-  const addBotMessage = (text: string, options?: { quickReplies?: string[]; actionLink?: { label: string; url: string } }) => {
+  const addBotMessage = (text: string, options?: { quickReplies?: string[]; actionLink?: { label: string; url: string } | null }) => {
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     setMessages((prev) => [...prev, {
       id: Date.now().toString(),
@@ -67,7 +67,7 @@ export const Chatbot = () => {
       text,
       timestamp: time,
       quickReplies: options?.quickReplies,
-      actionLink: options?.actionLink,
+      actionLink: options?.actionLink || null,
     }]);
   };
 
@@ -216,216 +216,231 @@ export const Chatbot = () => {
         sender: 'bot',
         text: 'Explore our latest Haute Couture collection featuring Velvet Royale Couture, Unstitched Luxury Lawn, and Pure Silk Chiffon editions!',
         timestamp: time,
-        actionLink: { label: 'Explore Shop Catalog', url: '/shop' },
-        quickReplies: ['🚚 Shipping Info', '🧵 Custom Stitching'],
+        actionLink: { label: 'Visit Shop', url: '/shop' },
+        quickReplies: ['🚚 Track My Order', '📞 WhatsApp Support'],
       };
     }
 
+    if (q.includes('whatsapp') || q.includes('phone') || q.includes('contact') || q.includes('support') || q.includes('help')) {
+      return {
+        id: Date.now().toString(),
+        sender: 'bot',
+        text: 'You can reach our Customer Support team via WhatsApp at 03180633323 or email us at Wearomniaa@gmail.com. Support hours: Monday – Saturday: 10:00 AM – 8:00 PM.',
+        timestamp: time,
+        actionLink: { label: 'Contact Page', url: '/contact' },
+        quickReplies: ['🛍️ Browse Catalog', '📦 Shipping Info'],
+      };
+    }
+
+    if (q.includes('payment') || q.includes('card') || q.includes('online') || q.includes('bank')) {
+      return {
+        id: Date.now().toString(),
+        sender: 'bot',
+        text: 'We currently offer Cash On Delivery (COD) for all orders across Pakistan. This allows you to inspect your package before payment. No advance payment required!',
+        timestamp: time,
+        quickReplies: ['📦 Shipping Info', '🔄 Exchange Policy'],
+      };
+    }
+
+    // Default fallback
     return {
       id: Date.now().toString(),
       sender: 'bot',
-      text: "Thank you for reaching out! For specific inquiries, product customizations, or bulk orders, our atelier team is live on WhatsApp.",
+      text: 'I can help you with order tracking, shipping info, exchange policy, and more. Would you like to:',
       timestamp: time,
-      actionLink: { label: 'Chat with Live Agent on WhatsApp', url: 'https://wa.me/923001234567' },
-      quickReplies: ['🚚 Track Order', '📦 Shipping Info', '🛍️ Shop Collection'],
+      quickReplies: ['🚚 Track My Order', '📦 Shipping Info', '🔄 Exchange Policy', '🛍️ Browse Catalog'],
     };
   };
 
-  const handleSend = async (textToSend?: string) => {
-    const text = textToSend || inputMessage;
-    if (!text.trim()) return;
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim()) return;
 
+    const userText = inputMessage.trim();
     const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const userMsg: ChatMessage = {
+
+    // Add user message
+    setMessages((prev) => [...prev, {
       id: Date.now().toString(),
       sender: 'user',
-      text: text.trim(),
+      text: userText,
       timestamp: time,
-    };
+    }]);
 
-    setMessages((prev) => [...prev, userMsg]);
-    if (!textToSend) setInputMessage('');
+    setInputMessage('');
 
-    // Check if we're in a tracking flow
-    const handled = await handleTrackingFlow(text);
-    if (handled) return;
+    // Check if we're in tracking flow
+    const handledByTracking = await handleTrackingFlow(userText);
+    if (handledByTracking) return;
 
-    // Normal response flow
+    // Otherwise, generate bot reply
     setIsTyping(true);
     setTimeout(() => {
-      const botMsg = generateBotReply(text);
-      setMessages((prev) => [...prev, botMsg]);
       setIsTyping(false);
-    }, 700);
+      const botReply = generateBotReply(userText);
+      setMessages((prev) => [...prev, botReply]);
+    }, 800);
+  };
+
+  const handleQuickReply = (reply: string) => {
+    setInputMessage(reply);
+    setTimeout(() => handleSendMessage(), 100);
+  };
+
+  const handleActionLink = (url: string) => {
+    window.location.href = url;
   };
 
   return (
     <>
-      {/* Floating Chatbot Trigger Button */}
+      {/* Floating SupportAssistant Trigger Button */}
       <motion.button
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
+        onClick={() => setIsOpen(true)}
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-36 right-4 sm:bottom-20 sm:right-6 z-40 bg-teal text-champagne p-3.5 sm:px-4 sm:py-3 rounded-full shadow-2xl flex items-center gap-2.5 border border-champagne/40 font-sans"
-        aria-label="Toggle Atelier AI Assistant"
+        transition={{ duration: 0.3 }}
+        className="fixed bottom-24 right-4 sm:bottom-8 sm:right-8 z-30 flex items-center gap-2.5 bg-gradient-to-r from-[#D4AF37] to-[#C5A028] text-black p-3 sm:px-4 sm:py-3 rounded-full shadow-2xl hover:shadow-[#D4AF37]/40 font-sans"
+        title="Customer Support"
+        aria-label="Open Customer Support Assistant"
       >
-        <div className="relative">
-          <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-champagne" />
-          <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse border border-teal" />
-        </div>
-        <span className="hidden sm:inline text-xs uppercase font-bold tracking-wider text-offwhite">
-          OMNIA Concierge AI
+        <Sparkles className="w-5 h-5" />
+        <span className="hidden sm:inline text-xs uppercase font-bold tracking-wider">
+          Need Help?
         </span>
       </motion.button>
 
-      {/* Chat Interface Drawer */}
+      {/* SupportAssistant Panel */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            transition={{ duration: 0.25 }}
-            className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-[calc(100vw-2rem)] sm:w-[380px] h-[520px] max-h-[82vh] z-50 bg-offwhite/95 backdrop-blur-2xl rounded-3xl shadow-2xl border border-champagne flex flex-col overflow-hidden font-sans text-charcoal"
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-24 right-4 sm:bottom-8 sm:right-8 z-40 w-full sm:w-[400px] h-[600px] max-h-[80vh] bg-[#141414] border border-[#262626] rounded-2xl shadow-2xl flex flex-col overflow-hidden"
           >
-            {/* Chatbot Header */}
-            <div className="bg-teal text-offwhite p-4 border-b border-champagne/20 flex items-center justify-between shrink-0">
+            {/* SupportAssistant Header */}
+            <div className="bg-gradient-to-r from-[#D4AF37] to-[#C5A028] p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-full bg-teal-900 border border-champagne/40 flex items-center justify-center text-champagne">
-                  <Sparkles className="w-4 h-4" />
+                <div className="w-10 h-10 rounded-full bg-black/20 flex items-center justify-center">
+                  <Bot className="w-5 h-5 text-black" />
                 </div>
                 <div>
-                  <h3 className="font-serif text-sm font-bold text-champagne">WearOMNIA AI Concierge</h3>
-                  <span className="text-[10px] text-offwhite/70 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Always Active 24/7
-                  </span>
+                  <h3 className="font-serif text-sm font-bold text-black">WearOMNIA Support</h3>
+                  <p className="text-[10px] text-black/70">Customer Service</p>
                 </div>
               </div>
               <button
                 onClick={() => setIsOpen(false)}
-                className="p-1 text-offwhite/80 hover:text-champagne transition-colors rounded-lg"
+                className="w-8 h-8 rounded-full bg-black/20 hover:bg-black/30 flex items-center justify-center transition-colors"
+                aria-label="Close Support Assistant"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4 text-black" />
               </button>
             </div>
 
-            {/* Chat Message Stream */}
-            <div className="flex-1 p-4 overflow-y-auto space-y-4 text-xs">
+            {/* Messages Area */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#0A0A0A]">
               {messages.map((msg) => (
                 <div
                   key={msg.id}
-                  className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
+                  className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
-                  <div className="flex items-start gap-2 max-w-[85%]">
+                  <div
+                    className={`max-w-[80%] rounded-2xl p-3 ${
+                      msg.sender === 'user'
+                        ? 'bg-[#D4AF37] text-black'
+                        : 'bg-[#262626] text-[#FAF8F5]'
+                    }`}
+                  >
                     {msg.sender === 'bot' && (
-                      <div className="w-6 h-6 rounded-full bg-teal text-champagne flex items-center justify-center shrink-0 mt-0.5 shadow-sm">
-                        <Bot className="w-3.5 h-3.5" />
+                      <div className="flex items-center gap-2 mb-1">
+                        <Bot className="w-3 h-3 text-[#D4AF37]" />
+                        <span className="text-[10px] text-[#A3A3A3]">Support</span>
                       </div>
                     )}
-                    <div
-                      className={`p-3 rounded-2xl leading-relaxed shadow-sm ${
-                        msg.sender === 'user'
-                          ? 'bg-teal text-champagne rounded-tr-none font-medium'
-                          : 'bg-sand/70 text-charcoal border border-sand rounded-tl-none font-sans'
-                      }`}
-                    >
-                      <p className="whitespace-pre-line">{msg.text}</p>
+                    <p className="text-sm whitespace-pre-line">{msg.text}</p>
+                    <span className="text-[10px] opacity-60 mt-1 block">{msg.timestamp}</span>
 
-                      {/* Action Link Button */}
-                      {msg.actionLink && (
-                        <a
-                          href={msg.actionLink.url}
-                          target={msg.actionLink.url.startsWith('http') ? '_blank' : '_self'}
-                          rel="noopener noreferrer"
-                          className="mt-2.5 inline-flex items-center gap-1.5 bg-champagne text-teal-950 px-3 py-1.5 rounded-lg text-[10px] uppercase font-bold tracking-wider hover:bg-sand transition-colors shadow-sm"
-                        >
-                          {msg.actionLink.label} <ChevronRight className="w-3 h-3" />
-                        </a>
-                      )}
-                    </div>
+                    {/* Quick Replies */}
+                    {msg.quickReplies && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {msg.quickReplies.map((reply) => (
+                          <button
+                            key={reply}
+                            onClick={() => handleQuickReply(reply)}
+                            className="text-xs bg-black/20 hover:bg-black/30 px-3 py-1.5 rounded-full transition-colors"
+                          >
+                            {reply}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Action Link */}
+                    {msg.actionLink && (
+                      <button
+                        onClick={() => handleActionLink(msg.actionLink?.url || '')}
+                        className="flex items-center gap-2 mt-3 text-xs bg-[#D4AF37] text-black px-3 py-1.5 rounded-full hover:bg-[#C5A028] transition-colors font-semibold"
+                      >
+                        {msg.actionLink?.label || 'Learn More'}
+                        <ChevronRight className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
-
-                  <span className="text-[9px] text-charcoal-muted mt-1 px-1">{msg.timestamp}</span>
-
-                  {/* Quick Replies Options */}
-                  {msg.quickReplies && msg.sender === 'bot' && (
-                    <div className="flex flex-wrap gap-1.5 mt-2 max-w-[90%]">
-                      {msg.quickReplies.map((reply, idx) => (
-                        <button
-                          key={idx}
-                          onClick={() => handleSend(reply)}
-                          className="bg-offwhite text-teal hover:bg-champagne hover:text-teal-950 border border-sand px-2.5 py-1 rounded-full text-[10px] font-semibold transition-all shadow-xs"
-                        >
-                          {reply}
-                        </button>
-                      ))}
-                    </div>
-                  )}
                 </div>
               ))}
 
-              {/* Typing indicator */}
               {isTyping && (
-                <div className="flex items-center gap-2 text-charcoal-muted">
-                  <div className="w-6 h-6 rounded-full bg-teal text-champagne flex items-center justify-center">
-                    <Bot className="w-3.5 h-3.5" />
-                  </div>
-                  <div className="bg-sand/60 px-3 py-2 rounded-2xl flex items-center gap-1 border border-sand">
-                    <span className="w-1.5 h-1.5 bg-teal rounded-full animate-bounce" />
-                    <span className="w-1.5 h-1.5 bg-teal rounded-full animate-bounce [animation-delay:0.2s]" />
-                    <span className="w-1.5 h-1.5 bg-teal rounded-full animate-bounce [animation-delay:0.4s]" />
+                <div className="flex justify-start">
+                  <div className="bg-[#262626] rounded-2xl p-3">
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 text-[#D4AF37] animate-spin" />
+                      <span className="text-sm text-[#A3A3A3]">Support is typing...</span>
+                    </div>
                   </div>
                 </div>
               )}
+
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Chat Input Field */}
-            <div className="p-3 bg-sand/40 border-t border-sand shrink-0">
-              <form
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  handleSend();
-                }}
-                className="flex items-center gap-2"
-              >
+            {/* Input Area */}
+            <div className="p-4 bg-[#141414] border-t border-[#262626]">
+              <div className="flex gap-2">
                 <input
                   type="text"
-                  placeholder={
-                    trackingState === 'awaiting_order_number'
-                      ? 'Enter order number...'
-                      : trackingState === 'awaiting_phone'
-                      ? 'Enter phone number...'
-                      : 'Ask about orders, lawn suits, COD...'
-                  }
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
-                  className="flex-1 bg-offwhite border border-sand rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-teal placeholder-charcoal-muted"
+                  onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                  placeholder="Type your message..."
+                  className="flex-1 bg-[#0A0A0A] border border-[#262626] rounded-lg px-4 py-2.5 text-sm text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]"
                 />
                 <button
-                  type="submit"
-                  disabled={!inputMessage.trim() || trackingState === 'loading'}
-                  className="bg-teal text-champagne p-2 rounded-xl hover:bg-teal-900 transition-colors disabled:opacity-40 shrink-0"
+                  onClick={handleSendMessage}
+                  disabled={!inputMessage.trim()}
+                  className="bg-[#D4AF37] hover:bg-[#C5A028] text-black p-2.5 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  aria-label="Send message"
                 >
-                  {trackingState === 'loading' ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
-                  )}
+                  <Send className="w-4 h-4" />
                 </button>
-              </form>
-              <div className="flex items-center justify-between text-[9px] text-charcoal-muted pt-1 px-1">
-                <span>Powered by WearOMNIA Concierge AI</span>
-                <a
-                  href="https://wa.me/923001234567"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-teal font-semibold hover:underline flex items-center gap-0.5"
+              </div>
+              <div className="flex items-center gap-4 mt-3 text-[10px] text-[#A3A3A3]">
+                <button
+                  onClick={() => window.location.href = '/track-order'}
+                  className="flex items-center gap-1 hover:text-[#D4AF37] transition-colors"
                 >
-                  <PhoneCall className="w-2.5 h-2.5" /> Live Agent
-                </a>
+                  <Package className="w-3 h-3" />
+                  Track Order
+                </button>
+                <button
+                  onClick={() => window.location.href = '/contact'}
+                  className="flex items-center gap-1 hover:text-[#D4AF37] transition-colors"
+                >
+                  <PhoneCall className="w-3 h-3" />
+                  Contact Us
+                </button>
               </div>
             </div>
           </motion.div>
