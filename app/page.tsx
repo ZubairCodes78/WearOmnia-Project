@@ -35,13 +35,13 @@ export default async function HomePage() {
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
             <span className="text-[10px] uppercase tracking-[0.3em] font-semibold text-champagne-700 block">
-              Flagship Collection 2026
+              New Arrivals
             </span>
             <h2 className="font-serif text-3xl sm:text-4xl font-bold text-teal">
-              Inaugural Launch Garment
+              Our Collection
             </h2>
             <p className="text-xs text-charcoal-muted font-sans">
-              Handcrafted in small batches at our Lahore studio.
+              Simple, modest and stylish clothing for women.
             </p>
           </div>
 

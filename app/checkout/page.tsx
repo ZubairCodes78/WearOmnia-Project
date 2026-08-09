@@ -664,7 +664,7 @@ export default function CheckoutPage() {
 
                 <div className="text-[11px] text-center text-charcoal-muted space-y-1 pt-2">
                   <p>🔒 7-Day Exchange Guarantee across Pakistan.</p>
-                  <p>Dispatched from Lahore Atelier via Express Courier.</p>
+                  <p>Dispatched from Lahore via Express Courier.</p>
                 </div>
               </div>
             </div>

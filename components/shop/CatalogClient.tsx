@@ -138,13 +138,16 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
       {/* Header Title Section */}
       <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
         <span className="text-[10px] sm:text-xs uppercase tracking-[0.25em] sm:tracking-[0.3em] font-semibold text-champagne-700">
-          WearOMNIA Catalog
+          New Arrivals
         </span>
         <h1 className="font-serif text-2xl sm:text-5xl font-bold text-teal mt-1 sm:mt-2">
-          {showWishlistOnly ? 'Your Saved Wishlist' : 'Haute Couture Collection'}
+          {showWishlistOnly ? 'Your Saved Wishlist' : 'Shop Our Collection'}
         </h1>
         <p className="text-xs text-charcoal-muted mt-2">
-          Showing {filteredProducts.length} luxury Pakistani unstitched lawn, silk chiffon & velvet suits.
+          Explore our latest modest and stylish stitched clothing.
+        </p>
+        <p className="text-xs text-charcoal-muted mt-1">
+          Showing {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'}
         </p>
       </div>
 

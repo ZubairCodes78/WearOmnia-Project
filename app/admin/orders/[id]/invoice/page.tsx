@@ -56,8 +56,7 @@ export default async function PrintInvoicePage({ params }: PrintInvoiceProps) {
         <div className="text-right">
           <h3 className="font-serif font-bold uppercase text-teal-900 mb-1">Dispatched From:</h3>
           <p className="font-bold">WearOMNIA Flagship Atelier</p>
-          <p>M.M. Alam Road, Gulberg III</p>
-          <p>Lahore, Punjab, Pakistan</p>
+          <p>Lahore, Pakistan</p>
           <p className="mt-1 font-semibold text-teal-950">Payment Method: CASH ON DELIVERY (COD)</p>
           {order.courier && (
             <p className="font-semibold text-teal-950">Courier: {order.courier}</p>

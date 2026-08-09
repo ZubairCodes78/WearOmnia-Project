@@ -53,13 +53,13 @@ export default async function AdminDashboardPage() {
       <div className="bg-[#0A2528]/80 backdrop-blur-xl p-8 rounded-3xl border border-champagne/30 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-6">
         <div>
           <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.3em] font-semibold text-champagne bg-teal-900/60 px-3.5 py-1 rounded-full border border-champagne/30">
-            <Sparkles className="w-3 h-3 text-champagne" /> Atelier Executive Console
+            <Sparkles className="w-3 h-3 text-champagne" /> Admin Console
           </span>
           <h1 className="font-serif text-3xl sm:text-4xl font-bold text-offwhite mt-2">
-            WearOMNIA Business Intelligence
+            WearOMNIA Dashboard
           </h1>
           <p className="text-xs text-offwhite/70 mt-1 font-sans">
-            Real-time SSE event streaming, revenue analytics, and nationwide COD fulfillment distribution.
+            Real-time analytics, revenue tracking, and order management.
           </p>
         </div>
         <Link

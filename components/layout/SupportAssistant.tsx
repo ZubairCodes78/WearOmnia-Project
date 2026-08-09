@@ -214,7 +214,7 @@ export const SupportAssistant = () => {
       return {
         id: Date.now().toString(),
         sender: 'bot',
-        text: 'Explore our latest Haute Couture collection featuring Velvet Royale Couture, Unstitched Luxury Lawn, and Pure Silk Chiffon editions!',
+        text: 'Explore our latest collection of simple, modest and stylish clothing for women.',
         timestamp: time,
         actionLink: { label: 'Visit Shop', url: '/shop' },
         quickReplies: ['🚚 Track My Order', '📞 WhatsApp Support'],

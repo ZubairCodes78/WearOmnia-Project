@@ -10,15 +10,14 @@ import { SupportAssistant } from '@/components/layout/SupportAssistant';
 import { ToastProvider } from '@/components/layout/ToastProvider';
 
 export const metadata: Metadata = {
-  title: 'WearOMNIA | World-Class Luxury Pakistani Fashion & Unstitched Lawn',
+  title: 'WearOMNIA | Simple, Modest & Stylish Clothing',
   description:
-    'Discover WearOMNIA haute couture. Hand-crafted printed & embroidered unstitched luxury lawn, velvet royale couture, pure silk chiffon suits with nationwide Cash On Delivery across Pakistan.',
+    'WearOMNIA offers simple, modest and stylish stitched clothing for women. Modern Pakistani fashion with nationwide Cash On Delivery.',
   keywords: [
     'WearOMNIA',
-    'Luxury Pakistani Fashion',
-    'Unstitched Lawn 2026',
-    'Velvet Couture',
-    'Silk Suits',
+    'Pakistani Fashion',
+    'Stitched Clothing',
+    'Modest Fashion',
     'Cash On Delivery Pakistan',
   ],
   authors: [{ name: 'WearOMNIA' }],

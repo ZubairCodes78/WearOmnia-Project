@@ -19,7 +19,7 @@ export default function ShippingPolicyPage() {
               <Truck className="w-5 h-5 text-champagne-700" /> 1. Dispatch & Delivery Timelines
             </h3>
             <p>
-              All WearOMNIA orders are processed and inspected at our main Lahore Atelier before dispatching.
+              All WearOMNIA orders are processed and inspected at our main Lahore location before dispatching.
             </p>
             <ul className="list-disc pl-5 space-y-1 text-charcoal-muted">
               <li><strong>Major Cities (Lahore, Karachi, Islamabad, Rawalpindi, Faisalabad):</strong> 2 to 3 Business Days.</li>

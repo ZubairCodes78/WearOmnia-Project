@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Mail, Phone, Clock, MessageSquare, Send, CheckCircle2 } from 'lucide-react';
+import { Mail, Phone, Clock, MessageSquare, Send, CheckCircle2, MapPin } from 'lucide-react';
 
 export default function ContactPage() {
   const [submitted, setSubmitted] = useState(false);
@@ -92,6 +92,16 @@ export default function ContactPage() {
                   <div>
                     <h4 className="font-bold text-teal">Business Hours</h4>
                     <p className="text-charcoal-muted">{settings.supportHours}</p>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="w-9 h-9 rounded-xl bg-teal text-champagne flex items-center justify-center shrink-0 mt-0.5">
+                    <MapPin className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-teal">Location</h4>
+                    <p className="text-charcoal-muted">Lahore, Pakistan</p>
                   </div>
                 </div>
               </div>
@@ -196,7 +206,7 @@ export default function ContactPage() {
                   type="submit"
                   className="w-full bg-teal text-champagne py-4 rounded-xl text-xs uppercase font-bold tracking-widest hover:bg-teal-900 transition-all shadow-md flex items-center justify-center gap-2"
                 >
-                  <Send className="w-4 h-4" /> Send Message To Concierge
+                  <Send className="w-4 h-4" /> Send Message
                 </button>
               </form>
             )}

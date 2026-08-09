@@ -7,33 +7,33 @@ import { ScrollReveal } from '@/components/layout/ScrollReveal';
 const FEATURES = [
   {
     icon: Sparkles,
-    title: 'Premium Luxury Fabrics',
-    description: 'Selected from fine 80/80 lawn yarn, 100% pure silk chiffon, and lush 9000 micro velvet.',
+    title: 'Quality Fabrics',
+    description: 'We select the best materials for comfortable and durable clothing.',
   },
   {
     icon: Scissors,
-    title: 'Hand-Crafted Stitching',
-    description: 'Artisanal embroideries incorporating intricate metallic tilla wirework, dabka & pearls.',
+    title: 'Expert Stitching',
+    description: 'Each piece is carefully crafted with attention to detail.',
   },
   {
     icon: Banknote,
-    title: 'Cash On Delivery Only',
-    description: 'Pay comfortably at your doorstep upon receiving your luxury WearOMNIA package.',
+    title: 'Cash On Delivery',
+    description: 'Pay when you receive your order. No advance payment required.',
   },
   {
     icon: Truck,
-    title: 'Fast Nationwide Delivery',
-    description: 'Swift 2-4 business day delivery across all provinces and cities in Pakistan.',
+    title: 'Fast Delivery',
+    description: 'Nationwide delivery across Pakistan in 2-4 business days.',
   },
   {
     icon: ShieldCheck,
-    title: 'Secure & Private Shopping',
-    description: 'Zero forced account registrations. Seamless guest checkout optimized for speed.',
+    title: 'Easy Shopping',
+    description: 'No account required. Simple guest checkout process.',
   },
   {
     icon: RotateCcw,
-    title: '7-Day Easy Exchange',
-    description: 'Simple size or suit exchange process supported by our dedicated WhatsApp concierge.',
+    title: '7-Day Exchange',
+    description: 'Easy exchange policy for size or style changes.',
   },
 ];
 
@@ -47,10 +47,10 @@ export const WhyWearOmnia = () => {
               The WearOMNIA Difference
             </span>
             <h2 className="font-serif text-3xl sm:text-5xl font-bold text-teal mt-2">
-              Why Discerning Clients Choose Us
+              Why Choose WearOMNIA
             </h2>
             <p className="text-sm text-charcoal-muted mt-3">
-              Every garment from our Lahore atelier reflects our obsession with quality, heritage, and customer satisfaction.
+              Every garment reflects our commitment to quality and customer satisfaction.
             </p>
           </div>
         </ScrollReveal>

@@ -87,7 +87,7 @@ export const Header: React.FC = () => {
               Wear<span className="text-champagne-700">OMNIA</span>
             </span>
             <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.2em] sm:tracking-[0.3em] font-medium text-charcoal-muted -mt-1 font-sans">
-              LUXURY FASHION
+              PAKISTANI FASHION
             </span>
           </Link>
 
@@ -270,8 +270,8 @@ export const Header: React.FC = () => {
               </div>
 
               <div className="border-t border-sand pt-6 mt-6 text-center text-xs text-charcoal-muted font-sans space-y-2">
-                <p>📍 M.M. Alam Road, Gulberg III, Lahore, Pakistan</p>
-                <p>📞 Helpline: +92 300 1234567</p>
+                <p>📍 Lahore, Pakistan</p>
+                <p>📞 Helpline: 03180633323</p>
               </div>
             </motion.div>
           </>

@@ -109,7 +109,7 @@ export default async function ShippingLabelPage({ params }: ShippingLabelProps) 
         {/* Origin Atelier Info */}
         <div className="text-[9px] font-mono text-center space-y-0.5 text-gray-600">
           <p className="font-bold uppercase text-black">DISPATCHED FROM WEAROMNIA LAHORE ATELIER</p>
-          <p>M.M. Alam Road, Gulberg III, Lahore • Helpline: +92 300 1234567</p>
+          <p>Lahore, Pakistan • Helpline: 03180633323</p>
         </div>
       </div>
     </div>

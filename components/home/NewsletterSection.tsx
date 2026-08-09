@@ -25,13 +25,13 @@ export const NewsletterSection = () => {
             <Mail className="w-6 h-6" />
           </div>
           <span className="text-xs uppercase tracking-[0.3em] font-semibold text-champagne-700">
-            Exclusive Access
+            Stay Updated
           </span>
           <h2 className="font-serif text-3xl sm:text-4xl font-bold text-teal mt-1">
-            Subscribe To The OMNIA Journal
+            Subscribe To Our Newsletter
           </h2>
           <p className="text-xs sm:text-sm text-charcoal-muted mt-2 max-w-lg mx-auto leading-relaxed">
-            Be the first to receive priority notifications for lawn collection launches, private velvet vault preview sales, and exclusive discount codes.
+            Be the first to know about new arrivals, special offers, and updates.
           </p>
         </ScrollReveal>
 
@@ -44,7 +44,7 @@ export const NewsletterSection = () => {
             >
               <CheckCircle2 className="w-6 h-6 text-champagne shrink-0" />
               <p className="text-xs font-semibold uppercase tracking-wider text-offwhite">
-                Thank you! You have been added to our VIP Privé List.
+                Thank you! You have been added to our mailing list.
               </p>
             </motion.div>
           ) : (
@@ -63,7 +63,7 @@ export const NewsletterSection = () => {
                 type="submit"
                 className="btn-premium btn-primary !py-3.5 shrink-0"
               >
-                Join VIP List
+                Subscribe
               </motion.button>
             </form>
           )}

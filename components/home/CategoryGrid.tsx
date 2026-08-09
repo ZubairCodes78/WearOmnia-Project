@@ -5,31 +5,31 @@ import { ArrowUpRight } from 'lucide-react';
 
 const CATEGORIES = [
   {
-    title: 'Unstitched Luxury Lawn',
-    subtitle: 'Printed & Schiffli 3-Piece',
+    title: 'New Arrivals',
+    subtitle: 'Latest Collection',
     image: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?q=80&w=800&auto=format&fit=crop',
-    link: '/shop?category=unstitched-lawn',
+    link: '/shop',
     span: 'col-span-1 md:col-span-2 row-span-1',
   },
   {
-    title: 'Velvet Royale',
-    subtitle: 'Micro-Velvet & Gold Zari',
+    title: 'Stitched Clothing',
+    subtitle: 'Ready To Wear',
     image: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop',
-    link: '/shop?category=velvet-couture',
+    link: '/shop',
     span: 'col-span-1 row-span-1',
   },
   {
-    title: 'Silk & Chiffon',
-    subtitle: '100% Pure Silk Dupattas',
+    title: 'Modest Fashion',
+    subtitle: 'Simple & Elegant',
     image: 'https://images.unsplash.com/photo-1539109136881-3be0616acf4b?q=80&w=800&auto=format&fit=crop',
-    link: '/shop?category=silk-edition',
+    link: '/shop',
     span: 'col-span-1 row-span-1',
   },
   {
-    title: 'Festive Pret',
-    subtitle: 'Ready To Wear Silhouettes',
+    title: 'Everyday Wear',
+    subtitle: 'Comfortable Styles',
     image: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=800&auto=format&fit=crop',
-    link: '/shop?category=festive-pret',
+    link: '/shop',
     span: 'col-span-1 md:col-span-2 row-span-1',
   },
 ];
@@ -41,7 +41,7 @@ export const CategoryGrid = () => {
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-12">
           <div>
             <span className="text-xs uppercase tracking-[0.25em] font-semibold text-champagne-700">
-              Curated Selection
+              Our Collections
             </span>
             <h2 className="font-serif text-3xl sm:text-5xl font-bold text-teal mt-1">
               Explore Our Categories
@@ -51,7 +51,7 @@ export const CategoryGrid = () => {
             href="/shop"
             className="text-xs uppercase tracking-widest font-semibold text-teal hover:text-champagne-700 flex items-center gap-1 mt-4 md:mt-0 transition-colors"
           >
-            View All Collections <ArrowUpRight className="w-4 h-4" />
+            View All <ArrowUpRight className="w-4 h-4" />
           </Link>
         </div>
 

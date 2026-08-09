@@ -286,8 +286,8 @@ export function CategoriesClient({ initialCategories, initialCollections }: Cate
       <div className="space-y-6 pt-8 border-t border-[#262626]">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#141414] p-6 border border-[#262626] rounded-xl">
           <div>
-            <h2 className="text-2xl font-serif text-[#FAF8F5]">Curated Collections ({collections.length})</h2>
-            <p className="text-xs text-[#A3A3A3] mt-1">Manage luxury collections, drop campaigns, and editorial banners.</p>
+            <h2 className="text-2xl font-serif text-[#FAF8F5]">Collections ({collections.length})</h2>
+            <p className="text-xs text-[#A3A3A3] mt-1">Manage collections and banners.</p>
           </div>
           <button
             onClick={() => openColModal()}

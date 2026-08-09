@@ -13,8 +13,8 @@ interface ShopPageProps {
 
 export async function generateMetadata({ searchParams }: ShopPageProps) {
   const { category, search } = await searchParams;
-  let title = 'Shop All Luxury Fashion | WearOMNIA';
-  let description = 'Browse luxury unstitched lawn, velvet royale couture, and silk chiffon suits with nationwide COD.';
+  let title = 'Shop Our Collection | WearOMNIA';
+  let description = 'Explore our latest modest and stylish stitched clothing.';
   if (category) {
     title = `${category.replace('-', ' ').toUpperCase()} Collection | WearOMNIA`;
   } else if (search) {

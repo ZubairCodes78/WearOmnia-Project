@@ -22,7 +22,7 @@ export const Footer = () => {
   const [settings, setSettings] = useState<SiteSettings>({
     whatsappNumber: '03180633323',
     storeEmail: 'Wearomniaa@gmail.com',
-    storeAddress: '',
+    storeAddress: 'Lahore, Pakistan',
     instagramUrl: 'https://www.instagram.com/wearomnia_/',
     facebookUrl: 'https://www.facebook.com/profile.php?id=61579168069040',
     tiktokUrl: 'https://www.tiktok.com/@wearomnia_',
