@@ -18,6 +18,8 @@ export async function generateMetadata({ params }: ProductPageProps) {
   return generateProductMetadata(product);
 }
 
+export const dynamic = 'force-dynamic';
+
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
 

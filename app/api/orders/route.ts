@@ -4,6 +4,7 @@ import { defaultPaymentGateway } from '@/lib/payments/cod';
 import { recordAuditLog } from '@/lib/audit';
 import { NotificationService } from '@/lib/notifications/notification-service';
 import { broadcastAdminEvent } from '@/lib/events/event-emitter';
+import { getSiteSettings } from '@/lib/settings';
 
 export async function POST(req: Request) {
   try {
@@ -26,6 +27,39 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Please complete all required fields and add items to your order' }, { status: 400 });
     }
 
+    // Check for duplicate order submission (same phone + same items within 1 minute)
+    const oneMinuteAgo = new Date(Date.now() - 60000);
+    const recentOrder = await prisma.order.findFirst({
+      where: {
+        customerPhone: phone.trim(),
+        createdAt: { gte: oneMinuteAgo },
+      },
+    });
+
+    if (recentOrder) {
+      return NextResponse.json({ error: 'You already placed an order recently. Please wait before placing another order.' }, { status: 429 });
+    }
+
+    // Check stock availability for all items
+    for (const item of items) {
+      if (item.productId) {
+        const product = await prisma.product.findUnique({
+          where: { id: item.productId },
+          select: { stockQuantity: true, title: true },
+        });
+
+        if (!product) {
+          return NextResponse.json({ error: `Product not found: ${item.title}` }, { status: 400 });
+        }
+
+        if (product.stockQuantity < item.quantity) {
+          return NextResponse.json({
+            error: `Sorry, "${product.title}" is no longer available in the requested quantity. Only ${product.stockQuantity} units left in stock.`
+          }, { status: 400 });
+        }
+      }
+    }
+
     // 1. Calculate subtotal
     let subtotal = 0;
     for (const item of items) {
@@ -33,13 +67,17 @@ export async function POST(req: Request) {
     }
 
     // 2. Shipping fee
-    let shippingFee = 250;
+    const siteSettings = await getSiteSettings();
+    let shippingFee = siteSettings.flatShippingFee || 250;
     const rule = await prisma.shippingRule.findUnique({ where: { city } });
     if (rule) {
       shippingFee = subtotal >= rule.freeShippingMinAmount ? 0 : rule.charge;
-    } else if (subtotal >= 10000) {
+    } else if (subtotal >= (siteSettings.freeShippingThreshold || 10000)) {
       shippingFee = 0;
     }
+
+    // 3. COD fee
+    const codFee = siteSettings.codCharge || 0;
 
     // 3. Process Coupon Discount
     let discountAmount = 0;
@@ -65,7 +103,7 @@ export async function POST(req: Request) {
       }
     }
 
-    const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee);
+    const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee + codFee);
 
     // 4. Customer linkage
     let customer = await prisma.customer.findUnique({ where: { phone: phone.trim() } });
@@ -145,6 +183,7 @@ export async function POST(req: Request) {
         subtotal,
         discountAmount,
         shippingFee,
+        codCharges: codFee,
         totalAmount,
         paymentMethod: paymentResult.paymentMethod,
         status: 'PENDING',

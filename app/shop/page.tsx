@@ -23,6 +23,8 @@ export async function generateMetadata({ searchParams }: ShopPageProps) {
   return generateCategoryMetadata(title, description);
 }
 
+export const dynamic = 'force-dynamic';
+
 export default async function ShopPage({ searchParams }: ShopPageProps) {
   const params = await searchParams;
 

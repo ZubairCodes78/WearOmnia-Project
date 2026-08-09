@@ -95,14 +95,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setCart((prev) => prev.filter((i) => i.id !== id));
   };
 
-  const updateQuantity = (id: string, delta: number) => {
+  const updateQuantity = (id: string, newQuantity: number) => {
     setCart((prev) =>
       prev
         .map((i) => {
           if (i.id === id) {
-            const newQty = i.quantity + delta;
-            if (newQty <= 0) return null;
-            return { ...i, quantity: Math.min(newQty, i.maxStock) };
+            if (newQuantity <= 0) return null;
+            return { ...i, quantity: Math.min(newQuantity, i.maxStock) };
           }
           return i;
         })

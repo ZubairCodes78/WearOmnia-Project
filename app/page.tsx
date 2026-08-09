@@ -7,12 +7,23 @@ import { WhyWearOmnia } from '@/components/home/WhyWearOmnia';
 import { NewsletterSection } from '@/components/home/NewsletterSection';
 import { PageTransition } from '@/components/layout/PageTransition';
 
+async function getLaunchProducts() {
+  try {
+    return await prisma.product.findMany({
+      where: { status: 'PUBLISHED' },
+      include: { images: true, variants: true, category: true },
+      take: 4,
+    });
+  } catch (error) {
+    console.error('Failed to fetch products:', error);
+    return [];
+  }
+}
+
+export const dynamic = 'force-dynamic';
+
 export default async function HomePage() {
-  const launchProducts = await prisma.product.findMany({
-    where: { status: 'PUBLISHED' },
-    include: { images: true, variants: true, category: true },
-    take: 4,
-  });
+  const launchProducts = await getLaunchProducts();
 
   return (
     <PageTransition>

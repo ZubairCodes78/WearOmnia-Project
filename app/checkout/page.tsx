@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useCart } from '@/context/CartContext';
-import { Truck, ShieldCheck, Banknote, ArrowRight, Lock, Tag, ChevronRight, Check } from 'lucide-react';
+import { Truck, ShieldCheck, Banknote, ArrowRight, Lock, Tag, ChevronRight, Check, AlertCircle } from 'lucide-react';
 import { PageTransition } from '@/components/layout/PageTransition';
 
 const PROVINCES = [
@@ -43,14 +43,37 @@ export default function CheckoutPage() {
     orderNotes: '',
   });
 
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [couponInput, setCouponInput] = useState('');
   const [couponError, setCouponError] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+  const [hasSubmitted, setHasSubmitted] = useState(false);
+  const [siteSettings, setSiteSettings] = useState({
+    flatShippingFee: 250,
+    freeShippingThreshold: 10000,
+    codCharge: 0,
+  });
 
-  const shippingFee = subtotal >= 10000 || cart.length === 0 ? 0 : 250;
-  const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee);
+  // Fetch site settings for live shipping/cod calculation
+  useEffect(() => {
+    fetch('/api/site-settings')
+      .then(res => res.json())
+      .then(data => {
+        if (data.settings) {
+          setSiteSettings({
+            flatShippingFee: data.settings.flatShippingFee || 250,
+            freeShippingThreshold: data.settings.freeShippingThreshold || 10000,
+            codCharge: data.settings.codCharge || 0,
+          });
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  const shippingFee = subtotal >= siteSettings.freeShippingThreshold || cart.length === 0 ? 0 : siteSettings.flatShippingFee;
+  const codFee = siteSettings.codCharge;
+  const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee + codFee);
 
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -78,17 +101,70 @@ export default function CheckoutPage() {
     }
   };
 
+  // Pakistani phone number validation
+  const validatePhone = (phone: string): boolean => {
+    const cleaned = phone.replace(/\D/g, '');
+    // Accept 03XXXXXXXXX (11 digits) or 923XXXXXXXXX (12 digits)
+    return /^03[0-9]{8}$/.test(cleaned) || /^923[0-9]{8}$/.test(cleaned);
+  };
+
+  const normalizePhone = (phone: string): string => {
+    const cleaned = phone.replace(/\D/g, '');
+    // Convert to international format
+    if (cleaned.startsWith('03')) {
+      return '92' + cleaned.substring(1);
+    }
+    return cleaned;
+  };
+
+  // Form validation
+  const validateForm = (): boolean => {
+    const errors: Record<string, string> = {};
+
+    if (!formData.fullName.trim()) {
+      errors.fullName = 'Full name is required';
+    }
+
+    if (!formData.phone.trim()) {
+      errors.phone = 'Mobile number is required';
+    } else if (!validatePhone(formData.phone)) {
+      errors.phone = 'Please enter a valid Pakistani mobile number (03XXXXXXXXX)';
+    }
+
+    if (formData.whatsapp && !validatePhone(formData.whatsapp)) {
+      errors.whatsapp = 'Please enter a valid Pakistani WhatsApp number';
+    }
+
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address';
+    }
+
+    if (!formData.address.trim()) {
+      errors.address = 'Complete address is required';
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  // Quantity handler with stock validation
+  const handleQuantityChange = (itemId: string, newQuantity: number, maxStock: number) => {
+    if (newQuantity < 1) return; // Prevent going below 1
+    if (newQuantity > maxStock) return; // Prevent exceeding stock
+    updateQuantity(itemId, newQuantity);
+  };
+
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMessage('');
+    setHasSubmitted(true);
+    setFormErrors({});
 
     if (cart.length === 0) {
-      setErrorMessage('Your bag is empty. Please add items before checking out.');
+      setFormErrors({ _form: 'Your bag is empty. Please add items before checking out.' });
       return;
     }
 
-    if (!formData.fullName || !formData.phone || !formData.address) {
-      setErrorMessage('Please complete your full name, mobile number, and complete delivery address.');
+    if (!validateForm()) {
       return;
     }
 
@@ -100,8 +176,8 @@ export default function CheckoutPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fullName: formData.fullName,
-          phone: formData.phone,
-          whatsapp: formData.whatsapp || formData.phone,
+          phone: normalizePhone(formData.phone),
+          whatsapp: formData.whatsapp ? normalizePhone(formData.whatsapp) : normalizePhone(formData.phone),
           email: formData.email,
           province: formData.province,
           city: formData.city,
@@ -124,7 +200,7 @@ export default function CheckoutPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setErrorMessage(data.error || 'Failed to place order');
+        setFormErrors({ _form: data.error || 'Failed to place order' });
         setIsSubmitting(false);
       } else {
         clearCart();
@@ -132,7 +208,7 @@ export default function CheckoutPage() {
       }
     } catch (err) {
       console.error('Order submit error:', err);
-      setErrorMessage('A network error occurred. Please try again.');
+      setFormErrors({ _form: 'A network error occurred. Please try again.' });
       setIsSubmitting(false);
     }
   };
@@ -183,9 +259,10 @@ export default function CheckoutPage() {
             {/* Left Column: Form Steps */}
             <div className="lg:col-span-7 space-y-8">
               {/* Error Alert */}
-              {errorMessage && (
-                <div className="bg-red-50 text-red-700 border border-red-200 p-4 rounded-2xl text-xs font-semibold">
-                  {errorMessage}
+              {formErrors._form && (
+                <div className="bg-red-50 text-red-700 border border-red-200 p-4 rounded-2xl text-xs font-semibold flex items-start gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                  {formErrors._form}
                 </div>
               )}
 
@@ -208,9 +285,20 @@ export default function CheckoutPage() {
                       required
                       placeholder="e.g. Fatima Khan"
                       value={formData.fullName}
-                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                      className="w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border border-sand/80 focus:outline-none focus:ring-1 focus:ring-teal"
+                      onChange={(e) => {
+                        setFormData({ ...formData, fullName: e.target.value });
+                        if (formErrors.fullName) setFormErrors({ ...formErrors, fullName: '' });
+                      }}
+                      className={`w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border focus:outline-none focus:ring-1 ${
+                        formErrors.fullName ? 'border-red-500 focus:ring-red-500' : 'border-sand/80 focus:ring-teal'
+                      }`}
                     />
+                    {formErrors.fullName && (
+                      <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {formErrors.fullName}
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -221,11 +309,22 @@ export default function CheckoutPage() {
                       <input
                         type="tel"
                         required
-                        placeholder="0300-1234567"
+                        placeholder="e.g. 03123456789"
                         value={formData.phone}
-                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                        className="w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border border-sand/80 focus:outline-none focus:ring-1 focus:ring-teal"
+                        onChange={(e) => {
+                          setFormData({ ...formData, phone: e.target.value });
+                          if (formErrors.phone) setFormErrors({ ...formErrors, phone: '' });
+                        }}
+                        className={`w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border focus:outline-none focus:ring-1 ${
+                          formErrors.phone ? 'border-red-500 focus:ring-red-500' : 'border-sand/80 focus:ring-teal'
+                        }`}
                       />
+                      {formErrors.phone && (
+                        <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {formErrors.phone}
+                        </p>
+                      )}
                     </div>
                     <div>
                       <label className="text-[10px] uppercase font-bold text-charcoal tracking-wider block mb-1.5">
@@ -233,11 +332,22 @@ export default function CheckoutPage() {
                       </label>
                       <input
                         type="tel"
-                        placeholder="0300-1234567"
+                        placeholder="e.g. 03123456789"
                         value={formData.whatsapp}
-                        onChange={(e) => setFormData({ ...formData, whatsapp: e.target.value })}
-                        className="w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border border-sand/80 focus:outline-none focus:ring-1 focus:ring-teal"
+                        onChange={(e) => {
+                          setFormData({ ...formData, whatsapp: e.target.value });
+                          if (formErrors.whatsapp) setFormErrors({ ...formErrors, whatsapp: '' });
+                        }}
+                        className={`w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border focus:outline-none focus:ring-1 ${
+                          formErrors.whatsapp ? 'border-red-500 focus:ring-red-500' : 'border-sand/80 focus:ring-teal'
+                        }`}
                       />
+                      {formErrors.whatsapp && (
+                        <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1">
+                          <AlertCircle className="w-3 h-3" />
+                          {formErrors.whatsapp}
+                        </p>
+                      )}
                     </div>
                   </div>
 
@@ -247,11 +357,22 @@ export default function CheckoutPage() {
                     </label>
                     <input
                       type="email"
-                      placeholder="fatima@example.com"
+                      placeholder="e.g. fatima@example.com"
                       value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border border-sand/80 focus:outline-none focus:ring-1 focus:ring-teal"
+                      onChange={(e) => {
+                        setFormData({ ...formData, email: e.target.value });
+                        if (formErrors.email) setFormErrors({ ...formErrors, email: '' });
+                      }}
+                      className={`w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border focus:outline-none focus:ring-1 ${
+                        formErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-sand/80 focus:ring-teal'
+                      }`}
                     />
+                    {formErrors.email && (
+                      <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {formErrors.email}
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>
@@ -311,9 +432,20 @@ export default function CheckoutPage() {
                       rows={3}
                       placeholder="House #, Street #, Sector, Area Landmark..."
                       value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      className="w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border border-sand/80 focus:outline-none focus:ring-1 focus:ring-teal"
+                      onChange={(e) => {
+                        setFormData({ ...formData, address: e.target.value });
+                        if (formErrors.address) setFormErrors({ ...formErrors, address: '' });
+                      }}
+                      className={`w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border focus:outline-none focus:ring-1 ${
+                        formErrors.address ? 'border-red-500 focus:ring-red-500' : 'border-sand/80 focus:ring-teal'
+                      }`}
                     />
+                    {formErrors.address && (
+                      <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" />
+                        {formErrors.address}
+                      </p>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -372,13 +504,13 @@ export default function CheckoutPage() {
 
             {/* Right Column: Order Summary & Place Order */}
             <div className="lg:col-span-5 space-y-6">
-              <div className="bg-sand/60 p-6 sm:p-8 rounded-3xl border border-sand/80 shadow-lg sticky top-28 space-y-6">
+              <div className="bg-sand/60 p-6 sm:p-8 rounded-3xl border border-sand/80 shadow-lg sticky top-4 sm:top-28 space-y-6">
                 <h3 className="font-serif text-xl font-bold text-teal border-b border-sand/80 pb-4">
                   Order Summary ({cart.reduce((a, b) => a + b.quantity, 0)} Items)
                 </h3>
 
                 {/* Items List with Interactive Quantity Adjusters */}
-                <div className="space-y-4 max-h-72 overflow-y-auto pr-1">
+                <div className="space-y-4 max-h-64 sm:max-h-72 overflow-y-auto pr-1">
                   {cart.map((item) => (
                     <div key={item.id} className="flex items-center gap-3 bg-sand/40 p-2.5 rounded-2xl border border-sand/80">
                       <div className="relative w-14 h-18 rounded-xl overflow-hidden shrink-0 bg-sand border border-sand">
@@ -394,16 +526,20 @@ export default function CheckoutPage() {
                           <div className="flex items-center border border-sand rounded-lg bg-sand text-[11px]">
                             <button
                               type="button"
-                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                              className="px-1.5 py-0.5 text-teal hover:bg-sand-dark rounded-l-lg"
+                              onClick={() => handleQuantityChange(item.id, item.quantity - 1, item.maxStock)}
+                              disabled={item.quantity <= 1}
+                              className="px-1.5 py-0.5 text-teal hover:bg-sand-dark rounded-l-lg disabled:opacity-40 disabled:cursor-not-allowed"
+                              aria-label="Decrease quantity"
                             >
                               -
                             </button>
                             <span className="px-2 font-bold">{item.quantity}</span>
                             <button
                               type="button"
-                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                              className="px-1.5 py-0.5 text-teal hover:bg-sand-dark rounded-r-lg"
+                              onClick={() => handleQuantityChange(item.id, item.quantity + 1, item.maxStock)}
+                              disabled={item.quantity >= item.maxStock}
+                              className="px-1.5 py-0.5 text-teal hover:bg-sand-dark rounded-r-lg disabled:opacity-40 disabled:cursor-not-allowed"
+                              aria-label="Increase quantity"
                             >
                               +
                             </button>
@@ -421,6 +557,12 @@ export default function CheckoutPage() {
                         <p className="text-xs font-bold text-teal">
                           Rs. {(item.price * item.quantity).toLocaleString()}
                         </p>
+                        {item.quantity >= item.maxStock && (
+                          <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1 justify-end">
+                            <AlertCircle className="w-3 h-3" />
+                            Max stock
+                          </p>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -480,9 +622,17 @@ export default function CheckoutPage() {
                   <div className="flex justify-between">
                     <span className="text-charcoal-muted">Nationwide Delivery:</span>
                     <span className="font-semibold">
-                      {shippingFee === 0 ? 'FREE (Orders > Rs. 10,000)' : `Rs. ${shippingFee}`}
+                      {shippingFee === 0
+                        ? `FREE (Orders > Rs. ${siteSettings.freeShippingThreshold.toLocaleString()})`
+                        : `Rs. ${shippingFee}`}
                     </span>
                   </div>
+                  {codFee > 0 && (
+                    <div className="flex justify-between">
+                      <span className="text-charcoal-muted">COD Fee:</span>
+                      <span className="font-semibold">Rs. {codFee}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-lg font-bold text-teal pt-3 border-t border-sand/80">
                     <span>Grand Total (COD):</span>
                     <span>Rs. {totalAmount.toLocaleString()}</span>
@@ -495,10 +645,16 @@ export default function CheckoutPage() {
                   whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-teal text-champagne py-4 rounded-xl text-xs uppercase font-bold tracking-widest hover:bg-teal-900 transition-all shadow-xl flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="w-full bg-teal text-champagne py-4 rounded-xl text-xs uppercase font-bold tracking-widest hover:bg-teal-900 transition-all shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 mt-6"
                 >
                   {isSubmitting ? (
-                    <span>Processing Order...</span>
+                    <span className="flex items-center gap-2">
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Processing Order...
+                    </span>
                   ) : (
                     <>
                       <Lock className="w-4 h-4" /> Place Cash On Delivery Order <ArrowRight className="w-4 h-4" />
@@ -506,7 +662,7 @@ export default function CheckoutPage() {
                   )}
                 </motion.button>
 
-                <div className="text-[11px] text-center text-charcoal-muted space-y-1">
+                <div className="text-[11px] text-center text-charcoal-muted space-y-1 pt-2">
                   <p>🔒 7-Day Exchange Guarantee across Pakistan.</p>
                   <p>Dispatched from Lahore Atelier via Express Courier.</p>
                 </div>

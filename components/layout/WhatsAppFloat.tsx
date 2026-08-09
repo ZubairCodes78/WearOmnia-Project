@@ -38,7 +38,7 @@ export const WhatsAppFloat = () => {
       whileHover={{ scale: 1.08 }}
       whileTap={{ scale: 0.95 }}
       transition={{ duration: 0.3 }}
-      className="fixed bottom-6 right-6 sm:bottom-6 sm:right-6 z-30 flex items-center gap-2.5 bg-[#25D366] text-white p-3 sm:px-4 sm:py-3 rounded-full shadow-2xl hover:shadow-[#25D366]/40 group border-2 border-white/20 font-sans"
+      className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-30 flex items-center gap-2.5 bg-[#25D366] text-white p-3 sm:px-4 sm:py-3 rounded-full shadow-2xl hover:shadow-[#25D366]/40 group border-2 border-white/20 font-sans"
       title="Chat on WhatsApp"
       aria-label="Chat with WearOMNIA on WhatsApp"
     >

@@ -185,16 +185,20 @@ export const CartDrawer: React.FC = () => {
                           <div className="flex items-center border border-sand/80 rounded-lg bg-offwhite">
                             <motion.button
                               whileTap={{ scale: 0.85 }}
-                              onClick={() => updateQuantity(item.id, -1)}
-                              className="p-1.5 hover:bg-sand rounded-l-lg transition-colors duration-200"
+                              onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                              disabled={item.quantity <= 1}
+                              className="p-1.5 hover:bg-sand rounded-l-lg transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                              aria-label="Decrease quantity"
                             >
                               <Minus className="w-3 h-3 text-teal" />
                             </motion.button>
                             <span className="px-2.5 text-xs font-bold text-teal">{item.quantity}</span>
                             <motion.button
                               whileTap={{ scale: 0.85 }}
-                              onClick={() => updateQuantity(item.id, 1)}
-                              className="p-1.5 hover:bg-sand rounded-r-lg transition-colors duration-200"
+                              onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                              disabled={item.quantity >= item.maxStock}
+                              className="p-1.5 hover:bg-sand rounded-r-lg transition-colors duration-200 disabled:opacity-40 disabled:cursor-not-allowed"
+                              aria-label="Increase quantity"
                             >
                               <Plus className="w-3 h-3 text-teal" />
                             </motion.button>
