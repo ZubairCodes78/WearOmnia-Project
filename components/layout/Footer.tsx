@@ -24,7 +24,7 @@ export const Footer = () => {
     storeEmail: 'Wearomniaa@gmail.com',
     storeAddress: 'Lahore, Pakistan',
     instagramUrl: 'https://www.instagram.com/wearomnia_/',
-    facebookUrl: 'https://www.facebook.com/profile.php?id=61579168069040',
+    facebookUrl: 'https://www.facebook.com/profile.php?id=61579169068040',
     tiktokUrl: 'https://www.tiktok.com/@wearomnia_',
     supportHours: 'Monday – Saturday: 10:00 AM – 8:00 PM',
     copyrightText: '© 2026 WearOMNIA. All rights reserved.'
@@ -82,7 +82,7 @@ export const Footer = () => {
               </span>
             </Link>
             <p className="text-xs leading-relaxed text-offwhite/80 max-w-sm font-sans">
-              WearOMNIA represents modern Pakistani luxury fashion. Elegant embroidery, rich velvet silhouettes, and premium unstitched lawn collections.
+              WearOMNIA represents modern Pakistani fashion. Simple, modest and stylish clothing for women.
             </p>
             <div className="flex items-center gap-3 pt-2">
               <a

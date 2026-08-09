@@ -300,13 +300,13 @@ export const SupportAssistant = () => {
         whileHover={{ scale: 1.08 }}
         whileTap={{ scale: 0.95 }}
         transition={{ duration: 0.3 }}
-        className="fixed bottom-16 right-4 sm:bottom-20 sm:right-6 z-40 flex items-center gap-2.5 bg-gradient-to-r from-[#D4AF37] to-[#C5A028] text-black p-3 sm:px-4 sm:py-3 rounded-full shadow-2xl hover:shadow-[#D4AF37]/40 font-sans"
+        className="fixed bottom-16 right-4 sm:bottom-20 sm:right-6 z-40 flex items-center gap-2 bg-gradient-to-r from-[#D4AF37] to-[#C5A028] text-black p-2.5 sm:px-4 sm:py-3 rounded-full shadow-2xl hover:shadow-[#D4AF37]/40 font-sans pb-safe"
         title="Customer Support"
         aria-label="Open Customer Support Assistant"
       >
-        <Sparkles className="w-5 h-5" />
-        <span className="hidden sm:inline text-xs uppercase font-bold tracking-wider">
-          Need Help?
+        <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+        <span className="text-xs uppercase font-bold tracking-wider">
+          Help
         </span>
       </motion.button>
 
@@ -318,7 +318,7 @@ export const SupportAssistant = () => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-16 right-4 left-4 sm:left-auto sm:bottom-8 sm:right-8 z-50 w-[calc(100%-32px)] sm:w-[400px] h-[500px] sm:h-[600px] max-h-[70vh] sm:max-h-[80vh] bg-[#141414] border border-[#262626] rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            className="fixed bottom-16 right-4 left-4 sm:left-auto sm:bottom-8 sm:right-8 z-50 w-[calc(100%-32px)] sm:w-[400px] h-[500px] sm:h-[600px] max-h-[70vh] sm:max-h-[80vh] bg-[#141414] border border-[#262626] rounded-2xl shadow-2xl flex flex-col overflow-hidden pb-safe"
           >
             {/* SupportAssistant Header */}
             <div className="bg-gradient-to-r from-[#D4AF37] to-[#C5A028] p-4 flex items-center justify-between">

@@ -645,7 +645,7 @@ export default function CheckoutPage() {
                   whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-teal text-champagne py-4 rounded-xl text-xs uppercase font-bold tracking-widest hover:bg-teal-900 transition-all shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 mt-6"
+                  className="w-full bg-teal text-champagne py-3.5 sm:py-4 rounded-xl text-sm sm:text-xs uppercase font-bold tracking-wider hover:bg-teal-900 transition-all shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 mt-6"
                 >
                   {isSubmitting ? (
                     <span className="flex items-center gap-2">
@@ -653,11 +653,11 @@ export default function CheckoutPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Processing Order...
+                      Processing...
                     </span>
                   ) : (
                     <>
-                      <Lock className="w-4 h-4" /> Place Cash On Delivery Order <ArrowRight className="w-4 h-4" />
+                      <Lock className="w-4 h-4" /> Place Order — COD <ArrowRight className="w-4 h-4" />
                     </>
                   )}
                 </motion.button>
