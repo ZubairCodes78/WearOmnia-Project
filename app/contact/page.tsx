@@ -8,7 +8,7 @@ export default function ContactPage() {
   const [formData, setFormData] = useState({ name: '', phone: '', email: '', message: '' });
   const [settings, setSettings] = useState({
     whatsappNumber: '03180633323',
-    storeEmail: 'Wearomniaa@gmail.com',
+    storeEmail: 'wearomniaofficial@gmail.com',
     supportHours: 'Monday – Saturday: 10:00 AM – 8:00 PM',
     instagramUrl: 'https://www.instagram.com/wearomnia_/',
     facebookUrl: 'https://www.facebook.com/profile.php?id=61579169068040',
@@ -22,7 +22,7 @@ export default function ContactPage() {
         if (data.settings) {
           setSettings({
             whatsappNumber: data.settings.whatsappNumber || '03180633323',
-            storeEmail: data.settings.storeEmail || 'Wearomniaa@gmail.com',
+            storeEmail: data.settings.storeEmail || 'wearomniaofficial@gmail.com',
             supportHours: data.settings.supportHours || 'Monday – Saturday: 10:00 AM – 8:00 PM',
             instagramUrl: data.settings.instagramUrl || 'https://www.instagram.com/wearomnia_/',
             facebookUrl: data.settings.facebookUrl || 'https://www.facebook.com/profile.php?id=61579169068040',

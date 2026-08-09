@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { INotificationProvider, NotificationProviderType, NotificationResult, WhatsAppSettings } from './types';
+import { normalizePhone } from '@/lib/phone';
 
 export class WhatsAppProvider implements INotificationProvider {
   public name = 'Meta WhatsApp Cloud API';
@@ -9,13 +10,7 @@ export class WhatsAppProvider implements INotificationProvider {
    * Helper to normalize phone numbers to international format without + (e.g., 923001234567)
    */
   public normalizePhone(phone: string): string {
-    let cleaned = phone.replace(/\D/g, '');
-    if (cleaned.startsWith('0')) {
-      cleaned = '92' + cleaned.substring(1);
-    } else if (cleaned.startsWith('920')) {
-      cleaned = '92' + cleaned.substring(3);
-    }
-    return cleaned;
+    return normalizePhone(phone);
   }
 
   /**

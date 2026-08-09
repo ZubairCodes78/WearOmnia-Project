@@ -5,6 +5,7 @@ import { recordAuditLog } from '@/lib/audit';
 import { NotificationService } from '@/lib/notifications/notification-service';
 import { broadcastAdminEvent } from '@/lib/events/event-emitter';
 import { getSiteSettings } from '@/lib/settings';
+import { normalizePhone, validatePhone } from '@/lib/phone';
 
 export async function POST(req: Request) {
   try {
@@ -27,11 +28,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Please complete all required fields and add items to your order' }, { status: 400 });
     }
 
+    // Normalize and validate phone number
+    const finalPhone = normalizePhone(phone);
+    
+    if (!validatePhone(phone)) {
+      return NextResponse.json({ error: 'Please enter a valid Pakistani mobile number (03XXXXXXXXX)' }, { status: 400 });
+    }
+
     // Check for duplicate order submission (same phone + same items within 1 minute)
     const oneMinuteAgo = new Date(Date.now() - 60000);
     const recentOrder = await prisma.order.findFirst({
       where: {
-        customerPhone: phone.trim(),
+        customerPhone: finalPhone,
         createdAt: { gte: oneMinuteAgo },
       },
     });
@@ -106,16 +114,16 @@ export async function POST(req: Request) {
     const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee + codFee);
 
     // 4. Customer linkage
-    let customer = await prisma.customer.findUnique({ where: { phone: phone.trim() } });
+    let customer = await prisma.customer.findUnique({ where: { phone: finalPhone } });
     const now = new Date();
 
     if (!customer) {
       customer = await prisma.customer.create({
         data: {
           fullName: fullName.trim(),
-          phone: phone.trim(),
-          whatsapp: whatsapp ? whatsapp.trim() : phone.trim(),
-          email: email ? email.trim() : null,
+          phone: finalPhone,
+          whatsapp: whatsapp ? normalizePhone(whatsapp) : finalPhone,
+          email: email ? email.trim() : 'wearomniaofficial@gmail.com',
           province,
           city,
           address,
@@ -136,8 +144,8 @@ export async function POST(req: Request) {
         where: { id: customer.id },
         data: {
           fullName: fullName.trim(),
-          whatsapp: whatsapp ? whatsapp.trim() : customer.whatsapp,
-          email: email ? email.trim() : customer.email,
+          whatsapp: whatsapp ? normalizePhone(whatsapp) : customer.whatsapp,
+          email: email ? email.trim() : customer.email || 'wearomniaofficial@gmail.com',
           province,
           city,
           address,
@@ -161,7 +169,7 @@ export async function POST(req: Request) {
       amount: totalAmount,
       currency: 'PKR',
       customerName: fullName,
-      customerPhone: phone,
+      customerPhone: finalPhone,
       customerEmail: email,
       description: 'WearOMNIA Cash On Delivery Order',
     });
@@ -172,8 +180,8 @@ export async function POST(req: Request) {
         orderNumber,
         customerId: customer.id,
         customerName: fullName.trim(),
-        customerPhone: phone.trim(),
-        customerWhatsapp: whatsapp || phone.trim(),
+        customerPhone: finalPhone,
+        customerWhatsapp: whatsapp ? whatsapp.replace(/\D/g, '').replace(/^0/, '92') : finalPhone,
         customerEmail: email || null,
         shippingProvince: province,
         shippingCity: city,

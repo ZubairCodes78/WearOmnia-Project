@@ -38,7 +38,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettingsData = {
   businessName: 'WearOMNIA',
   whatsappNumber: '03180633323',
   storePhone: '03180633323',
-  storeEmail: 'Wearomniaa@gmail.com',
+  storeEmail: 'wearomniaofficial@gmail.com',
   storeAddress: 'Lahore, Pakistan',
   logoUrl: '/logo.png',
   instagramUrl: 'https://www.instagram.com/wearomnia_/',

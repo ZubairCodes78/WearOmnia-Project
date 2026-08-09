@@ -7,6 +7,7 @@ import { motion } from 'framer-motion';
 import { useCart } from '@/context/CartContext';
 import { Truck, ShieldCheck, Banknote, ArrowRight, Lock, Tag, ChevronRight, Check, AlertCircle } from 'lucide-react';
 import { PageTransition } from '@/components/layout/PageTransition';
+import { normalizePhone, validatePhone } from '@/lib/phone';
 
 const PROVINCES = [
   'Punjab',
@@ -101,22 +102,6 @@ export default function CheckoutPage() {
     }
   };
 
-  // Pakistani phone number validation
-  const validatePhone = (phone: string): boolean => {
-    const cleaned = phone.replace(/\D/g, '');
-    // Accept 03XXXXXXXXX (11 digits) or 923XXXXXXXXX (12 digits)
-    return /^03[0-9]{8}$/.test(cleaned) || /^923[0-9]{8}$/.test(cleaned);
-  };
-
-  const normalizePhone = (phone: string): string => {
-    const cleaned = phone.replace(/\D/g, '');
-    // Convert to international format
-    if (cleaned.startsWith('03')) {
-      return '92' + cleaned.substring(1);
-    }
-    return cleaned;
-  };
-
   // Form validation
   const validateForm = (): boolean => {
     const errors: Record<string, string> = {};
@@ -176,8 +161,8 @@ export default function CheckoutPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           fullName: formData.fullName,
-          phone: normalizePhone(formData.phone),
-          whatsapp: formData.whatsapp ? normalizePhone(formData.whatsapp) : normalizePhone(formData.phone),
+          phone: formData.phone,
+          whatsapp: formData.whatsapp ? formData.whatsapp : formData.phone,
           email: formData.email,
           province: formData.province,
           city: formData.city,
@@ -309,7 +294,7 @@ export default function CheckoutPage() {
                       <input
                         type="tel"
                         required
-                        placeholder="e.g. 03123456789"
+                        placeholder="03XX XXXXXXX"
                         value={formData.phone}
                         onChange={(e) => {
                           setFormData({ ...formData, phone: e.target.value });

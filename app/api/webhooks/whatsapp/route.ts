@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { NotificationService } from '@/lib/notifications/notification-service';
 import { WhatsAppProvider } from '@/lib/notifications/whatsapp-provider';
 import { broadcastAdminEvent } from '@/lib/events/event-emitter';
+import { normalizePhone } from '@/lib/phone';
 
 const globalForPrisma = global as unknown as { prisma?: PrismaClient };
 const prisma = globalForPrisma.prisma || new PrismaClient();
@@ -117,8 +118,8 @@ export async function POST(req: NextRequest) {
     }
 
     // SECURITY CHECK 2: Validate Customer Phone Number match
-    const normSender = provider.normalizePhone(senderPhone);
-    const normOrderPhone = provider.normalizePhone(order.customerWhatsapp || order.customerPhone);
+    const normSender = normalizePhone(senderPhone);
+    const normOrderPhone = normalizePhone(order.customerWhatsapp || order.customerPhone);
 
     if (normSender !== normOrderPhone && settings.whatsapp_mode === 'PRODUCTION') {
       console.warn(`[WhatsApp Security Mismatch] Sender phone (${normSender}) does not match Order Phone (${normOrderPhone}).`);

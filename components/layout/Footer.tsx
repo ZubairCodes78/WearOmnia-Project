@@ -21,7 +21,7 @@ export const Footer = () => {
   const pathname = usePathname();
   const [settings, setSettings] = useState<SiteSettings>({
     whatsappNumber: '03180633323',
-    storeEmail: 'Wearomniaa@gmail.com',
+    storeEmail: 'wearomniaofficial@gmail.com',
     storeAddress: 'Lahore, Pakistan',
     instagramUrl: 'https://www.instagram.com/wearomnia_/',
     facebookUrl: 'https://www.facebook.com/profile.php?id=61579169068040',
