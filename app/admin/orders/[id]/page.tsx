@@ -41,6 +41,9 @@ export default async function AdminOrderDetailPage({ params }: OrderDetailPagePr
       timeline: {
         orderBy: { createdAt: 'desc' },
       },
+      shipments: {
+        orderBy: { createdAt: 'desc' },
+      },
     },
   });
 

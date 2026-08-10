@@ -380,9 +380,20 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
               </span>
             </div>
 
+            {/* Quick Confirm Order Button for PLACED/PENDING status */}
+            {(order.status === 'PENDING' || order.status === 'PLACED') && (
+              <button
+                onClick={() => handleStatusChange('CONFIRMED')}
+                disabled={statusSaving}
+                className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 rounded-xl text-xs uppercase tracking-widest transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {statusSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Confirm Order
+              </button>
+            )}
+
             {validNextStatuses.length > 0 ? (
-              <div className="space-y-2">
-                <p className="text-[10px] text-offwhite/50 uppercase tracking-wider">Available Actions:</p>
+              <div className="space-y-2 pt-1">
+                <p className="text-[10px] text-offwhite/50 uppercase tracking-wider">Available Status Transitions:</p>
                 <div className="flex flex-wrap gap-2">
                   {validNextStatuses.map((nextStatus) => (
                     <button
@@ -442,7 +453,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
           <div className="bg-[#0A2528]/70 backdrop-blur-xl rounded-3xl border border-champagne/15 p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-champagne/15 pb-3">
               <h3 className="text-xs font-bold text-champagne uppercase tracking-wider flex items-center gap-2">
-                <Truck className="w-4 h-4" /> Courier & Shipping
+                <Truck className="w-4 h-4" /> Shipping & PostEx Courier
               </h3>
               <span className="text-[10px] font-mono uppercase bg-champagne/10 text-champagne px-2.5 py-0.5 rounded-full border border-champagne/20">
                 {courier || 'PostEx'}
@@ -455,77 +466,165 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
               </div>
             )}
 
-            <div className="space-y-3">
-              <div>
-                <label className="text-[10px] text-offwhite/50 uppercase tracking-wider block mb-1.5">Courier Provider</label>
-                <select
-                  value={courier}
-                  onChange={(e) => setCourier(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-[#06191B] rounded-xl text-xs text-champagne border border-champagne/20 focus:outline-none focus:ring-1 focus:ring-champagne"
-                >
-                  <option value="">Select Courier</option>
-                  {COURIER_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>{opt.label}</option>
-                  ))}
-                </select>
-              </div>
+            {/* PostEx Workflow Logic */}
+            {(() => {
+              const activeShipment = order.shipments?.find(
+                (s: any) => s.status !== 'FAILED' && s.status !== 'CANCELLED'
+              );
+              const failedShipment = order.shipments?.find((s: any) => s.status === 'FAILED');
+              const isOrderPlaced = order.status === 'PENDING' || order.status === 'PLACED';
 
-              <div>
-                <label className="text-[10px] text-offwhite/50 uppercase tracking-wider block mb-1.5">Tracking ID</label>
-                <div className="flex gap-2">
+              if (isOrderPlaced) {
+                return (
+                  <div className="p-4 bg-blue-900/20 border border-blue-700/30 text-blue-200 rounded-2xl space-y-3">
+                    <div className="flex items-center gap-2 font-bold text-xs text-blue-300">
+                      <AlertCircle className="w-4 h-4 text-blue-400 shrink-0" /> Order Status: PLACED
+                    </div>
+                    <p className="text-[11px] text-blue-200/80 leading-relaxed">
+                      Review order details and click <strong>"Confirm Order"</strong> to enable sending this shipment to PostEx.
+                    </p>
+                    <button
+                      onClick={() => handleStatusChange('CONFIRMED')}
+                      disabled={statusSaving}
+                      className="w-full bg-blue-600 hover:bg-blue-500 text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all shadow flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      {statusSaving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Confirm Order'}
+                    </button>
+                  </div>
+                );
+              }
+
+              if (activeShipment && (activeShipment.trackingNumber || activeShipment.status === 'CREATED')) {
+                return (
+                  <div className="p-4 bg-emerald-900/20 border border-emerald-700/30 text-emerald-200 rounded-2xl space-y-3">
+                    <div className="flex items-center justify-between border-b border-emerald-700/30 pb-2">
+                      <span className="text-xs font-bold uppercase tracking-wider text-emerald-300">PostEx Shipment Created</span>
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-2.5 py-0.5 rounded-full font-mono border border-emerald-500/30">
+                        {activeShipment.status || 'CREATED'}
+                      </span>
+                    </div>
+
+                    <div className="text-xs space-y-1.5 bg-[#06191B] p-3 rounded-xl border border-champagne/10 font-mono">
+                      <div className="flex justify-between items-center">
+                        <span className="text-offwhite/60 font-sans">Courier:</span>
+                        <span className="font-semibold text-offwhite font-sans">PostEx</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-offwhite/60 font-sans">Tracking ID:</span>
+                        <span className="font-bold text-champagne">{activeShipment.trackingNumber || trackingNumber || 'N/A'}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={handleCopyTracking}
+                        className="bg-champagne/10 hover:bg-champagne/20 text-champagne border border-champagne/30 px-3 py-2 rounded-xl text-xs font-semibold shrink-0 transition-colors"
+                      >
+                        {copySuccess ? 'Copied!' : 'Copy Tracking ID'}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (activeShipment?.labelUrl) {
+                            window.open(activeShipment.labelUrl, '_blank');
+                          } else {
+                            window.open(`/admin/orders/${order.id}/label`, '_blank');
+                          }
+                        }}
+                        className="bg-amber-500 hover:bg-amber-400 text-teal-950 font-bold px-3 py-2 rounded-xl text-[11px] uppercase tracking-wider transition-all text-center flex items-center justify-center gap-1 shadow"
+                      >
+                        <Printer className="w-3.5 h-3.5" /> Print PostEx Label
+                      </button>
+
+                      <Link
+                        href={`/track-order?orderNumber=${encodeURIComponent(order.orderNumber)}`}
+                        target="_blank"
+                        className="bg-teal-800 hover:bg-teal-700 text-champagne border border-champagne/20 px-3 py-2 rounded-xl text-[11px] uppercase font-bold tracking-wider text-center transition-colors flex items-center justify-center gap-1"
+                      >
+                        <Truck className="w-3.5 h-3.5" /> Track Shipment
+                      </Link>
+
+                      <button
+                        type="button"
+                        onClick={() => router.refresh()}
+                        className="bg-[#06191B] hover:bg-teal-900 text-offwhite border border-champagne/20 px-3 py-2 rounded-xl text-[11px] uppercase font-bold tracking-wider transition-colors"
+                      >
+                        Refresh Status
+                      </button>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (failedShipment || error) {
+                return (
+                  <div className="p-4 bg-red-900/20 border border-red-700/30 text-red-200 rounded-2xl space-y-3">
+                    <div className="flex items-center gap-2 font-bold text-xs text-red-300">
+                      <AlertCircle className="w-4 h-4 text-red-400 shrink-0" /> PostEx shipment could not be created.
+                    </div>
+                    <p className="text-[11px] text-red-200/80">
+                      {error || shipmentMessage || 'PostEx API request failed or credentials missing. Order remains CONFIRMED.'}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleCreateShipment('POSTEX')}
+                      disabled={creatingShipment}
+                      className="w-full bg-amber-500 hover:bg-amber-400 text-teal-950 font-bold px-4 py-2.5 rounded-xl text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
+                    >
+                      {creatingShipment ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'Retry Send to PostEx'}
+                    </button>
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-3">
+                  <div className="p-3 bg-emerald-900/10 border border-emerald-700/20 rounded-xl text-xs text-emerald-300">
+                    ✓ Order status is <strong>CONFIRMED</strong>. Ready to create PostEx courier shipment.
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleCreateShipment('POSTEX')}
+                    disabled={creatingShipment}
+                    className="w-full bg-amber-500 hover:bg-amber-400 text-teal-950 font-bold px-4 py-3 rounded-xl text-xs uppercase tracking-widest transition-all shadow-lg hover:shadow-amber-500/20 flex items-center justify-center gap-2 disabled:opacity-50"
+                  >
+                    {creatingShipment ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Sending to PostEx API...</>
+                    ) : (
+                      <><Truck className="w-4 h-4" /> Send to PostEx</>
+                    )}
+                  </button>
+                </div>
+              );
+            })()}
+
+            {/* Manual Courier Override Controls */}
+            <div className="pt-2 border-t border-champagne/15 space-y-3">
+              <span className="text-[10px] text-offwhite/50 uppercase tracking-wider block">Manual Shipping Override</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <select
+                    value={courier}
+                    onChange={(e) => setCourier(e.target.value)}
+                    className="w-full px-3 py-2 bg-[#06191B] rounded-xl text-xs text-champagne border border-champagne/20 focus:outline-none"
+                  >
+                    <option value="">Select Courier</option>
+                    {COURIER_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
                   <input
                     type="text"
                     value={trackingNumber}
                     onChange={(e) => setTrackingNumber(e.target.value)}
-                    placeholder="Enter or generate tracking ID..."
-                    className="flex-1 px-3 py-2.5 bg-[#06191B] rounded-xl text-xs text-offwhite border border-champagne/20 focus:outline-none focus:ring-1 focus:ring-champagne font-mono"
+                    placeholder="Tracking ID..."
+                    className="w-full px-3 py-2 bg-[#06191B] rounded-xl text-xs text-offwhite border border-champagne/20 font-mono focus:outline-none"
                   />
-                  {trackingNumber && (
-                    <button
-                      type="button"
-                      onClick={handleCopyTracking}
-                      className="bg-champagne/10 hover:bg-champagne/20 text-champagne border border-champagne/30 px-3 py-2.5 rounded-xl text-xs font-semibold shrink-0 transition-colors"
-                    >
-                      {copySuccess ? 'Copied!' : 'Copy Tracking ID'}
-                    </button>
-                  )}
                 </div>
-              </div>
-
-              {/* Action Buttons Grid */}
-              <div className="pt-2 grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => handleCreateShipment('POSTEX')}
-                  disabled={creatingShipment}
-                  className="bg-amber-600 hover:bg-amber-500 text-teal-950 font-bold px-3 py-2.5 rounded-xl text-[11px] uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 disabled:opacity-50"
-                >
-                  {creatingShipment ? 'Creating...' : 'Create PostEx Shipment'}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => router.refresh()}
-                  className="bg-[#06191B] hover:bg-teal-900 text-offwhite border border-champagne/20 px-3 py-2.5 rounded-xl text-[11px] uppercase font-bold tracking-wider transition-colors"
-                >
-                  Refresh Status
-                </button>
-
-                <Link
-                  href={`/admin/orders/${order.id}/label`}
-                  target="_blank"
-                  className="bg-teal-800 hover:bg-teal-700 text-champagne border border-champagne/20 px-3 py-2.5 rounded-xl text-[11px] uppercase font-bold tracking-wider text-center transition-colors"
-                >
-                  Print Label
-                </Link>
-
-                <Link
-                  href={`/track-order?orderNumber=${encodeURIComponent(order.orderNumber)}`}
-                  target="_blank"
-                  className="bg-[#06191B] hover:bg-teal-900 text-offwhite border border-champagne/20 px-3 py-2.5 rounded-xl text-[11px] uppercase font-bold tracking-wider text-center transition-colors"
-                >
-                  Track Shipment
-                </Link>
               </div>
             </div>
           </div>

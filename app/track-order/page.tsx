@@ -48,8 +48,8 @@ export default function TrackOrderPage() {
 
   const handleTrack = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!orderNumber.trim() || !phone.trim()) {
-      setError('Please enter both your order number and phone number.');
+    if (!orderNumber.trim()) {
+      setError('Please enter your Order Number or Courier Tracking ID.');
       return;
     }
 
@@ -136,7 +136,7 @@ export default function TrackOrderPage() {
 
                   <div>
                     <label className="text-[10px] uppercase font-bold text-charcoal tracking-wider block mb-1.5">
-                      Phone Number <span className="text-red-600">*</span>
+                      Phone Number <span className="text-charcoal-muted font-normal">(Optional)</span>
                     </label>
                     <div className="relative">
                       <Phone className="absolute left-3.5 top-3.5 w-4 h-4 text-charcoal-muted" />
