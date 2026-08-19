@@ -62,7 +62,7 @@ ALTER TABLE public."TableName" ENABLE ROW LEVEL SECURITY;
 ```
 
 ### 2. Admin Password Protection
-**Three-layer protection implemented**:
+**Two-layer protection implemented**:
 
 #### Layer 1: RLS Policy
 ```sql
@@ -72,19 +72,7 @@ TO anon, authenticated
 USING (false);
 ```
 
-#### Layer 2: AdminSafe View
-```sql
-CREATE OR REPLACE VIEW public."AdminSafe" AS
-SELECT 
-    id,
-    email,
-    name,
-    "createdAt",
-    "updatedAt"
-FROM public."Admin";
-```
-
-#### Layer 3: Access Revocation
+#### Layer 2: Access Revocation
 ```sql
 REVOKE ALL ON public."Admin" FROM anon;
 REVOKE ALL ON public."Admin" FROM authenticated;
@@ -125,18 +113,15 @@ USING (
 ```
 
 #### Reviews (Controlled Access)
-**Policy**: Allow public read access to approved reviews only, allow public insert for submissions
+**Policy**: Allow public read access to approved reviews only
 ```sql
 CREATE POLICY "Allow public read access to approved reviews"
 ON public."Review" FOR SELECT
 TO anon, authenticated
 USING ("isApproved" = true);
-
-CREATE POLICY "Allow public insert for reviews"
-ON public."Review" FOR INSERT
-TO anon, authenticated
-WITH CHECK (true);
 ```
+
+**Note**: Review submission goes through server-side API (`/api/reviews`) only. Public INSERT access is blocked to prevent direct database manipulation.
 
 #### Private Customer/Order Data (No Public Access)
 **Tables**: Customer, Order, OrderItem, OrderTimeline, Shipment, ContactSubmission, NewsletterSubscriber
@@ -237,7 +222,6 @@ All existing functionality preserved:
 
 ### Admin Password Protection
 ✅ **RLS Policy**: Blocks all public access to Admin table
-✅ **AdminSafe View**: Excludes password column
 ✅ **Access Revocation**: Public roles cannot access Admin table directly
 ✅ **Application**: Auth queries already exclude password via `select`
 

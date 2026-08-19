@@ -41,26 +41,9 @@ ALTER TABLE public."Shipment" ENABLE ROW LEVEL SECURITY;
 -- PROTECT ADMIN PASSWORD COLUMN
 -- ==========================================
 
--- Create a view that excludes the password column for public access
-CREATE OR REPLACE VIEW public."AdminSafe" AS
-SELECT 
-    id,
-    email,
-    name,
-    "createdAt",
-    "updatedAt"
-FROM public."Admin";
-
--- Grant access to the safe view
-GRANT SELECT ON public."AdminSafe" TO anon;
-GRANT SELECT ON public."AdminSafe" TO authenticated;
-
--- Revoke direct access to Admin table from public roles
+-- Revoke public access to Admin table
 REVOKE ALL ON public."Admin" FROM anon;
 REVOKE ALL ON public."Admin" FROM authenticated;
-
--- Grant service role access for Prisma
--- (Service role bypasses RLS automatically)
 
 -- ==========================================
 -- PUBLIC/STOREFRONT DATA POLICIES
@@ -131,12 +114,6 @@ CREATE POLICY "Allow public read access to approved reviews"
 ON public."Review" FOR SELECT
 TO anon, authenticated
 USING ("isApproved" = true);
-
--- Review: Allow insert for public (review submission)
-CREATE POLICY "Allow public insert for reviews"
-ON public."Review" FOR INSERT
-TO anon, authenticated
-WITH CHECK (true);
 
 -- ==========================================
 -- PRIVATE CUSTOMER/ORDER DATA POLICIES
@@ -255,13 +232,6 @@ SELECT
 FROM pg_policies
 WHERE tablename = 'Admin';
 
--- Verify AdminSafe view exists
-SELECT 
-    viewname,
-    definition
-FROM pg_views
-WHERE viewname = 'AdminSafe';
-
 -- Verify sensitive settings are protected
 SELECT 
     tablename,
@@ -286,8 +256,8 @@ WHERE tablename = 'SiteSettings';
 --
 -- 3. Admin Password: The Admin.password column is protected by:
 --    - RLS policy blocking all public access
---    - AdminSafe view excluding the password column
 --    - Revoked direct grants to public roles
+--    - Application code excluding password in queries
 --
 -- 4. Prisma Compatibility: Since Prisma uses the database owner
 --    connection (service role), it bypasses RLS and continues to
