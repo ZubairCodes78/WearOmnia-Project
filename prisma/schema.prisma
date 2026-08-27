@@ -170,19 +170,36 @@ model Order {
 }
 
 model Shipment {
-  id                 String   @id @default(uuid())
+  id                 String    @id @default(uuid())
   orderId            String
-  order              Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  provider           String   @default("POSTEX") // POSTEX, MANUAL, TCS, LEOPARDS
+  order              Order     @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider           String    @default("POSTEX") // POSTEX, MANUAL, TCS, LEOPARDS
   trackingNumber     String?
   externalShipmentId String?
-  status             String   @default("PENDING") // PENDING, CREATED, PICKED_UP, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, CANCELLED
+  status             String    @default("PENDING") // PENDING, CREATED, PICKED_UP, IN_TRANSIT, OUT_FOR_DELIVERY, DELIVERED, CANCELLED, RETURNED
   labelUrl           String?
   trackingUrl        String?
-  codAmount          Float    @default(0)
-  metadata           String?  // JSON string for provider payload
-  createdAt          DateTime @default(now())
-  updatedAt          DateTime @updatedAt
+  codAmount          Float     @default(0)
+  metadata           String?   // JSON string for provider payload
+
+  // Extended PostEx Courier Fields
+  orderRefNumber     String?
+  transactionFee     Float?
+  fuelSurcharge      Float?
+  taxAmount          Float?
+  settlementStatus   String?   // PENDING, SETTLED, UNPAID, PARTIAL, etc.
+  settlementDate     DateTime?
+  cprNumber          String?   // CPR (Cheque/Payment Reference) number from PostEx
+  upfrontPaymentDate DateTime?
+  reservePaymentDate DateTime?
+  pickupDate         DateTime?
+  deliveryDate       DateTime?
+  returnDate         DateTime?
+  returnReason       String?
+  apiResponse        String?   // Full raw JSON response for audit/debugging
+
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@index([orderId])
   @@index([trackingNumber])

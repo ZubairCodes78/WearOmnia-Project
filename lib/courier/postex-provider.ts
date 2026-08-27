@@ -5,66 +5,82 @@ import {
   TrackingResult,
   PrintLabelResult,
   CancelShipmentResult,
+  SettlementResult,
+  POSTEX_STATUS_MAP,
 } from './types';
-import { getSiteSettings } from '@/lib/settings';
+import { postexApi } from './postex-api';
 
 export class PostExProvider implements CourierProvider {
   name = 'POSTEX';
 
-  private async getPostExConfig() {
-    const settings = await getSiteSettings();
-    return {
-      enabled: settings.postex_enabled ?? false,
-      baseUrl: settings.postex_api_url || process.env.POSTEX_API_URL || '',
-      apiKey: settings.postex_api_key || process.env.POSTEX_API_KEY || '',
-      apiToken: settings.postex_api_token || process.env.POSTEX_API_TOKEN || '',
-      merchantId: settings.postex_merchant_id || process.env.POSTEX_MERCHANT_ID || '',
-      accountId: settings.postex_account_id || process.env.POSTEX_ACCOUNT_ID || '',
-      webhookUrl: settings.postex_webhook_url || '',
-      environment: settings.postex_environment || 'TEST',
-    };
-  }
-
   isConfigured(): boolean {
-    // Sync check placeholder — runtime configuration check will evaluate actual settings
-    return false;
+    return postexApi.isConfigured();
   }
 
   async checkConfiguration(): Promise<boolean> {
-    const config = await this.getPostExConfig();
-    return Boolean(config.enabled && (config.apiKey || config.apiToken));
+    return postexApi.isConfigured();
   }
 
+  /**
+   * Creates an official shipment on PostEx via POST /services/integration/api/order/v3/create-order
+   */
   async createShipment(request: ShipmentRequest): Promise<ShipmentResult> {
-    const config = await this.getPostExConfig();
-
-    if (!config.enabled || (!config.apiKey && !config.apiToken)) {
+    if (!this.isConfigured()) {
       return {
         success: false,
         provider: this.name,
         status: 'UNCONFIGURED',
-        message: 'PostEx integration is not configured yet. Please enter valid PostEx API credentials in Admin Settings.',
+        message: 'PostEx integration is not configured. Please set POSTEX_API_TOKEN in server environment variables.',
       };
     }
 
     try {
-      // Future live PostEx API Integration Endpoint call
-      // When official PostEx API documentation & credentials are provided:
-      // const response = await fetch(`${config.baseUrl}/order/create`, {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //     'api-key': config.apiKey,
-      //     'token': config.apiToken,
-      //   },
-      //   body: JSON.stringify({ ... }),
-      // });
-      
+      const itemsCount = request.items.reduce((sum, i) => sum + (i.quantity || 1), 0);
+      const itemsDetail = request.items
+        .map((i) => `${i.quantity}x ${i.productTitle}${i.variantInfo ? ` (${i.variantInfo})` : ''}`)
+        .join(', ') || 'WearOMNIA Apparel';
+
+      const result = await postexApi.createOrder({
+        cityName: request.shippingCity,
+        customerName: request.customerName,
+        customerPhone: request.customerPhone,
+        deliveryAddress: request.shippingAddress,
+        invoiceDivision: 1,
+        invoicePayment: request.codAmount,
+        items: itemsCount,
+        orderDetail: itemsDetail,
+        orderRefNumber: request.orderNumber,
+        orderType: 'Normal',
+        pickupAddressCode: request.pickupAddressCode,
+        storeAddressCode: request.storeAddressCode,
+        transactionNotes: request.orderNotes || `WearOMNIA Order #${request.orderNumber}`,
+      });
+
+      if (!result.success || !result.trackingNumber) {
+        return {
+          success: false,
+          provider: this.name,
+          status: 'FAILED',
+          message: result.message || 'Failed to create shipment on PostEx.',
+          raw: result.raw,
+        };
+      }
+
       return {
-        success: false,
+        success: true,
         provider: this.name,
-        status: 'PENDING',
-        message: 'PostEx API credentials configured, awaiting official API contract implementation.',
+        trackingNumber: result.trackingNumber,
+        orderRefNumber: request.orderNumber,
+        status: 'Booked',
+        labelUrl: `/api/admin/courier/postex/label?trackingNumber=${encodeURIComponent(result.trackingNumber)}`,
+        trackingUrl: `https://postex.pk/tracking?trackingNumber=${encodeURIComponent(result.trackingNumber)}`,
+        message: 'PostEx shipment created successfully.',
+        metadata: {
+          postexStatus: 'Booked',
+          orderRefNumber: request.orderNumber,
+          createdAt: new Date().toISOString(),
+        },
+        raw: result.raw,
       };
     } catch (e: any) {
       return {
@@ -76,9 +92,11 @@ export class PostExProvider implements CourierProvider {
     }
   }
 
+  /**
+   * Retrieves shipment details from PostEx
+   */
   async getShipment(trackingNumberOrId: string): Promise<ShipmentResult> {
-    const config = await this.getPostExConfig();
-    if (!config.enabled || (!config.apiKey && !config.apiToken)) {
+    if (!this.isConfigured()) {
       return {
         success: false,
         provider: this.name,
@@ -87,73 +105,200 @@ export class PostExProvider implements CourierProvider {
       };
     }
 
+    const tracking = await postexApi.trackOrder(trackingNumberOrId);
+    if (!tracking.success || !tracking.tracking) {
+      return {
+        success: false,
+        provider: this.name,
+        status: 'FAILED',
+        message: tracking.message || 'Could not retrieve shipment details.',
+        raw: tracking.raw,
+      };
+    }
+
+    const detail = tracking.tracking;
     return {
       success: true,
       provider: this.name,
-      trackingNumber: trackingNumberOrId,
-      status: 'CREATED',
-      message: 'Shipment info retrieved',
+      trackingNumber: detail.trackingNumber || trackingNumberOrId,
+      orderRefNumber: detail.orderRefNumber,
+      status: detail.orderStatus || 'Booked',
+      labelUrl: `/api/admin/courier/postex/label?trackingNumber=${encodeURIComponent(detail.trackingNumber || trackingNumberOrId)}`,
+      trackingUrl: `https://postex.pk/tracking?trackingNumber=${encodeURIComponent(detail.trackingNumber || trackingNumberOrId)}`,
+      message: 'Shipment info retrieved successfully.',
+      raw: tracking.raw,
     };
   }
 
+  /**
+   * Retrieves full tracking history and mapped status
+   */
   async getTracking(trackingNumber: string): Promise<TrackingResult> {
-    const config = await this.getPostExConfig();
-    if (!config.enabled || (!config.apiKey && !config.apiToken)) {
+    if (!this.isConfigured()) {
       return {
         success: false,
         provider: this.name,
         trackingNumber,
         status: 'UNCONFIGURED',
         courierName: 'PostEx',
-        message: 'PostEx tracking is not configured yet. Credentials missing.',
+        message: 'PostEx tracking is not configured. POSTEX_API_TOKEN is missing.',
+      };
+    }
+
+    try {
+      const result = await postexApi.trackOrder(trackingNumber);
+      if (!result.success || !result.tracking) {
+        return {
+          success: false,
+          provider: this.name,
+          trackingNumber,
+          status: 'PENDING',
+          courierName: 'PostEx',
+          message: result.message || 'Tracking information could not be found.',
+        };
+      }
+
+      const t = result.tracking;
+      const rawStatus = t.orderStatus || t.transactionStatus || 'Booked';
+      const mapped = POSTEX_STATUS_MAP[rawStatus] || { orderStatus: 'DISPATCHED' };
+
+      return {
+        success: true,
+        provider: this.name,
+        trackingNumber: t.trackingNumber || trackingNumber,
+        orderRefNumber: t.orderRefNumber,
+        status: mapped.orderStatus,
+        rawStatus: rawStatus,
+        statusDetails: t.transactionStatus || rawStatus,
+        courierName: 'PostEx',
+        pickupDate: t.pickupDate,
+        deliveryDate: t.deliveryDate,
+        returnDate: t.returnDate,
+        returnReason: t.returnReason,
+        transactionFee: t.transactionFee,
+        taxAmount: t.taxAmount,
+        fuelSurcharge: t.fuelSurcharge,
+        history: t.history
+          ? t.history.map((h) => ({
+              status: h.status,
+              location: h.location,
+              timestamp: h.timestamp || new Date().toISOString(),
+              remarks: h.remarks,
+            }))
+          : [
+              {
+                status: rawStatus,
+                timestamp: new Date().toISOString(),
+                remarks: t.transactionStatus || `Status: ${rawStatus}`,
+              },
+            ],
+        message: 'Tracking details retrieved successfully.',
+      };
+    } catch (e: any) {
+      return {
+        success: false,
+        provider: this.name,
+        trackingNumber,
+        status: 'ERROR',
+        courierName: 'PostEx',
+        message: e?.message || 'Error tracking shipment.',
+      };
+    }
+  }
+
+  /**
+   * Cancels shipment on PostEx via PUT /services/integration/api/order/v1/cancel-order
+   */
+  async cancelShipment(trackingNumberOrId: string): Promise<CancelShipmentResult> {
+    if (!this.isConfigured()) {
+      return {
+        success: false,
+        message: 'PostEx integration is not configured.',
+      };
+    }
+
+    const res = await postexApi.cancelOrder({ trackingNumber: trackingNumberOrId });
+    return {
+      success: res.success,
+      message: res.message || (res.success ? 'PostEx shipment cancelled successfully.' : 'Cancellation failed.'),
+    };
+  }
+
+  /**
+   * Retrieves official PostEx Airway Bill invoice PDF
+   */
+  async printLabel(trackingNumberOrId: string): Promise<PrintLabelResult> {
+    if (!this.isConfigured()) {
+      return {
+        success: false,
+        message: 'PostEx API is not configured.',
+      };
+    }
+
+    const pdfRes = await postexApi.getInvoicePdf(trackingNumberOrId);
+    if (!pdfRes.success || !pdfRes.buffer) {
+      return {
+        success: false,
+        message: pdfRes.message || 'Failed to retrieve official PostEx airway bill label.',
       };
     }
 
     return {
       success: true,
-      provider: this.name,
-      trackingNumber,
-      status: 'IN_TRANSIT',
-      courierName: 'PostEx',
-      message: 'Shipment in transit via PostEx',
+      labelFormat: 'PDF',
+      pdfBuffer: pdfRes.buffer,
+      labelUrl: `/api/admin/courier/postex/label?trackingNumber=${encodeURIComponent(trackingNumberOrId)}`,
+      message: 'Official PostEx PDF retrieved successfully.',
     };
   }
 
-  async cancelShipment(trackingNumberOrId: string): Promise<CancelShipmentResult> {
-    const config = await this.getPostExConfig();
-    if (!config.enabled || (!config.apiKey && !config.apiToken)) {
+  /**
+   * Retrieves payment / COD settlement status
+   */
+  async getPaymentStatus(trackingNumber: string): Promise<SettlementResult> {
+    if (!this.isConfigured()) {
       return {
         success: false,
-        message: 'PostEx integration is not configured yet.',
+        trackingNumber,
+        settlementStatus: 'UNCONFIGURED',
+        message: 'PostEx is not configured.',
       };
     }
 
-    return {
-      success: false,
-      message: 'Shipment cancellation requires PostEx API connection.',
-    };
-  }
-
-  async printLabel(trackingNumberOrId: string): Promise<PrintLabelResult> {
-    const config = await this.getPostExConfig();
-    if (!config.enabled || (!config.apiKey && !config.apiToken)) {
+    const res = await postexApi.getPaymentStatus(trackingNumber);
+    if (!res.success || !res.payment) {
       return {
         success: false,
-        message: 'PostEx API is not configured. Falling back to standard WearOMNIA label.',
+        trackingNumber,
+        settlementStatus: 'UNKNOWN',
+        message: res.message || 'Settlement information not available.',
+        raw: res.raw,
       };
     }
 
+    const p = res.payment;
     return {
-      success: false,
-      message: 'Official PostEx Airway Bill label requires active API credentials.',
+      success: true,
+      trackingNumber: p.trackingNumber || trackingNumber,
+      orderRefNumber: p.orderRefNumber,
+      settlementStatus: p.settlementStatus || 'Pending',
+      settlementDate: p.settlementDate,
+      upfrontPaymentDate: p.upfrontPaymentDate,
+      cprNumber: p.cprNumber,
+      reservePaymentDate: p.reservePaymentDate,
+      codAmount: p.invoicePayment,
+      netAmount: p.netAmount,
+      transactionFee: p.transactionFee,
+      taxAmount: p.tax,
+      fuelSurcharge: p.fuelSurcharge,
+      message: 'Settlement details retrieved successfully.',
+      raw: res.raw,
     };
   }
 
   async getShipmentStatus(trackingNumberOrId: string): Promise<string> {
-    const config = await this.getPostExConfig();
-    if (!config.enabled || (!config.apiKey && !config.apiToken)) {
-      return 'UNCONFIGURED';
-    }
-    return 'PENDING';
+    const tracking = await this.getTracking(trackingNumberOrId);
+    return tracking.rawStatus || tracking.status || 'UNKNOWN';
   }
 }
+

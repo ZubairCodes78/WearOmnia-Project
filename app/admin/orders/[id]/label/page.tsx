@@ -98,11 +98,23 @@ export default async function ShippingLabelPage({ params }: ShippingLabelProps) 
   return (
     <div className="bg-white min-h-screen p-4 sm:p-8 text-black font-sans">
       {/* Print Controls (Client Component) */}
-      <PrintControls
-        title="A4 / A6 Courier Delivery Label"
-        subtitle="Printable on standard thermal label or A4 paper"
-        buttonLabel="Print Label"
-      />
+      <div className="no-print max-w-md mx-auto mb-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+        <PrintControls
+          title="A4 / A6 Courier Delivery Label"
+          subtitle="Printable on standard thermal label or A4 paper"
+          buttonLabel="Print Label"
+        />
+        {trackingId && trackingId !== 'PENDING' && (
+          <a
+            href={`/api/admin/courier/postex/label?trackingNumber=${encodeURIComponent(trackingId)}`}
+            target="_blank"
+            rel="noreferrer"
+            className="w-full sm:w-auto bg-black hover:bg-neutral-800 text-white px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 shadow transition-colors"
+          >
+            Official PostEx Airway Bill (PDF)
+          </a>
+        )}
+      </div>
 
       {/* Warning Notice if info is missing */}
       {isMissingInfo && (

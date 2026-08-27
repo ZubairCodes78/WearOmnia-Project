@@ -142,11 +142,6 @@ export function SettingsClient({ initialSettings, initialShippingRules }: Settin
       const res = await fetch('/api/admin/courier/postex/test-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          postex_enabled: settings.postex_enabled,
-          postex_api_key: settings.postex_api_key,
-          postex_api_token: settings.postex_api_token,
-        }),
       });
       const data = await res.json();
       setPostExTestMessage(data.message || 'PostEx API is not configured.');

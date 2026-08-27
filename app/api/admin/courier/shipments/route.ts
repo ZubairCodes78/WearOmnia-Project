@@ -120,21 +120,34 @@ export async function POST(req: Request) {
         orderId: order.id,
         provider: result.provider || providerName,
         trackingNumber: result.trackingNumber || null,
+        orderRefNumber: result.orderRefNumber || order.orderNumber,
         externalShipmentId: result.externalShipmentId || null,
-        status: result.status || 'CREATED',
+        status: result.status || 'Booked',
         labelUrl: result.labelUrl || null,
         trackingUrl: result.trackingUrl || null,
         codAmount: order.totalAmount,
+        settlementStatus: 'PENDING',
         metadata: result.metadata ? JSON.stringify(result.metadata) : null,
+        apiResponse: result.raw ? JSON.stringify(result.raw) : null,
       },
     });
 
-    // Update order courier & tracking number while preserving status (or advancing to PACKING/DISPATCHED)
+    // Update order courier & tracking number while preserving status
     await prisma.order.update({
       where: { id: order.id },
       data: {
         courier: result.provider || providerName,
         trackingNumber: result.trackingNumber || order.trackingNumber,
+      },
+    });
+
+    // Add Order Timeline Entry
+    await prisma.orderTimeline.create({
+      data: {
+        orderId: order.id,
+        status: order.status,
+        note: `PostEx shipment created. Tracking ID: ${result.trackingNumber}`,
+        updatedBy: 'Admin',
       },
     });
 

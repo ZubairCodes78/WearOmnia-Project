@@ -1,38 +1,47 @@
 import { NextResponse } from 'next/server';
-import { getSiteSettings } from '@/lib/settings';
+import { verifyAdminSession } from '@/lib/auth';
+import { postexApi } from '@/lib/courier/postex-api';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
-    const settings = await getSiteSettings();
+    const isAuthenticated = await verifyAdminSession();
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
-    const apiKey = body.postex_api_key ?? settings.postex_api_key ?? '';
-    const apiToken = body.postex_api_token ?? settings.postex_api_token ?? '';
-    const enabled = body.postex_enabled ?? settings.postex_enabled ?? false;
-
-    if (!enabled || (!apiKey && !apiToken)) {
+    if (!postexApi.isConfigured()) {
       return NextResponse.json({
         success: false,
         configured: false,
-        message: 'PostEx API is not configured.',
+        message: 'PostEx API is not configured. POSTEX_API_TOKEN is missing in server environment.',
       });
     }
 
-    // Future Live PostEx API Ping Check Endpoint
-    // When official PostEx API endpoint documentation is provided:
-    // const res = await fetch(`${baseUrl}/ping`, ...);
+    // Live connectivity check against PostEx Operational Cities API
+    const pingRes = await postexApi.getOperationalCities();
+
+    if (!pingRes.success) {
+      return NextResponse.json({
+        success: false,
+        configured: true,
+        message: `PostEx API Error: ${pingRes.message || 'Could not connect to PostEx API.'}`,
+      });
+    }
+
+    const cityCount = pingRes.cities?.length || 0;
 
     return NextResponse.json({
       success: true,
       configured: true,
-      message: 'PostEx API credentials detected. Ready for live endpoint testing.',
+      citiesCount: cityCount,
+      message: `PostEx connection successful! Connected to ${cityCount} operational delivery cities.`,
     });
-  } catch (error) {
-    console.error('PostEx Test Connection Error:', error);
+  } catch (error: any) {
     return NextResponse.json({
       success: false,
       configured: false,
-      message: 'PostEx API is not configured.',
+      message: error?.message || 'PostEx API connection failed.',
     }, { status: 500 });
   }
 }
+
