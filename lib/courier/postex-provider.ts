@@ -18,23 +18,44 @@ export class PostExProvider implements CourierProvider {
   }
 
   async checkConfiguration(): Promise<boolean> {
-    return postexApi.isConfigured();
+    return postexApi.isConfiguredAsync();
   }
 
   /**
    * Creates an official shipment on PostEx via POST /services/integration/api/order/v3/create-order
    */
   async createShipment(request: ShipmentRequest): Promise<ShipmentResult> {
-    if (!this.isConfigured()) {
+    const isConfig = await this.checkConfiguration();
+    if (!isConfig) {
       return {
         success: false,
         provider: this.name,
         status: 'UNCONFIGURED',
-        message: 'PostEx integration is not configured. Please set POSTEX_API_TOKEN in server environment variables.',
+        message: 'PostEx integration is not configured. Please set POSTEX_API_TOKEN in server environment variables or Admin Settings.',
       };
     }
 
     try {
+      // Resolve address codes from request or server SiteSettings
+      let pickupCode = request.pickupAddressCode?.trim();
+      let storeCode = request.storeAddressCode?.trim();
+
+      if (!pickupCode && !storeCode) {
+        const { getSiteSettings } = await import('@/lib/settings');
+        const settings = await getSiteSettings();
+        pickupCode = settings.postex_pickup_address_code?.trim() || undefined;
+        storeCode = settings.postex_store_address_code?.trim() || undefined;
+      }
+
+      if (!pickupCode && !storeCode) {
+        return {
+          success: false,
+          provider: this.name,
+          status: 'UNCONFIGURED_ADDRESS',
+          message: 'PostEx pickup address is not configured. Please configure it in Admin Settings → PostEx.',
+        };
+      }
+
       const itemsCount = request.items.reduce((sum, i) => sum + (i.quantity || 1), 0);
       const itemsDetail = request.items
         .map((i) => `${i.quantity}x ${i.productTitle}${i.variantInfo ? ` (${i.variantInfo})` : ''}`)
@@ -51,8 +72,8 @@ export class PostExProvider implements CourierProvider {
         orderDetail: itemsDetail,
         orderRefNumber: request.orderNumber,
         orderType: 'Normal',
-        pickupAddressCode: request.pickupAddressCode,
-        storeAddressCode: request.storeAddressCode,
+        pickupAddressCode: pickupCode,
+        storeAddressCode: storeCode,
         transactionNotes: request.orderNotes || `WearOMNIA Order #${request.orderNumber}`,
       });
 

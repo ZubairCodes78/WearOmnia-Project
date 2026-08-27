@@ -142,14 +142,31 @@ export class PostExApiClient {
 
   /**
    * Retrieves the server-side PostEx API token.
+   * Resolves from explicit parameter, process.env, or SiteSettings in database.
    * STRICT SECURITY: Never logs or exposes this token.
    */
-  private getToken(): string {
-    return (process.env.POSTEX_API_TOKEN || '').trim();
+  private async resolveToken(customToken?: string): Promise<string> {
+    if (customToken?.trim()) return customToken.trim();
+    if (process.env.POSTEX_API_TOKEN?.trim()) return process.env.POSTEX_API_TOKEN.trim();
+    try {
+      const { getSiteSettings } = await import('@/lib/settings');
+      const settings = await getSiteSettings();
+      if (settings.postex_api_token?.trim()) {
+        return settings.postex_api_token.trim();
+      }
+    } catch {
+      // fallback
+    }
+    return '';
   }
 
   public isConfigured(): boolean {
-    return Boolean(this.getToken());
+    return Boolean(process.env.POSTEX_API_TOKEN?.trim());
+  }
+
+  public async isConfiguredAsync(): Promise<boolean> {
+    const token = await this.resolveToken();
+    return Boolean(token);
   }
 
   /**
@@ -162,14 +179,15 @@ export class PostExApiClient {
       body?: any;
       headers?: Record<string, string>;
       isBinary?: boolean;
+      customToken?: string;
     } = {}
   ): Promise<{ ok: boolean; status: number; data?: T; buffer?: ArrayBuffer; error?: string }> {
-    const token = this.getToken();
+    const token = await this.resolveToken(options.customToken);
     if (!token) {
       return {
         ok: false,
         status: 401,
-        error: 'PostEx API token is not configured. Please set the POSTEX_API_TOKEN server environment variable.',
+        error: 'PostEx API token is not configured. Please set the POSTEX_API_TOKEN server environment variable or enter it in Admin Settings.',
       };
     }
 
@@ -267,28 +285,31 @@ export class PostExApiClient {
   // 2. Pickup Address
   // GET /services/integration/api/order/v1/get-merchant-address
   // ─────────────────────────────────────────────────────────────────────────────
-  async getMerchantAddresses(): Promise<{ success: boolean; addresses: PostExMerchantAddress[]; message?: string }> {
+  async getMerchantAddresses(customToken?: string): Promise<{ success: boolean; addresses: PostExMerchantAddress[]; message?: string }> {
     const res = await this.request<{ statusCode: string; statusMessage: string; response?: any[] }>(
       '/services/integration/api/order/v1/get-merchant-address',
-      { method: 'GET' }
+      { method: 'GET', customToken }
     );
 
     if (!res.ok || !res.data) {
       return { success: false, addresses: [], message: res.error || 'Failed to fetch merchant addresses' };
     }
 
-    const list = Array.isArray(res.data.response) ? res.data.response : [];
-    const formatted: PostExMerchantAddress[] = list.map((item: any) => ({
-      addressCode: item.addressCode || item.pickupAddressCode || item.id,
-      pickupAddressCode: item.pickupAddressCode || item.addressCode || item.id,
-      cityName: item.cityName || '',
-      address: item.address || item.pickupAddress || '',
-      contactPersonName: item.contactPersonName || item.merchantName,
-      contactPersonPhone: item.contactPersonPhone || item.merchantPhone,
-      isDefault: Boolean(item.isDefault || item.default),
-    }));
+    const list = Array.isArray(res.data.response) ? res.data.response : Array.isArray(res.data) ? (res.data as any) : [];
+    const formatted: PostExMerchantAddress[] = list.map((item: any) => {
+      const code = String(item.addressCode || item.pickupAddressCode || item.storeAddressCode || item.id || '').trim();
+      return {
+        addressCode: code,
+        pickupAddressCode: code,
+        cityName: item.cityName || '',
+        address: item.address || item.pickupAddress || '',
+        contactPersonName: item.contactPersonName || item.merchantName || '',
+        contactPersonPhone: item.contactPersonPhone || item.merchantPhone || '',
+        isDefault: Boolean(item.isDefault || item.default),
+      };
+    });
 
-    return { success: true, addresses: formatted, message: res.data.statusMessage || 'Addresses retrieved' };
+    return { success: true, addresses: formatted, message: res.data.statusMessage || `${formatted.length} PostEx address(es) retrieved` };
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -353,6 +374,17 @@ export class PostExApiClient {
     raw?: any;
     message?: string;
   }> {
+    const pickupCode = payload.pickupAddressCode?.trim();
+    const storeCode = payload.storeAddressCode?.trim();
+
+    // PostEx requires at least one address code
+    if (!pickupCode && !storeCode) {
+      return {
+        success: false,
+        message: 'PostEx pickup address is not configured. Please configure it in Admin Settings → PostEx.',
+      };
+    }
+
     const cleanPayload = {
       cityName: payload.cityName.trim(),
       customerName: payload.customerName.trim(),
@@ -364,8 +396,8 @@ export class PostExApiClient {
       orderDetail: payload.orderDetail || 'Apparel Order',
       orderRefNumber: payload.orderRefNumber,
       orderType: payload.orderType || 'Normal',
-      pickupAddressCode: payload.pickupAddressCode || undefined,
-      storeAddressCode: payload.storeAddressCode || undefined,
+      pickupAddressCode: pickupCode || undefined,
+      storeAddressCode: storeCode || undefined,
       transactionNotes: payload.transactionNotes || `WearOMNIA Order ${payload.orderRefNumber}`,
     };
 

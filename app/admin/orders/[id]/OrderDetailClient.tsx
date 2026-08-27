@@ -51,11 +51,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
 
       const data = await res.json();
       if (!res.ok) {
-        if (data.unconfigured) {
-          setShipmentMessage('PostEx integration is not configured yet. Set POSTEX_API_TOKEN in server environment.');
-        } else {
-          setError(data.error || 'Failed to create PostEx shipment');
-        }
+        setError(data.error || 'Failed to create PostEx shipment');
       } else {
         setShipmentMessage(data.message || 'PostEx shipment created successfully!');
         if (data.shipment?.trackingNumber) {
@@ -766,6 +762,14 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                     <p className="text-[11px] text-red-200/80">
                       {error || shipmentMessage || 'PostEx API request failed or credentials missing. Order remains CONFIRMED.'}
                     </p>
+                    {(error?.includes('Admin Settings') || shipmentMessage?.includes('Admin Settings')) && (
+                      <Link
+                        href="/admin/settings"
+                        className="inline-block text-xs text-amber-300 underline hover:text-amber-200 font-semibold"
+                      >
+                        → Go to Admin Settings to Configure PostEx Pickup Address
+                      </Link>
+                    )}
                     <button
                       type="button"
                       onClick={() => handleCreateShipment('POSTEX')}

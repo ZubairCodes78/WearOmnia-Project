@@ -41,6 +41,10 @@ export interface SiteSettingsData {
   postex_account_id: string;
   postex_webhook_url: string;
   postex_environment: 'TEST' | 'PRODUCTION';
+  postex_pickup_address_code: string;
+  postex_store_address_code: string;
+  postex_pickup_address_name?: string;
+  postex_store_address_name?: string;
 }
 
 export const DEFAULT_SITE_SETTINGS: SiteSettingsData = {
@@ -84,6 +88,10 @@ export const DEFAULT_SITE_SETTINGS: SiteSettingsData = {
   postex_account_id: '',
   postex_webhook_url: '',
   postex_environment: 'TEST',
+  postex_pickup_address_code: '',
+  postex_store_address_code: '',
+  postex_pickup_address_name: '',
+  postex_store_address_name: '',
 };
 
 export async function getSiteSettings(): Promise<SiteSettingsData> {

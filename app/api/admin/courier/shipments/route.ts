@@ -56,7 +56,34 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // 6. Execute shipment creation with courier provider
+    // 6. Validate courier configuration and address codes
+    const { getSiteSettings } = await import('@/lib/settings');
+    const settings = await getSiteSettings();
+
+    if (providerName === 'POSTEX') {
+      const hasToken = Boolean(process.env.POSTEX_API_TOKEN?.trim() || settings.postex_api_token?.trim());
+      if (!hasToken) {
+        return NextResponse.json({
+          error: 'PostEx integration is not configured. Please set POSTEX_API_TOKEN in server environment or Admin Settings → PostEx.',
+          unconfigured: true,
+        }, { status: 400 });
+      }
+
+      const pickupAddressCode = body.pickupAddressCode?.trim() || settings.postex_pickup_address_code?.trim() || undefined;
+      const storeAddressCode = body.storeAddressCode?.trim() || settings.postex_store_address_code?.trim() || undefined;
+
+      if (!pickupAddressCode && !storeAddressCode) {
+        return NextResponse.json({
+          error: 'PostEx pickup address is not configured. Please configure it in Admin Settings → PostEx.',
+          unconfiguredAddress: true,
+        }, { status: 400 });
+      }
+    }
+
+    const pickupAddressCode = body.pickupAddressCode?.trim() || settings.postex_pickup_address_code?.trim() || undefined;
+    const storeAddressCode = body.storeAddressCode?.trim() || settings.postex_store_address_code?.trim() || undefined;
+
+    // 7. Execute shipment creation with courier provider
     const provider = getCourierProvider(providerName);
     const result = await provider.createShipment({
       orderId: order.id,
@@ -70,6 +97,8 @@ export async function POST(req: Request) {
       postalCode: order.postalCode,
       codAmount: order.totalAmount,
       orderNotes: order.orderNotes,
+      pickupAddressCode,
+      storeAddressCode,
       items: order.items.map((i) => ({
         productTitle: i.productTitle,
         variantInfo: i.variantInfo,

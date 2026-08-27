@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Save, Plus, Trash2, Phone, Truck, ShieldAlert, Share2, Megaphone, Info, Lock } from 'lucide-react';
+import { Save, Plus, Trash2, Phone, Truck, ShieldAlert, Share2, Megaphone, Info, Lock, MapPin, CheckCircle2, RefreshCw, Loader2 } from 'lucide-react';
 import { SiteSettingsData } from '@/lib/settings';
 
 interface ShippingRule {
@@ -28,6 +28,19 @@ export function SettingsClient({ initialSettings, initialShippingRules }: Settin
   // PostEx test connection state
   const [testingPostEx, setTestingPostEx] = useState(false);
   const [postExTestMessage, setPostExTestMessage] = useState('');
+
+  // PostEx Merchant Addresses state
+  const [merchantAddresses, setMerchantAddresses] = useState<Array<{
+    addressCode?: string;
+    pickupAddressCode?: string;
+    cityName: string;
+    address: string;
+    contactPersonName?: string;
+    contactPersonPhone?: string;
+    isDefault?: boolean;
+  }>>([]);
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [addressMessage, setAddressMessage] = useState('');
   
   // Password change state
   const [passwordData, setPasswordData] = useState({
@@ -149,6 +162,41 @@ export function SettingsClient({ initialSettings, initialShippingRules }: Settin
       setPostExTestMessage('PostEx API is not configured.');
     } finally {
       setTestingPostEx(false);
+    }
+  };
+
+  const handleFetchMerchantAddresses = async () => {
+    setLoadingAddresses(true);
+    setAddressMessage('');
+    try {
+      const res = await fetch('/api/admin/courier/postex/merchant-address');
+      const data = await res.json();
+      if (!res.ok) {
+        setAddressMessage(data.error || 'Failed to fetch PostEx merchant addresses.');
+      } else {
+        const addresses = data.addresses || [];
+        setMerchantAddresses(addresses);
+        if (addresses.length > 0) {
+          setAddressMessage(`✓ Successfully retrieved ${addresses.length} merchant address(es) from PostEx.`);
+          // If no pickup address code is set, auto-select default or first address
+          if (!settings.postex_pickup_address_code) {
+            const def = addresses.find((a: any) => a.isDefault) || addresses[0];
+            const code = def.addressCode || def.pickupAddressCode || '';
+            const name = `${def.cityName} - ${def.address}`;
+            setSettings((prev) => ({
+              ...prev,
+              postex_pickup_address_code: code,
+              postex_pickup_address_name: name,
+            }));
+          }
+        } else {
+          setAddressMessage('No merchant addresses returned from PostEx account.');
+        }
+      }
+    } catch (e) {
+      setAddressMessage('Network error fetching PostEx merchant addresses.');
+    } finally {
+      setLoadingAddresses(false);
     }
   };
 
@@ -621,6 +669,154 @@ export function SettingsClient({ initialSettings, initialShippingRules }: Settin
                 >
                   Copy
                 </button>
+              </div>
+            </div>
+
+            {/* PostEx Merchant Address Selection */}
+            <div className="sm:col-span-2 lg:col-span-4 bg-[#1A1A1A] p-5 rounded-xl border border-[#262626] space-y-4 mt-2">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[#262626] pb-3">
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-amber-400" />
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#FAF8F5]">
+                    PostEx Merchant Pickup & Store Addresses
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleFetchMerchantAddresses}
+                  disabled={loadingAddresses}
+                  className="bg-[#262626] hover:bg-[#333333] text-amber-400 border border-amber-500/30 px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
+                >
+                  {loadingAddresses ? (
+                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Fetching Addresses...</>
+                  ) : (
+                    <><RefreshCw className="w-3.5 h-3.5" /> Load / Refresh Addresses</>
+                  )}
+                </button>
+              </div>
+
+              {addressMessage && (
+                <div className={`p-3 rounded-lg text-xs font-medium ${
+                  addressMessage.includes('✓') || addressMessage.includes('Successfully')
+                    ? 'bg-emerald-900/30 text-emerald-300 border border-emerald-500/30'
+                    : 'bg-amber-900/30 text-amber-300 border border-amber-500/30'
+                }`}>
+                  {addressMessage}
+                </div>
+              )}
+
+              {!settings.postex_pickup_address_code && (
+                <div className="p-3 bg-amber-950/40 border border-amber-500/40 text-amber-200 rounded-xl text-xs flex items-center gap-2 font-medium">
+                  <ShieldAlert className="w-4 h-4 text-amber-400 shrink-0" />
+                  <span>
+                    <strong>Action Required:</strong> PostEx pickup address is not configured. Click <strong>&quot;Load / Refresh Addresses&quot;</strong> above and select your pickup address code to enable 1-click order shipping.
+                  </span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Pickup Address Selector */}
+                <div className="space-y-2">
+                  <label className="block text-xs font-bold text-amber-400 uppercase">
+                    PostEx Pickup Address (Required for Shipping) *
+                  </label>
+                  {merchantAddresses.length > 0 && (
+                    <select
+                      value={settings.postex_pickup_address_code || ''}
+                      onChange={(e) => {
+                        const code = e.target.value;
+                        const matched = merchantAddresses.find(
+                          (a) => (a.addressCode || a.pickupAddressCode) === code
+                        );
+                        setSettings({
+                          ...settings,
+                          postex_pickup_address_code: code,
+                          postex_pickup_address_name: matched ? `${matched.cityName} - ${matched.address}` : '',
+                        });
+                      }}
+                      className="w-full bg-[#141414] border border-amber-500/50 rounded-lg px-3.5 py-2.5 text-xs text-[#FAF8F5] focus:outline-none focus:border-amber-400"
+                    >
+                      <option value="">-- Select Pickup Address --</option>
+                      {merchantAddresses.map((addr, idx) => {
+                        const code = addr.addressCode || addr.pickupAddressCode || `ADDR-${idx}`;
+                        return (
+                          <option key={code} value={code}>
+                            {addr.cityName ? `${addr.cityName} - ` : ''}{addr.address} (Code: {code}){addr.isDefault ? ' [Default]' : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  )}
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={settings.postex_pickup_address_code || ''}
+                      onChange={(e) =>
+                        setSettings({ ...settings, postex_pickup_address_code: e.target.value })
+                      }
+                      placeholder="Pickup Address Code (e.g. 001)"
+                      className="flex-1 bg-[#141414] border border-[#333] rounded-lg px-3 py-2 text-xs font-mono text-amber-400 focus:outline-none focus:border-amber-400"
+                    />
+                  </div>
+                  {settings.postex_pickup_address_name && (
+                    <p className="text-[11px] text-emerald-400 flex items-center gap-1 font-medium">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                      {settings.postex_pickup_address_name}
+                    </p>
+                  )}
+                </div>
+
+                {/* Store Address Selector */}
+                <div className="space-y-2">
+                  <label className="block text-xs text-[#A3A3A3] uppercase">
+                    PostEx Store Address (Optional / Secondary)
+                  </label>
+                  {merchantAddresses.length > 0 && (
+                    <select
+                      value={settings.postex_store_address_code || ''}
+                      onChange={(e) => {
+                        const code = e.target.value;
+                        const matched = merchantAddresses.find(
+                          (a) => (a.addressCode || a.pickupAddressCode) === code
+                        );
+                        setSettings({
+                          ...settings,
+                          postex_store_address_code: code,
+                          postex_store_address_name: matched ? `${matched.cityName} - ${matched.address}` : '',
+                        });
+                      }}
+                      className="w-full bg-[#141414] border border-[#262626] rounded-lg px-3.5 py-2.5 text-xs text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]"
+                    >
+                      <option value="">-- Optional / None --</option>
+                      {merchantAddresses.map((addr, idx) => {
+                        const code = addr.addressCode || addr.pickupAddressCode || `ADDR-${idx}`;
+                        return (
+                          <option key={code} value={code}>
+                            {addr.cityName ? `${addr.cityName} - ` : ''}{addr.address} (Code: {code}){addr.isDefault ? ' [Default]' : ''}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  )}
+
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={settings.postex_store_address_code || ''}
+                      onChange={(e) =>
+                        setSettings({ ...settings, postex_store_address_code: e.target.value })
+                      }
+                      placeholder="Store Address Code (Optional)"
+                      className="flex-1 bg-[#141414] border border-[#333] rounded-lg px-3 py-2 text-xs font-mono text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]"
+                    />
+                  </div>
+                  {settings.postex_store_address_name && (
+                    <p className="text-[11px] text-[#A3A3A3]">
+                      {settings.postex_store_address_name}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
