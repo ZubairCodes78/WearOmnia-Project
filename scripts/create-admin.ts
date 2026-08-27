@@ -21,6 +21,18 @@ async function createAdmin() {
     },
   });
   
+  // Clean up any failed login attempts so admin is never locked out on password reset
+  await prisma.auditLog.deleteMany({
+    where: {
+      entity: 'AdminAuth',
+      action: 'FAILED_LOGIN_ATTEMPT',
+      OR: [
+        { entityId: admin.id },
+        { details: { contains: email } },
+      ],
+    },
+  });
+
   console.log('Admin user created/updated:', admin.email);
   console.log('Password:', password);
   console.log('IMPORTANT: Change this password after first login!');

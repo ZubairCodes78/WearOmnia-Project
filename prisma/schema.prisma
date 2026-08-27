@@ -304,6 +304,9 @@ model AuditLog {
   details   String?
   ipAddress String?  @default("127.0.0.1")
   createdAt DateTime @default(now())
+
+  @@index([entity, action, createdAt])
+  @@index([ipAddress, createdAt])
 }
 
 model ShippingRule {

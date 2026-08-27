@@ -1,59 +1,159 @@
-// Simple in-memory rate limiting for login attempts
-const loginAttempts = new Map<string, { count: number; resetTime: number }>();
+import { prisma } from './prisma';
 
-const MAX_ATTEMPTS = 5;
-const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutes
+const MAX_ACCOUNT_ATTEMPTS = 5;
+const MAX_IP_ATTEMPTS = 20; // IP-level brute-force threshold
+const LOCKOUT_WINDOW_MS = 15 * 60 * 1000; // 15 minutes
 
-export function checkLoginRateLimit(identifier: string): { allowed: boolean; remainingAttempts: number; lockoutTime?: number } {
-  const now = Date.now();
-  const record = loginAttempts.get(identifier);
+export interface RateLimitResult {
+  allowed: boolean;
+  remainingAttempts: number;
+  lockoutTime?: number;
+  lockoutMinutes?: number;
+}
 
-  if (!record) {
-    return { allowed: true, remainingAttempts: MAX_ATTEMPTS };
-  }
+/**
+ * Check login rate limits for both IP and Email identifier.
+ * Works seamlessly in serverless/Vercel environments using Postgres/Prisma persistence.
+ */
+export async function checkLoginRateLimit(
+  email: string,
+  ipAddress: string = '127.0.0.1'
+): Promise<RateLimitResult> {
+  try {
+    const identifier = email.toLowerCase().trim();
+    const windowStart = new Date(Date.now() - LOCKOUT_WINDOW_MS);
 
-  // Check if lockout period has expired
-  if (now > record.resetTime) {
-    loginAttempts.delete(identifier);
-    return { allowed: true, remainingAttempts: MAX_ATTEMPTS };
-  }
+    // 1. IP-level brute force protection (prevents bot spray)
+    if (ipAddress && ipAddress !== '127.0.0.1' && ipAddress !== '::1') {
+      const ipFailures = await prisma.auditLog.count({
+        where: {
+          entity: 'AdminAuth',
+          action: 'FAILED_LOGIN_ATTEMPT',
+          ipAddress: ipAddress,
+          createdAt: { gte: windowStart },
+        },
+      });
 
-  // Check if currently locked out
-  if (record.count >= MAX_ATTEMPTS) {
-    return { 
-      allowed: false, 
-      remainingAttempts: 0, 
-      lockoutTime: record.resetTime 
+      if (ipFailures >= MAX_IP_ATTEMPTS) {
+        return {
+          allowed: false,
+          remainingAttempts: 0,
+          lockoutTime: Date.now() + LOCKOUT_WINDOW_MS,
+          lockoutMinutes: 15,
+        };
+      }
+    }
+
+    // 2. Account-level protection
+    // Check if the admin exists and determine the valid reference timestamp
+    const admin = await prisma.admin.findUnique({
+      where: { email: identifier },
+      select: { id: true, updatedAt: true },
+    });
+
+    let latestValidTime = windowStart;
+
+    if (admin) {
+      // If admin was updated (e.g. password reset script or change-password), ignore failures before update
+      if (admin.updatedAt && admin.updatedAt > latestValidTime) {
+        latestValidTime = admin.updatedAt;
+      }
+
+      // Check last successful login to avoid counting attempts before previous successful session
+      const lastSuccess = await prisma.auditLog.findFirst({
+        where: {
+          entity: 'AdminAuth',
+          action: 'SUCCESSFUL_LOGIN',
+          entityId: admin.id,
+          createdAt: { gte: latestValidTime },
+        },
+        orderBy: { createdAt: 'desc' },
+        select: { createdAt: true },
+      });
+
+      if (lastSuccess && lastSuccess.createdAt > latestValidTime) {
+        latestValidTime = lastSuccess.createdAt;
+      }
+    }
+
+    // Query recent failed attempts for this identifier since latestValidTime
+    const failures = await prisma.auditLog.findMany({
+      where: {
+        entity: 'AdminAuth',
+        action: 'FAILED_LOGIN_ATTEMPT',
+        createdAt: { gte: latestValidTime },
+        OR: [
+          admin ? { entityId: admin.id } : { details: { contains: identifier } },
+          { details: { contains: identifier } },
+        ],
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true },
+    });
+
+    const failedCount = failures.length;
+
+    if (failedCount >= MAX_ACCOUNT_ATTEMPTS) {
+      const oldestRelevantFailure = failures[failures.length - 1];
+      const expiryTime = oldestRelevantFailure.createdAt.getTime() + LOCKOUT_WINDOW_MS;
+      const remainingMs = Math.max(0, expiryTime - Date.now());
+      const lockoutMinutes = Math.max(1, Math.ceil(remainingMs / 60000));
+
+      if (remainingMs > 0) {
+        return {
+          allowed: false,
+          remainingAttempts: 0,
+          lockoutTime: expiryTime,
+          lockoutMinutes,
+        };
+      }
+    }
+
+    return {
+      allowed: true,
+      remainingAttempts: Math.max(0, MAX_ACCOUNT_ATTEMPTS - failedCount),
     };
-  }
-
-  return { 
-    allowed: true, 
-    remainingAttempts: MAX_ATTEMPTS - record.count 
-  };
-}
-
-export function recordFailedLoginAttempt(identifier: string): void {
-  const now = Date.now();
-  const record = loginAttempts.get(identifier);
-
-  if (!record) {
-    loginAttempts.set(identifier, { count: 1, resetTime: now + LOCKOUT_TIME });
-  } else {
-    record.count++;
-    // Reset time updates with each failed attempt to prevent indefinite lockout
-    record.resetTime = now + LOCKOUT_TIME;
+  } catch (error) {
+    // Fail-open gracefully on unexpected DB read errors so legit admins are never hard-blocked
+    console.warn('[RateLimit] Database rate-limit check failed, allowing request:', error);
+    return { allowed: true, remainingAttempts: MAX_ACCOUNT_ATTEMPTS };
   }
 }
 
-export function recordSuccessfulLogin(identifier: string): void {
-  loginAttempts.delete(identifier);
+/**
+ * Clears failed login attempts for a specific account or IP.
+ */
+export async function clearFailedLoginAttempts(
+  email: string,
+  adminId?: string
+): Promise<void> {
+  try {
+    const identifier = email.toLowerCase().trim();
+    await prisma.auditLog.deleteMany({
+      where: {
+        entity: 'AdminAuth',
+        action: 'FAILED_LOGIN_ATTEMPT',
+        OR: [
+          adminId ? { entityId: adminId } : { details: { contains: identifier } },
+          { details: { contains: identifier } },
+        ],
+      },
+    });
+  } catch (e) {
+    // Non-critical, ignore if fails
+  }
 }
 
-export function getLockoutTime(identifier: string): number | null {
-  const record = loginAttempts.get(identifier);
-  if (record && record.count >= MAX_ATTEMPTS) {
-    return record.resetTime;
-  }
-  return null;
+export async function recordSuccessfulLogin(
+  email: string,
+  adminId?: string
+): Promise<void> {
+  await clearFailedLoginAttempts(email, adminId);
+}
+
+export async function recordFailedLoginAttempt(
+  identifier: string,
+  adminId?: string
+): Promise<void> {
+  // Handled directly via recordAuditLog in login route
 }

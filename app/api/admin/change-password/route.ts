@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { verifyAdminSession, hashPassword, verifyPassword, getAdminById, COOKIE_NAME } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { recordAuditLog } from '@/lib/audit';
+import { clearFailedLoginAttempts } from '@/lib/rate-limit';
 import { cookies } from 'next/headers';
 
 export async function POST(req: Request) {
@@ -57,6 +58,7 @@ export async function POST(req: Request) {
       data: { password: hashedNewPassword }
     });
 
+    await clearFailedLoginAttempts(admin.email, adminId);
     await recordAuditLog('PASSWORD_CHANGED', 'AdminAuth', adminId, 'Admin password changed successfully');
 
     return NextResponse.json({ success: true, message: 'Password changed successfully' });
