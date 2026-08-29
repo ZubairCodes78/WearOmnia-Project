@@ -572,6 +572,36 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
                             </button>
                           )}
 
+                          {/* Send Tracking Notification to Customer */}
+                          {tracking !== 'Pending' && shipment.order && (
+                            <button
+                              onClick={async () => {
+                                try {
+                                  const res = await fetch('/api/admin/orders/notify-tracking', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      orderId: shipment.orderId,
+                                      trackingNumber: tracking,
+                                    }),
+                                  });
+                                  const data = await res.json();
+                                  if (res.ok) {
+                                    alert(`✓ Tracking notification sent to customer for #${shipment.order?.orderNumber}`);
+                                  } else {
+                                    alert(`Error: ${data.error || 'Failed to send tracking'}`);
+                                  }
+                                } catch {
+                                  alert('Network error notifying customer.');
+                                }
+                              }}
+                              className="p-2 bg-emerald-950 hover:bg-emerald-600 text-emerald-300 hover:text-white rounded-lg border border-emerald-800/40 transition-all inline-block align-middle"
+                              title="Send Tracking to Customer via WhatsApp/SMS"
+                            >
+                              <Send className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
                           {/* Check Settlement */}
                           {tracking !== 'Pending' && (
                             <button

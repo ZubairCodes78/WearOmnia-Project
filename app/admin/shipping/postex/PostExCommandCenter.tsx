@@ -799,6 +799,33 @@ export function PostExCommandCenter({ siteSettings, initialShipments, stats }: P
                               >
                                 Track
                               </button>
+                              <button
+                                onClick={async () => {
+                                  if (!s.order?.id && !s.orderId) return;
+                                  try {
+                                    const res = await fetch('/api/admin/orders/notify-tracking', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        orderId: s.order?.id || s.orderId,
+                                        trackingNumber: s.trackingNumber,
+                                      }),
+                                    });
+                                    const data = await res.json();
+                                    if (res.ok) {
+                                      alert(`✓ Tracking notification dispatched for ${s.trackingNumber}`);
+                                    } else {
+                                      alert(`Error: ${data.error || 'Failed to send tracking notification'}`);
+                                    }
+                                  } catch {
+                                    alert('Network error notifying customer.');
+                                  }
+                                }}
+                                className="px-2.5 py-1 bg-emerald-950 text-emerald-300 border border-emerald-800/40 hover:bg-emerald-600 hover:text-white rounded-lg text-[10px] font-bold uppercase transition-all"
+                                title="Send Tracking to Customer"
+                              >
+                                Notify
+                              </button>
                               <a
                                 href={`/api/admin/courier/postex/label?trackingNumber=${s.trackingNumber}`}
                                 target="_blank"
