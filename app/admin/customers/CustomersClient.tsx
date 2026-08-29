@@ -18,7 +18,9 @@ import {
   Loader2,
   CheckCircle2,
   ExternalLink,
+  Trash2,
 } from 'lucide-react';
+import { DeleteConfirmModal } from '@/components/admin/DeleteConfirmModal';
 
 interface CustomerOrder {
   id: string;
@@ -58,9 +60,31 @@ export function CustomersClient({ initialCustomers }: CustomersClientProps) {
 
   // Drawer / Detail State
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [deleteCustomerModal, setDeleteCustomerModal] = useState<Customer | null>(null);
   const [notes, setNotes] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
+
+  const handleDeleteCustomerConfirm = async () => {
+    if (!deleteCustomerModal) return;
+    const res = await fetch('/api/admin/customers', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ customerId: deleteCustomerModal.id }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to delete customer.');
+    }
+
+    setCustomers((prev) => prev.filter((c) => c.id !== deleteCustomerModal.id));
+    if (selectedCustomer?.id === deleteCustomerModal.id) {
+      setSelectedCustomer(null);
+    }
+    setDeleteCustomerModal(null);
+    router.refresh();
+  };
 
   const totalSpentAll = customers.reduce((sum, c) => sum + c.totalSpent, 0);
   const vipCount = customers.filter((c) => c.isVIP).length;
@@ -302,12 +326,19 @@ export function CustomersClient({ initialCustomers }: CustomersClientProps) {
                         {customer.isVIP ? 'VIP Patron' : 'Set VIP'}
                       </button>
                     </td>
-                    <td className="p-4 text-right">
+                    <td className="p-4 text-right space-x-2">
                       <button
                         onClick={() => handleOpenCustomer(customer)}
                         className="bg-[#D4AF37]/10 hover:bg-[#D4AF37] text-[#D4AF37] hover:text-black px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase transition-all border border-[#D4AF37]/30"
                       >
                         Profile →
+                      </button>
+                      <button
+                        onClick={() => setDeleteCustomerModal(customer)}
+                        className="bg-red-950/40 hover:bg-red-900/70 text-red-300 border border-red-800/40 p-1.5 rounded-lg text-xs transition-all inline-block align-middle"
+                        title="Delete Customer Profile"
+                      >
+                        <Trash2 className="w-3.5 h-3.5 text-red-400" />
                       </button>
                     </td>
                   </tr>
@@ -325,26 +356,32 @@ export function CustomersClient({ initialCustomers }: CustomersClientProps) {
             <div className="flex items-start justify-between border-b border-[#D4AF37]/20 pb-4">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="font-serif text-2xl font-bold text-[#FAF8F5]">
-                    {selectedCustomer.fullName}
-                  </h3>
+                  <h3 className="font-serif text-2xl font-bold text-[#FAF8F5]">{selectedCustomer.fullName}</h3>
                   {selectedCustomer.isVIP && (
-                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-amber-500/20 text-amber-300 border border-amber-500/50 flex items-center gap-1 font-sans">
+                    <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded text-[10px] font-bold uppercase flex items-center gap-1">
                       <Crown className="w-3 h-3 text-amber-400 fill-amber-400" /> VIP
                     </span>
                   )}
                 </div>
-                <p className="text-xs text-[#D4AF37] font-mono mt-0.5">{selectedCustomer.phone}</p>
+                <p className="text-xs text-[#FAF8F5]/60 mt-0.5">{selectedCustomer.phone} • {selectedCustomer.email || 'No email'}</p>
               </div>
-              <button onClick={() => setSelectedCustomer(null)} className="p-1.5 text-[#D4AF37] hover:bg-teal-900 rounded-lg">
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setDeleteCustomerModal(selectedCustomer)}
+                  className="bg-red-950/60 hover:bg-red-900 text-red-300 border border-red-800/40 px-3 py-1.5 rounded-xl text-xs font-bold uppercase flex items-center gap-1 transition-colors"
+                >
+                  <Trash2 className="w-3.5 h-3.5 text-red-400" /> Delete Profile
+                </button>
+                <button onClick={() => setSelectedCustomer(null)} className="p-1.5 text-[#D4AF37] hover:bg-teal-900 rounded-lg">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
-            {/* Quick Metrics */}
+            {/* Quick Financial Snapshot */}
             <div className="grid grid-cols-3 gap-3 text-center">
               <div className="bg-[#06191B] p-3 rounded-2xl border border-[#D4AF37]/15">
-                <span className="text-[10px] uppercase text-[#D4AF37] font-bold block">Lifetime Orders</span>
+                <span className="text-[10px] uppercase text-[#D4AF37] font-bold block">Orders Placed</span>
                 <span className="font-serif text-xl font-bold text-[#FAF8F5]">{selectedCustomer.ordersCount}</span>
               </div>
               <div className="bg-[#06191B] p-3 rounded-2xl border border-[#D4AF37]/15">
@@ -427,6 +464,17 @@ export function CustomersClient({ initialCustomers }: CustomersClientProps) {
           </div>
         </div>
       )}
+
+      {/* Delete Customer Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={Boolean(deleteCustomerModal)}
+        onClose={() => setDeleteCustomerModal(null)}
+        onConfirm={handleDeleteCustomerConfirm}
+        title="Delete Customer Profile?"
+        itemName={`${deleteCustomerModal?.fullName} (${deleteCustomerModal?.phone})`}
+        itemType="Customer Profile"
+        warningMessage="This will permanently delete this customer profile from the Customer Base. Any past order records will be safely unlinked rather than deleted, preserving financial and revenue accounting."
+      />
     </div>
   );
 }

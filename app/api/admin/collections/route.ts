@@ -78,21 +78,39 @@ export async function PUT(req: Request) {
 }
 
 export async function DELETE(req: Request) {
-  const isAuthenticated = await verifyAdminSession();
-  if (!isAuthenticated) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
+    const isAuthenticated = await verifyAdminSession();
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    let id: string | null = null;
+    try {
+      const body = await req.json();
+      id = body.id;
+    } catch {
+      const { searchParams } = new URL(req.url);
+      id = searchParams.get('id');
+    }
 
     if (!id) {
       return NextResponse.json({ error: 'Collection ID is required' }, { status: 400 });
     }
 
+    const collection = await prisma.collection.findUnique({ where: { id } });
+    if (!collection) {
+      return NextResponse.json({ error: 'Collection not found' }, { status: 404 });
+    }
+
+    // Unlink any products currently in this collection
+    await prisma.product.updateMany({
+      where: { collectionId: id },
+      data: { collectionId: null },
+    });
+
     await prisma.collection.delete({ where: { id } });
-    return NextResponse.json({ success: true });
+
+    return NextResponse.json({ success: true, message: `Collection "${collection.name}" deleted successfully.` });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Failed to delete collection' }, { status: 500 });
   }

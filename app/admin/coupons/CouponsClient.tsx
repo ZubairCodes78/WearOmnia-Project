@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Tag, Plus, Check, X, Loader2, Sparkles, Trash2 } from 'lucide-react';
+import { Tag, Plus, Check, X, Loader2, Sparkles, Trash2, Edit3, Power, AlertCircle } from 'lucide-react';
+import { DeleteConfirmModal } from '@/components/admin/DeleteConfirmModal';
 
 interface CouponItem {
   id: string;
@@ -19,6 +20,8 @@ interface CouponItem {
 export const CouponsClient: React.FC<{ initialCoupons: CouponItem[] }> = ({ initialCoupons }) => {
   const [coupons, setCoupons] = useState<CouponItem[]>(initialCoupons);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState<CouponItem | null>(null);
+  const [deleteModalCoupon, setDeleteModalCoupon] = useState<CouponItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -29,39 +32,113 @@ export const CouponsClient: React.FC<{ initialCoupons: CouponItem[] }> = ({ init
     minOrderAmount: '5000',
     maxDiscountAmount: '3000',
     usageLimit: '100',
+    isActive: true,
   });
 
-  const handleCreateCoupon = async (e: React.FormEvent) => {
+  const openCreateModal = () => {
+    setEditingCoupon(null);
+    setFormData({
+      code: '',
+      discountType: 'PERCENTAGE',
+      discountValue: '10',
+      minOrderAmount: '5000',
+      maxDiscountAmount: '3000',
+      usageLimit: '100',
+      isActive: true,
+    });
+    setErrorMessage('');
+    setModalOpen(true);
+  };
+
+  const openEditModal = (coupon: CouponItem) => {
+    setEditingCoupon(coupon);
+    setFormData({
+      code: coupon.code,
+      discountType: coupon.discountType,
+      discountValue: coupon.discountValue.toString(),
+      minOrderAmount: coupon.minOrderAmount.toString(),
+      maxDiscountAmount: coupon.maxDiscountAmount ? coupon.maxDiscountAmount.toString() : '',
+      usageLimit: coupon.usageLimit ? coupon.usageLimit.toString() : '',
+      isActive: coupon.isActive,
+    });
+    setErrorMessage('');
+    setModalOpen(true);
+  };
+
+  const handleSaveCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrorMessage('');
 
     try {
-      const res = await fetch('/api/admin/coupons', {
-        method: 'POST',
+      const url = '/api/admin/coupons';
+      const method = editingCoupon ? 'PUT' : 'POST';
+      const payload = {
+        id: editingCoupon?.id,
+        code: formData.code,
+        discountType: formData.discountType,
+        discountValue: formData.discountValue,
+        minOrderAmount: formData.minOrderAmount,
+        maxDiscountAmount: formData.maxDiscountAmount,
+        usageLimit: formData.usageLimit,
+        isActive: formData.isActive,
+      };
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
+
       if (res.ok && data.coupon) {
-        setCoupons([data.coupon, ...coupons]);
+        if (editingCoupon) {
+          setCoupons((prev) => prev.map((c) => (c.id === data.coupon.id ? data.coupon : c)));
+        } else {
+          setCoupons([data.coupon, ...coupons]);
+        }
         setModalOpen(false);
-        setFormData({
-          code: '',
-          discountType: 'PERCENTAGE',
-          discountValue: '10',
-          minOrderAmount: '5000',
-          maxDiscountAmount: '3000',
-          usageLimit: '100',
-        });
       } else {
-        setErrorMessage(data.error || 'Failed to create coupon.');
+        setErrorMessage(data.error || 'Failed to save coupon.');
       }
     } catch (e) {
-      setErrorMessage('Network error creating coupon.');
+      setErrorMessage('Network error saving coupon.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleToggleActive = async (coupon: CouponItem) => {
+    const newStatus = !coupon.isActive;
+    try {
+      const res = await fetch('/api/admin/coupons', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: coupon.id, isActive: newStatus }),
+      });
+      if (res.ok) {
+        setCoupons((prev) => prev.map((c) => (c.id === coupon.id ? { ...c, isActive: newStatus } : c)));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!deleteModalCoupon) return;
+    const res = await fetch('/api/admin/coupons', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: deleteModalCoupon.id }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to delete coupon.');
+    }
+
+    setCoupons((prev) => prev.filter((c) => c.id !== deleteModalCoupon.id));
+    setDeleteModalCoupon(null);
   };
 
   return (
@@ -78,14 +155,11 @@ export const CouponsClient: React.FC<{ initialCoupons: CouponItem[] }> = ({ init
             Promo Coupons & Vouchers ({coupons.length})
           </h1>
           <p className="text-xs text-[#FAF8F5]/70 mt-1 font-sans">
-            Create and manage percentage or fixed discount promo codes for customer checkout.
+            Create, edit, toggle, or permanently delete promo discount codes for customer checkout.
           </p>
         </div>
         <button
-          onClick={() => {
-            setErrorMessage('');
-            setModalOpen(true);
-          }}
+          onClick={openCreateModal}
           className="bg-[#D4AF37] text-black hover:bg-white px-6 py-3 rounded-xl text-xs uppercase font-extrabold tracking-widest transition-all shadow-lg flex items-center justify-center gap-2"
         >
           <Plus className="w-4 h-4" /> Create New Coupon
@@ -104,12 +178,13 @@ export const CouponsClient: React.FC<{ initialCoupons: CouponItem[] }> = ({ init
                 <th className="p-4">Min Spend</th>
                 <th className="p-4">Usage (Used / Limit)</th>
                 <th className="p-4">Status</th>
+                <th className="p-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#D4AF37]/10">
               {coupons.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="p-12 text-center text-[#FAF8F5]/50 italic">
+                  <td colSpan={7} className="p-12 text-center text-[#FAF8F5]/50 italic">
                     No promo coupons created yet. Click &quot;Create New Coupon&quot; to add one.
                   </td>
                 </tr>
@@ -121,20 +196,40 @@ export const CouponsClient: React.FC<{ initialCoupons: CouponItem[] }> = ({ init
                     </td>
                     <td className="p-4 font-semibold text-[#FAF8F5]">{c.discountType}</td>
                     <td className="p-4 font-bold text-emerald-400 font-mono">
-                      {c.discountType === 'PERCENTAGE' ? `${c.discountValue}% OFF` : `Rs. ${c.discountValue} OFF`}
+                      {c.discountType === 'PERCENTAGE' ? `${c.discountValue}% OFF` : `Rs. ${c.discountValue.toLocaleString()} OFF`}
                     </td>
                     <td className="p-4 text-[#FAF8F5]/80 font-mono">Rs. {c.minOrderAmount.toLocaleString()}</td>
                     <td className="p-4 font-mono font-bold text-[#FAF8F5]">
                       {c.usedCount} / {c.usageLimit || '∞'}
                     </td>
                     <td className="p-4">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                        c.isActive
-                          ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40'
-                          : 'bg-gray-950/60 text-gray-400 border-gray-500/40'
-                      }`}>
+                      <button
+                        onClick={() => handleToggleActive(c)}
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all inline-flex items-center gap-1 ${
+                          c.isActive
+                            ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900/80'
+                            : 'bg-gray-950/60 text-gray-400 border-gray-500/40 hover:bg-gray-900/80'
+                        }`}
+                        title="Click to toggle Active/Inactive"
+                      >
+                        <Power className="w-3 h-3" />
                         {c.isActive ? 'Active' : 'Inactive'}
-                      </span>
+                      </button>
+                    </td>
+                    <td className="p-4 text-right space-x-2">
+                      <button
+                        onClick={() => openEditModal(c)}
+                        className="bg-[#103A3E] hover:bg-[#D4AF37] hover:text-black text-[#D4AF37] border border-[#D4AF37]/30 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all inline-flex items-center gap-1 shadow"
+                      >
+                        <Edit3 className="w-3 h-3" /> Edit
+                      </button>
+                      <button
+                        onClick={() => setDeleteModalCoupon(c)}
+                        className="bg-red-950/40 hover:bg-red-900/70 text-red-300 border border-red-800/40 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all inline-flex items-center gap-1 shadow"
+                        title="Permanently Delete Coupon"
+                      >
+                        <Trash2 className="w-3 h-3 text-red-400" /> Delete
+                      </button>
                     </td>
                   </tr>
                 ))
@@ -144,13 +239,13 @@ export const CouponsClient: React.FC<{ initialCoupons: CouponItem[] }> = ({ init
         </div>
       </div>
 
-      {/* Create Coupon Modal */}
+      {/* Create / Edit Coupon Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#0A2528] text-[#FAF8F5] border border-[#D4AF37]/30 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-[#D4AF37]/20 pb-3">
               <h3 className="font-serif text-lg font-bold text-[#D4AF37]">
-                Create Promo Coupon
+                {editingCoupon ? 'Edit Promo Coupon' : 'Create Promo Coupon'}
               </h3>
               <button onClick={() => setModalOpen(false)} className="p-1.5 text-[#D4AF37] hover:bg-teal-900 rounded-lg">
                 <X className="w-5 h-5" />
@@ -163,7 +258,7 @@ export const CouponsClient: React.FC<{ initialCoupons: CouponItem[] }> = ({ init
               </div>
             )}
 
-            <form onSubmit={handleCreateCoupon} className="space-y-4 text-xs font-sans">
+            <form onSubmit={handleSaveCoupon} className="space-y-4 text-xs font-sans">
               <div>
                 <label className="block text-[10px] text-[#A3A3A3] uppercase mb-1 font-bold">Coupon Code *</label>
                 <input
@@ -219,6 +314,7 @@ export const CouponsClient: React.FC<{ initialCoupons: CouponItem[] }> = ({ init
                     value={formData.usageLimit}
                     onChange={(e) => setFormData({ ...formData, usageLimit: e.target.value })}
                     className="w-full bg-[#06191B] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 text-xs text-[#FAF8F5] font-mono focus:outline-none"
+                    placeholder="Unlimited if blank"
                   />
                 </div>
               </div>
@@ -230,13 +326,24 @@ export const CouponsClient: React.FC<{ initialCoupons: CouponItem[] }> = ({ init
                   className="w-full bg-[#D4AF37] hover:bg-white text-black py-3 rounded-xl text-xs font-extrabold uppercase tracking-widest transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                  Save Coupon
+                  {editingCoupon ? 'Update Coupon' : 'Save Coupon'}
                 </button>
               </div>
             </form>
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmModal
+        isOpen={Boolean(deleteModalCoupon)}
+        onClose={() => setDeleteModalCoupon(null)}
+        onConfirm={handleDeleteConfirm}
+        title="Delete Coupon?"
+        itemName={deleteModalCoupon?.code || ''}
+        itemType="Promo Coupon"
+        warningMessage="This will permanently delete this coupon code. It will immediately cease to be redeemable on checkout. Historical orders that previously used this coupon will NOT be altered or corrupted."
+      />
     </div>
   );
 };

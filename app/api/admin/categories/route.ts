@@ -80,15 +80,33 @@ export async function DELETE(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const { searchParams } = new URL(req.url);
-    const id = searchParams.get('id');
+    let id: string | null = null;
+    try {
+      const body = await req.json();
+      id = body.id;
+    } catch {
+      const { searchParams } = new URL(req.url);
+      id = searchParams.get('id');
+    }
 
     if (!id) {
       return NextResponse.json({ error: 'Category ID is required' }, { status: 400 });
     }
 
+    const category = await prisma.category.findUnique({ where: { id } });
+    if (!category) {
+      return NextResponse.json({ error: 'Category not found' }, { status: 404 });
+    }
+
+    // Unlink any products currently in this category
+    await prisma.product.updateMany({
+      where: { categoryId: id },
+      data: { categoryId: null },
+    });
+
     await prisma.category.delete({ where: { id } });
-    return NextResponse.json({ success: true });
+
+    return NextResponse.json({ success: true, message: `Category "${category.name}" deleted successfully.` });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Failed to delete category' }, { status: 500 });
   }

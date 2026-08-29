@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { verifyPassword, createAdminSession, getAdminById } from '@/lib/auth';
+import { verifyPassword, createAdminSession, getAdminById, create2FAChallenge } from '@/lib/auth';
 import { prisma } from '@/lib/prisma';
 import { recordAuditLog } from '@/lib/audit';
 import { checkLoginRateLimit, recordSuccessfulLogin } from '@/lib/rate-limit';
@@ -31,19 +31,19 @@ export async function POST(req: Request) {
 
     // 1. Rate limiting check (Serverless-safe & database-persisted)
     const rateLimitCheck = await checkLoginRateLimit(identifier, clientIp);
-    
+
     if (!rateLimitCheck.allowed) {
       const lockoutMinutes = rateLimitCheck.lockoutMinutes || 15;
       await recordAuditLog('LOGIN_RATE_LIMITED', 'AdminAuth', undefined, `Too many attempts for ${identifier}`, clientIp);
-      return NextResponse.json({ 
+      return NextResponse.json({
         error: `Too many login attempts. Please try again in ${lockoutMinutes} minute${lockoutMinutes > 1 ? 's' : ''}.`,
-        lockoutMinutes 
+        lockoutMinutes,
       }, { status: 429 });
     }
 
     // 2. Find admin by email
     const admin = await prisma.admin.findUnique({
-      where: { email: identifier }
+      where: { email: identifier },
     });
 
     if (!admin) {
@@ -58,18 +58,39 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid login details' }, { status: 401 });
     }
 
-    // 4. Successful login - clear rate limit & log success
-    await recordSuccessfulLogin(identifier, admin.id);
-    await recordAuditLog('SUCCESSFUL_LOGIN', 'AdminAuth', admin.id, 'Admin logged in successfully', clientIp);
+    // 4. Check if 2FA is enabled
+    if (admin.twoFactorEnabled && admin.twoFactorSecret) {
+      // Issue short-lived (5 min) temporary 2FA challenge cookie
+      // DO NOT create authenticated admin session yet
+      await create2FAChallenge(admin.id);
 
-    // 5. Create session
+      await recordAuditLog(
+        '2FA_CHALLENGE_ISSUED',
+        'AdminAuth',
+        admin.id,
+        `Password verified for ${identifier}. Awaiting 2FA TOTP code.`,
+        clientIp
+      );
+
+      return NextResponse.json({
+        success: false,
+        requires2FA: true,
+        message: 'Two-factor authentication code required',
+      });
+    }
+
+    // 5. If 2FA is disabled: standard password-only login
+    await recordSuccessfulLogin(identifier, admin.id);
+    await recordAuditLog('SUCCESSFUL_LOGIN', 'AdminAuth', admin.id, 'Admin logged in successfully (Password)', clientIp);
+
+    // Create session
     await createAdminSession(admin.id);
 
     const adminData = await getAdminById(admin.id);
 
-    return NextResponse.json({ 
-      success: true, 
-      admin: adminData 
+    return NextResponse.json({
+      success: true,
+      admin: adminData,
     });
   } catch (error) {
     console.error('Login error:', error);
