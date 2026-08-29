@@ -38,6 +38,7 @@ export default async function PostExHubPage() {
     prisma.shipment.count({
       where: {
         provider: 'POSTEX',
+        status: { in: ['DELIVERED', 'Delivered'] },
         OR: [{ settlementStatus: { in: ['PENDING', 'UNPAID'] } }, { settlementStatus: null }],
       },
     }),

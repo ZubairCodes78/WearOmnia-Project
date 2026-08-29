@@ -43,6 +43,8 @@ export async function POST(req: Request) {
 
     const t = trackRes.tracking;
     const rawStatus = t.orderStatus || t.transactionStatus || 'Booked';
+    const { getCanonicalCourierStatus } = await import('@/lib/courier/canonical-status');
+    const canonicalCourierStatus = getCanonicalCourierStatus(rawStatus);
     const mapped = POSTEX_STATUS_MAP[rawStatus] || { orderStatus: 'DISPATCHED' };
 
     // Update database shipment & order if orderId or matching trackingNumber exists
@@ -61,7 +63,7 @@ export async function POST(req: Request) {
       await prisma.shipment.updateMany({
         where: { orderId: matchingOrder.id, trackingNumber: targetTracking },
         data: {
-          status: rawStatus,
+          status: canonicalCourierStatus === 'CANCELLED' ? 'CANCELLED' : rawStatus,
           transactionFee: t.transactionFee ?? undefined,
           fuelSurcharge: t.fuelSurcharge ?? undefined,
           taxAmount: t.taxAmount ?? undefined,
@@ -73,8 +75,16 @@ export async function POST(req: Request) {
         },
       });
 
-      // Update order status if PostEx status implies advancement
-      if (mapped.orderStatus && mapped.orderStatus !== matchingOrder.status) {
+      // Update order status if PostEx status implies advancement and not cancelled
+      if (canonicalCourierStatus === 'CANCELLED') {
+        // If shipment was cancelled on PostEx, clear tracking on order if it matched
+        if (matchingOrder.trackingNumber === targetTracking) {
+          await prisma.order.update({
+            where: { id: matchingOrder.id },
+            data: { trackingNumber: null, courier: null },
+          });
+        }
+      } else if (mapped.orderStatus && mapped.orderStatus !== matchingOrder.status) {
         await prisma.order.update({
           where: { id: matchingOrder.id },
           data: { status: mapped.orderStatus },
@@ -91,6 +101,15 @@ export async function POST(req: Request) {
         });
       }
     }
+
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath('/admin/shipping');
+    revalidatePath('/admin/shipping/postex');
+    revalidatePath('/admin/shipping/cod');
+    revalidatePath('/admin/shipping/returns');
+    revalidatePath('/admin/dashboard');
+    revalidatePath('/admin/orders');
+    revalidatePath('/admin/reports');
 
     return NextResponse.json({
       success: true,

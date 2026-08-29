@@ -128,7 +128,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
               </span>
               {group.items.map((item) => {
                 const Icon = item.icon;
-                const isActive = pathname === item.href || (item.href !== '/admin/dashboard' && pathname.startsWith(`${item.href}/`));
+                        const isExactOnly = ['/admin/dashboard', '/admin/shipping', '/admin/inventory'].includes(item.href);
+                        const isActive = isExactOnly ? pathname === item.href : (pathname === item.href || pathname.startsWith(`${item.href}/`));
                 return (
                   <Link
                     key={item.name}
@@ -223,7 +224,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                       </span>
                       {group.items.map((item) => {
                         const Icon = item.icon;
-                        const isActive = pathname === item.href || (item.href !== '/admin/dashboard' && pathname.startsWith(`${item.href}/`));
+                                const isExactOnly = ['/admin/dashboard', '/admin/shipping', '/admin/inventory'].includes(item.href);
+                        const isActive = isExactOnly ? pathname === item.href : (pathname === item.href || pathname.startsWith(`${item.href}/`));
                         return (
                           <Link
                             key={item.name}

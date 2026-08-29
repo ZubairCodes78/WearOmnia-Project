@@ -63,9 +63,11 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   } | null>(null);
 
   const activeShipment = order.shipments?.find(
-    (s: any) => s.status !== 'FAILED' && s.status !== 'CANCELLED' && Boolean(s.trackingNumber)
+    (s: any) =>
+      !['FAILED', 'CANCELLED', 'ARCHIVED', 'Un-Assigned By Me', 'Expired'].includes(s.status) &&
+      Boolean(s.trackingNumber)
   );
-  const currentTracking = activeShipment?.trackingNumber || order.trackingNumber || trackingNumber;
+  const currentTracking = activeShipment?.trackingNumber || (order.courier ? order.trackingNumber : null);
   const isPostExActive = Boolean(currentTracking);
 
   const handleCreateShipment = async (providerName: string = 'POSTEX') => {

@@ -123,23 +123,25 @@ export const COURIER_OPTIONS = [
 /**
  * Official PostEx Shipment Statuses from M-v4.1.9 Specification
  */
-export const POSTEX_STATUS_MAP: Record<string, { label: string; orderStatus: string; color: string }> = {
-  'Unbooked': { label: 'Unbooked', orderStatus: 'CONFIRMED', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
-  'Booked': { label: 'Booked', orderStatus: 'PACKING', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
-  'PostEx WareHouse': { label: 'In PostEx Warehouse', orderStatus: 'DISPATCHED', color: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' },
-  'Picked By PostEx': { label: 'Picked by PostEx', orderStatus: 'DISPATCHED', color: 'bg-purple-500/20 text-purple-300 border-purple-500/30' },
-  'En-Route to PostEx warehouse': { label: 'En-Route to Warehouse', orderStatus: 'DISPATCHED', color: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30' },
-  'Out For Delivery': { label: 'Out For Delivery', orderStatus: 'OUT_FOR_DELIVERY', color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30' },
-  'Delivered': { label: 'Delivered', orderStatus: 'DELIVERED', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' },
-  'Returned': { label: 'Returned to Origin', orderStatus: 'RETURNED', color: 'bg-red-500/20 text-red-300 border-red-500/30' },
-  'Out For Return': { label: 'Out For Return', orderStatus: 'RETURNED', color: 'bg-orange-500/20 text-orange-300 border-orange-500/30' },
-  'Attempted': { label: 'Delivery Attempted', orderStatus: 'OUT_FOR_DELIVERY', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
-  'Delivery Under Review': { label: 'Delivery Under Review', orderStatus: 'OUT_FOR_DELIVERY', color: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30' },
-  'Un-Assigned By Me': { label: 'Un-Assigned', orderStatus: 'CONFIRMED', color: 'bg-zinc-500/20 text-zinc-300 border-zinc-500/30' },
-  'Expired': { label: 'Expired', orderStatus: 'CANCELLED', color: 'bg-rose-500/20 text-rose-300 border-rose-500/30' },
-  'Cancelled': { label: 'Cancelled', orderStatus: 'CANCELLED', color: 'bg-red-500/20 text-red-300 border-red-500/30' },
-  'CREATED': { label: 'Shipment Created', orderStatus: 'PACKING', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30' },
-  'PENDING': { label: 'Pending Dispatch', orderStatus: 'CONFIRMED', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30' },
+export const POSTEX_STATUS_MAP: Record<string, { label: string; orderStatus: string; color: string; canonical: string }> = {
+  'Unbooked': { label: 'Unbooked', orderStatus: 'CONFIRMED', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30', canonical: 'BOOKED' },
+  'Booked': { label: 'Booked', orderStatus: 'PACKING', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30', canonical: 'BOOKED' },
+  'PostEx WareHouse': { label: 'In PostEx Warehouse', orderStatus: 'DISPATCHED', color: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30', canonical: 'IN_TRANSIT' },
+  'Picked By PostEx': { label: 'Picked by PostEx', orderStatus: 'DISPATCHED', color: 'bg-purple-500/20 text-purple-300 border-purple-500/30', canonical: 'PICKED_UP' },
+  'En-Route to PostEx warehouse': { label: 'En-Route to Warehouse', orderStatus: 'DISPATCHED', color: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30', canonical: 'IN_TRANSIT' },
+  'Out For Delivery': { label: 'Out For Delivery', orderStatus: 'OUT_FOR_DELIVERY', color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30', canonical: 'OUT_FOR_DELIVERY' },
+  'Delivered': { label: 'Delivered', orderStatus: 'DELIVERED', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30', canonical: 'DELIVERED' },
+  'Returned': { label: 'Returned to Origin', orderStatus: 'RETURNED', color: 'bg-red-500/20 text-red-300 border-red-500/30', canonical: 'RETURNED' },
+  'Out For Return': { label: 'Out For Return', orderStatus: 'RETURNED', color: 'bg-orange-500/20 text-orange-300 border-orange-500/30', canonical: 'RETURNED' },
+  'Attempted': { label: 'Delivery Attempted', orderStatus: 'OUT_FOR_DELIVERY', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30', canonical: 'ATTEMPTED' },
+  'Delivery Under Review': { label: 'Delivery Under Review', orderStatus: 'OUT_FOR_DELIVERY', color: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30', canonical: 'ATTEMPTED' },
+  'Un-Assigned By Me': { label: 'Cancelled on Courier', orderStatus: 'CONFIRMED', color: 'bg-red-500/20 text-red-300 border-red-500/30', canonical: 'CANCELLED' },
+  'Expired': { label: 'Expired', orderStatus: 'CANCELLED', color: 'bg-rose-500/20 text-rose-300 border-rose-500/30', canonical: 'CANCELLED' },
+  'Cancelled': { label: 'Cancelled', orderStatus: 'CANCELLED', color: 'bg-red-500/20 text-red-300 border-red-500/30', canonical: 'CANCELLED' },
+  'CREATED': { label: 'Shipment Created', orderStatus: 'PACKING', color: 'bg-blue-500/20 text-blue-300 border-blue-500/30', canonical: 'BOOKED' },
+  'PENDING': { label: 'Pending Dispatch', orderStatus: 'CONFIRMED', color: 'bg-amber-500/20 text-amber-300 border-amber-500/30', canonical: 'BOOKED' },
+  'ARCHIVED': { label: 'Archived', orderStatus: 'CONFIRMED', color: 'bg-zinc-500/20 text-zinc-300 border-zinc-500/30', canonical: 'ARCHIVED' },
+  'FAILED': { label: 'Dispatch Failed', orderStatus: 'CONFIRMED', color: 'bg-red-500/20 text-red-300 border-red-500/30', canonical: 'FAILED' },
 };
 
 /**

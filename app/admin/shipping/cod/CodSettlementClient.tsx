@@ -1,16 +1,24 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import {
   CreditCard,
   Search,
   RefreshCw,
   CheckCircle2,
   Clock,
-  Download,
   Loader2,
   DollarSign,
+  ArrowUpRight,
+  ExternalLink,
 } from 'lucide-react';
+import {
+  getCanonicalCourierStatus,
+  getCourierStatusBadgeInfo,
+  getSettlementStatusBadgeInfo,
+  isSettlementEligible,
+} from '@/lib/courier/canonical-status';
 
 interface ShipmentItem {
   id: string;
@@ -72,8 +80,25 @@ export function CodSettlementClient({ initialShipments }: { initialShipments: Sh
     }
   };
 
-  const totalCodCollected = shipments.reduce((sum, s) => sum + (s.codAmount || s.order?.totalAmount || 0), 0);
-  const settledCount = shipments.filter((s) => ['SETTLED', 'Paid', 'settled'].includes(s.settlementStatus || '')).length;
+  // Canonical calculations
+  const deliveredShipments = shipments.filter(
+    (s) => getCanonicalCourierStatus(s.status) === 'DELIVERED' && Boolean(s.trackingNumber)
+  );
+
+  const totalDeliveredCod = deliveredShipments.reduce((sum, s) => sum + (s.codAmount || s.order?.totalAmount || 0), 0);
+
+  const settledShipments = deliveredShipments.filter(
+    (s) => s.settlementStatus === 'SETTLED' || s.settlementStatus === 'PAID'
+  );
+  const totalSettledAmount = settledShipments.reduce((sum, s) => sum + (s.codAmount || s.order?.totalAmount || 0), 0);
+
+  const pendingSettlementShipments = deliveredShipments.filter(
+    (s) => s.settlementStatus !== 'SETTLED' && s.settlementStatus !== 'PAID'
+  );
+  const totalPendingAmount = pendingSettlementShipments.reduce(
+    (sum, s) => sum + (s.codAmount || s.order?.totalAmount || 0),
+    0
+  );
 
   const filtered = shipments.filter((s) => {
     const term = search.toLowerCase();
@@ -81,37 +106,44 @@ export function CodSettlementClient({ initialShipments }: { initialShipments: Sh
       (s.trackingNumber || '').toLowerCase().includes(term) ||
       (s.cprNumber || '').toLowerCase().includes(term) ||
       (s.order?.orderNumber || '').toLowerCase().includes(term) ||
-      (s.order?.customerName || '').toLowerCase().includes(term)
+      (s.order?.customerName || '').toLowerCase().includes(term) ||
+      (s.order?.shippingCity || '').toLowerCase().includes(term)
     );
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 text-[#FAF8F5]">
       {/* Summary KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-[#0A2528] border border-[#D4AF37]/20 p-5 rounded-2xl">
-          <span className="text-xs uppercase font-bold tracking-wider text-[#D4AF37]/80">Total COD Volume</span>
+        <div className="bg-[#0A2528] border border-[#D4AF37]/20 p-5 rounded-2xl shadow">
+          <span className="text-xs uppercase font-bold tracking-wider text-[#D4AF37]">Total Delivered COD</span>
           <div className="text-2xl font-bold font-serif text-[#FAF8F5] mt-2">
-            Rs. {totalCodCollected.toLocaleString()}
+            Rs. {totalDeliveredCod.toLocaleString()}
           </div>
-          <div className="text-[11px] text-[#FAF8F5]/60 mt-1">{shipments.length} total shipments tracked</div>
+          <div className="text-[11px] text-[#FAF8F5]/60 mt-1">{deliveredShipments.length} delivered parcel(s) total</div>
         </div>
 
-        <div className="bg-[#0A2528] border border-[#D4AF37]/20 p-5 rounded-2xl">
-          <span className="text-xs uppercase font-bold tracking-wider text-[#D4AF37]/80">Settled Parcels</span>
-          <div className="text-2xl font-bold font-serif text-emerald-400 mt-2">{settledCount}</div>
-          <div className="text-[11px] text-[#FAF8F5]/60 mt-1">Disbursed by PostEx</div>
+        <div className="bg-[#0A2528] border border-emerald-500/30 p-5 rounded-2xl shadow">
+          <span className="text-xs uppercase font-bold tracking-wider text-emerald-400">Settled & Remitted</span>
+          <div className="text-2xl font-bold font-serif text-emerald-400 mt-2">
+            Rs. {totalSettledAmount.toLocaleString()}
+          </div>
+          <div className="text-[11px] text-emerald-300/80 mt-1">{settledShipments.length} parcel(s) with confirmed CPR</div>
         </div>
 
-        <div className="bg-[#0A2528] border border-[#D4AF37]/20 p-5 rounded-2xl">
-          <span className="text-xs uppercase font-bold tracking-wider text-[#D4AF37]/80">Pending Settlement</span>
-          <div className="text-2xl font-bold font-serif text-amber-400 mt-2">{shipments.length - settledCount}</div>
-          <div className="text-[11px] text-[#FAF8F5]/60 mt-1">Awaiting CPR clearance</div>
+        <div className="bg-[#0A2528] border border-amber-500/30 p-5 rounded-2xl shadow">
+          <span className="text-xs uppercase font-bold tracking-wider text-amber-400">Pending Remittance</span>
+          <div className="text-2xl font-bold font-serif text-amber-400 mt-2">
+            Rs. {totalPendingAmount.toLocaleString()}
+          </div>
+          <div className="text-[11px] text-amber-300/80 mt-1">
+            {pendingSettlementShipments.length} delivered parcel(s) awaiting PostEx transfer
+          </div>
         </div>
       </div>
 
       {/* Filter and Table */}
-      <div className="bg-[#0A2528] border border-[#D4AF37]/20 rounded-2xl overflow-hidden">
+      <div className="bg-[#0A2528] border border-[#D4AF37]/20 rounded-2xl overflow-hidden shadow-xl">
         <div className="p-4 border-b border-[#D4AF37]/15 flex flex-col sm:flex-row items-center justify-between gap-3">
           <div className="relative flex-1 w-full max-w-md">
             <Search className="w-4 h-4 text-[#D4AF37]/70 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -119,8 +151,8 @@ export function CodSettlementClient({ initialShipments }: { initialShipments: Sh
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by tracking #, CPR #, order #, customer..."
-              className="w-full bg-[#06191B] border border-[#D4AF37]/20 rounded-xl pl-10 pr-4 py-2 text-xs text-[#FAF8F5]"
+              placeholder="Search by tracking #, CPR #, order #, customer, city..."
+              className="w-full bg-[#06191B] border border-[#D4AF37]/20 rounded-xl pl-10 pr-4 py-2 text-xs text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]"
             />
           </div>
         </div>
@@ -131,6 +163,7 @@ export function CodSettlementClient({ initialShipments }: { initialShipments: Sh
               <tr>
                 <th className="p-3.5">Order / Tracking</th>
                 <th className="p-3.5">Customer & City</th>
+                <th className="p-3.5">Courier Status</th>
                 <th className="p-3.5">COD Amount</th>
                 <th className="p-3.5">Settlement Status</th>
                 <th className="p-3.5">CPR Reference #</th>
@@ -138,32 +171,47 @@ export function CodSettlementClient({ initialShipments }: { initialShipments: Sh
                 <th className="p-3.5 text-right">Reconcile</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#D4AF37]/10 text-[#FAF8F5]">
+            <tbody className="divide-y divide-white/5 text-[#FAF8F5]">
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-[#FAF8F5]/50">
+                  <td colSpan={8} className="p-8 text-center text-[#FAF8F5]/50">
                     No COD shipments matching criteria.
                   </td>
                 </tr>
               ) : (
                 filtered.map((s) => {
-                  const isSettled = ['SETTLED', 'Paid', 'settled'].includes(s.settlementStatus || '');
+                  const courierBadge = getCourierStatusBadgeInfo(s.status);
+                  const settlementBadge = getSettlementStatusBadgeInfo(s.settlementStatus, s.status);
+                  const isSettled = s.settlementStatus === 'SETTLED' || s.settlementStatus === 'PAID';
+
                   return (
-                    <tr key={s.id} className="hover:bg-[#103A3E]/40 transition-colors">
+                    <tr key={s.id} className="hover:bg-[#103A3E]/30 transition-colors">
                       <td className="p-3.5">
-                        <div className="font-bold font-mono text-[#D4AF37]">{s.order?.orderNumber || 'N/A'}</div>
-                        <div className="text-[11px] font-mono text-emerald-400">{s.trackingNumber || 'Pending'}</div>
+                        {s.order ? (
+                          <Link href={`/admin/orders/${s.orderId}`} className="font-bold font-mono text-[#D4AF37] hover:underline block">
+                            {s.order.orderNumber}
+                          </Link>
+                        ) : (
+                          <span className="font-bold font-mono text-[#D4AF37] block">{s.orderRefNumber || 'N/A'}</span>
+                        )}
+                        <span className="text-[11px] font-mono text-emerald-400">{s.trackingNumber || 'Pending'}</span>
                       </td>
                       <td className="p-3.5">
-                        <div className="font-semibold text-[#FAF8F5]">{s.order?.customerName}</div>
+                        <div className="font-semibold text-[#FAF8F5]">{s.order?.customerName || 'Customer'}</div>
                         <div className="text-[11px] text-[#FAF8F5]/60">{s.order?.shippingCity}</div>
                       </td>
+                      <td className="p-3.5">
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${courierBadge.badgeClass}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${courierBadge.dotClass}`} />
+                          {courierBadge.label}
+                        </span>
+                      </td>
                       <td className="p-3.5 font-mono font-bold text-[#FAF8F5]">
-                        Rs. {s.codAmount?.toLocaleString() || s.order?.totalAmount?.toLocaleString()}
+                        Rs. {(s.codAmount || s.order?.totalAmount || 0).toLocaleString()}
                       </td>
                       <td className="p-3.5">
-                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold border ${isSettled ? 'bg-emerald-950 text-emerald-400 border-emerald-800/40' : 'bg-amber-950 text-amber-400 border-amber-800/40'}`}>
-                          {s.settlementStatus || 'PENDING'}
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold border ${settlementBadge.badgeClass}`}>
+                          {settlementBadge.label}
                         </span>
                       </td>
                       <td className="p-3.5 font-mono text-xs font-semibold text-[#FAF8F5]">
@@ -179,7 +227,11 @@ export function CodSettlementClient({ initialShipments }: { initialShipments: Sh
                             disabled={syncingId === s.trackingNumber}
                             className="px-2.5 py-1 bg-[#103A3E] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black rounded-lg text-[10px] font-bold uppercase transition-all inline-flex items-center gap-1"
                           >
-                            {syncingId === s.trackingNumber ? <Loader2 className="w-3 h-3 animate-spin" /> : <RefreshCw className="w-3 h-3" />}
+                            {syncingId === s.trackingNumber ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <RefreshCw className="w-3 h-3" />
+                            )}
                             Sync
                           </button>
                         )}

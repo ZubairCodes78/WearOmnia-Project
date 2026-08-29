@@ -56,8 +56,17 @@ export async function POST(req: Request) {
       data: { status: 'CANCELLED' },
     });
 
-    // If order was linked, update timeline
+    // If order was linked, update order fields and timeline
     if (targetOrder) {
+      // Clear trackingNumber from order if this was the active shipment
+      await prisma.order.update({
+        where: { id: targetOrder.id },
+        data: {
+          trackingNumber: null,
+          courier: null,
+        },
+      });
+
       await prisma.orderTimeline.create({
         data: {
           orderId: targetOrder.id,
@@ -74,6 +83,16 @@ export async function POST(req: Request) {
         `PostEx shipment #${targetTracking} for order #${targetOrder.orderNumber} cancelled by admin.`
       );
     }
+
+    // Revalidate paths for instant real-time sync
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath('/admin/shipping');
+    revalidatePath('/admin/shipping/postex');
+    revalidatePath('/admin/shipping/cod');
+    revalidatePath('/admin/shipping/returns');
+    revalidatePath('/admin/dashboard');
+    revalidatePath('/admin/orders');
+    revalidatePath('/admin/reports');
 
     return NextResponse.json({
       success: true,

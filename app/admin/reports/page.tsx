@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
 import { ReportsClient } from './ReportsClient';
+import { isValidActiveShipment, getCanonicalCourierStatus } from '@/lib/courier/canonical-status';
 
 export const metadata: Metadata = {
   title: 'Executive Analytics & Reports | WearOMNIA Enterprise Admin',
@@ -23,21 +24,37 @@ export default async function ReportsPage() {
     }),
   ]);
 
-  // Aggregate Metrics
-  const totalRevenue = orders.reduce((sum, o) => sum + (o.status !== 'CANCELLED' ? o.totalAmount : 0), 0);
+  // Canonical Aggregate Metrics
+  const validOrders = orders.filter((o) => o.status !== 'CANCELLED');
+  const totalRevenue = validOrders.reduce((sum, o) => sum + o.totalAmount, 0);
   const deliveredOrders = orders.filter((o) => o.status === 'DELIVERED');
   const deliveredRevenue = deliveredOrders.reduce((sum, o) => sum + o.totalAmount, 0);
   const returnedOrders = orders.filter((o) => o.status === 'RETURNED');
-  const totalOrders = orders.length;
+  const totalValidOrdersCount = validOrders.length;
 
   const totalStockUnits = products.reduce(
-    (sum, p) => sum + p.variants.reduce((vSum, v) => vSum + v.stock, 0) + (p.variants.length === 0 ? p.stockQuantity : 0),
+    (sum, p) =>
+      sum +
+      (p.variants.length > 0
+        ? p.variants.reduce((vSum, v) => vSum + v.stock, 0)
+        : p.stockQuantity),
     0
   );
 
   const stockValuation = products.reduce(
-    (sum, p) => sum + (p.basePrice * (p.variants.reduce((vSum, v) => vSum + v.stock, 0) || p.stockQuantity)),
+    (sum, p) =>
+      sum +
+      p.basePrice *
+        (p.variants.length > 0
+          ? p.variants.reduce((vSum, v) => vSum + v.stock, 0)
+          : p.stockQuantity),
     0
+  );
+
+  const validPostExShipments = shipments.filter(
+    (s) =>
+      s.provider === 'POSTEX' &&
+      !['FAILED', 'ARCHIVED', 'CANCELLED', 'Un-Assigned By Me'].includes(s.status)
   );
 
   const sanitizedOrders = orders.map((o) => ({
@@ -52,9 +69,9 @@ export default async function ReportsPage() {
   }));
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 text-[#FAF8F5]">
       <div className="border-b border-[#D4AF37]/15 pb-6">
-        <div className="flex items-center gap-2.5 mb-1.5">
+        <div className="flex items-center gap-2 mb-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-[#D4AF37] animate-pulse" />
           <span className="text-xs uppercase font-extrabold tracking-[0.2em] text-[#D4AF37]">
             Executive Intelligence
@@ -72,12 +89,12 @@ export default async function ReportsPage() {
         metrics={{
           totalRevenue,
           deliveredRevenue,
-          totalOrders,
+          totalOrders: totalValidOrdersCount,
           deliveredOrdersCount: deliveredOrders.length,
           returnedOrdersCount: returnedOrders.length,
           totalStockUnits,
           stockValuation,
-          postexShipmentsCount: shipments.filter((s) => s.provider === 'POSTEX').length,
+          postexShipmentsCount: validPostExShipments.length,
         }}
         orders={sanitizedOrders}
       />

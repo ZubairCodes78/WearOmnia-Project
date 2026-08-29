@@ -1,7 +1,13 @@
 import React from 'react';
+import { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
 import { ShippingClient } from './ShippingClient';
 import { getSiteSettings } from '@/lib/settings';
+
+export const metadata: Metadata = {
+  title: 'Logistics & Shipping Control Tower | WearOMNIA Enterprise Admin',
+  description: 'Enterprise Courier Hub, Live Parcel Tracking, Official AWB Generation, and COD Reconciliation',
+};
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +35,13 @@ export default async function AdminShippingPage() {
     prisma.order.findMany({
       where: {
         status: 'CONFIRMED',
-        shipments: { none: { status: { notIn: ['FAILED', 'CANCELLED'] } } },
+        shipments: {
+          none: {
+            status: {
+              notIn: ['FAILED', 'CANCELLED', 'ARCHIVED', 'Un-Assigned By Me', 'Expired'],
+            },
+          },
+        },
       },
       select: {
         id: true,
@@ -44,11 +56,28 @@ export default async function AdminShippingPage() {
     }),
   ]);
 
+  const sanitizedShipments = shipments.map((s) => ({
+    ...s,
+    settlementDate: s.settlementDate?.toISOString() || null,
+    pickupDate: s.pickupDate?.toISOString() || null,
+    deliveryDate: s.deliveryDate?.toISOString() || null,
+    returnDate: s.returnDate?.toISOString() || null,
+    upfrontPaymentDate: s.upfrontPaymentDate?.toISOString() || null,
+    reservePaymentDate: s.reservePaymentDate?.toISOString() || null,
+    createdAt: s.createdAt.toISOString(),
+    updatedAt: s.updatedAt.toISOString(),
+  }));
+
+  const sanitizedOrders = confirmedOrders.map((o) => ({
+    ...o,
+    createdAt: o.createdAt.toISOString(),
+  }));
+
   return (
     <ShippingClient
-      initialShipments={shipments as any}
+      initialShipments={sanitizedShipments as any}
       siteSettings={siteSettings}
-      confirmedOrders={confirmedOrders as any}
+      confirmedOrders={sanitizedOrders as any}
     />
   );
 }
