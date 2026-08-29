@@ -248,6 +248,25 @@ export class PostExApiClient {
     return Boolean(token);
   }
 
+  /**
+   * Resolves the API Base URL from server environment or DB SiteSettings.
+   */
+  private async resolveBaseUrl(): Promise<string> {
+    if (process.env.POSTEX_API_URL?.trim()) {
+      return process.env.POSTEX_API_URL.trim().replace(/\/+$/, '');
+    }
+    try {
+      const { getSiteSettings } = await import('@/lib/settings');
+      const settings = await getSiteSettings();
+      if (settings.postex_api_url?.trim()) {
+        return settings.postex_api_url.trim().replace(/\/+$/, '');
+      }
+    } catch {
+      // Fallback
+    }
+    return this.baseUrl || 'https://api.postex.pk';
+  }
+
   public getBaseUrl(): string {
     return this.baseUrl;
   }
@@ -274,8 +293,9 @@ export class PostExApiClient {
       };
     }
 
+    const baseUrl = await this.resolveBaseUrl();
     const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
-    const url = `${this.baseUrl}${cleanEndpoint}`;
+    const url = `${baseUrl}${cleanEndpoint}`;
 
     const headers: Record<string, string> = {
       token: token,
@@ -731,7 +751,7 @@ export class PostExApiClient {
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 10. Official Airway Bill (Invoice PDF)
-  // GET /services/integration/api/order/v1/getinvoice?trackingNumbers=...
+  // GET /services/integration/api/order/v1/get-invoice?trackingNumbers=...
   // Limit: 10 tracking numbers per request
   // ─────────────────────────────────────────────────────────────────────────────
   async getInvoicePdf(trackingNumbers: string | string[]): Promise<{
@@ -749,8 +769,10 @@ export class PostExApiClient {
     }
 
     const cleanParam = encodeURIComponent(list.map((t) => t.trim()).join(','));
-    const res = await this.request(
-      `/services/integration/api/order/v1/getinvoice?trackingNumbers=${cleanParam}`,
+    
+    // Attempt official PostEx get-invoice endpoint
+    let res = await this.request(
+      `/services/integration/api/order/v1/get-invoice?trackingNumbers=${cleanParam}`,
       {
         method: 'GET',
         isBinary: true,
@@ -760,7 +782,24 @@ export class PostExApiClient {
       }
     );
 
+    // If 404 or failed, fallback to getinvoice without hyphen
+    if ((!res.ok || !res.buffer) && res.status === 404) {
+      res = await this.request(
+        `/services/integration/api/order/v1/getinvoice?trackingNumbers=${cleanParam}`,
+        {
+          method: 'GET',
+          isBinary: true,
+          headers: {
+            Accept: 'application/pdf, application/json, */*',
+          },
+        }
+      );
+    }
+
     if (!res.ok || !res.buffer) {
+      console.error(
+        `[PostEx AWB Error] Failed retrieving official PDF for tracking numbers [${cleanParam}]. Status: ${res.status}. Diagnostic: ${res.error}`
+      );
       return {
         success: false,
         message: res.error || `Failed to retrieve official PostEx Airway Bill PDF for ${cleanParam}.`,
