@@ -5,8 +5,9 @@
  * Authentication: token header with POSTEX_API_TOKEN
  *
  * Security:
- * - Reads token ONLY from process.env.POSTEX_API_TOKEN
- * - Never exposes or logs the token
+ * - Reads token ONLY from server environment or SiteSettings in DB.
+ * - NEVER exposes or logs the token.
+ * - Multi-key response parser handles distList, response, data, and legacy formats.
  */
 
 export interface PostExOperationalCity {
@@ -17,7 +18,7 @@ export interface PostExOperationalCity {
 }
 
 export interface PostExMerchantAddress {
-  addressCode?: string;
+  addressCode: string;
   pickupAddressCode?: string;
   cityName: string;
   address: string;
@@ -133,6 +134,45 @@ export interface PostExShipperAdviceRequest {
   comments?: string;
 }
 
+export interface PostExDiagnostics {
+  configured: boolean;
+  httpStatus?: number;
+  statusMessage?: string;
+  citiesCount: number;
+  addressesCount: number;
+  addresses: PostExMerchantAddress[];
+  diagnosticMessage: string;
+  environment: 'PRODUCTION' | 'TEST';
+  baseUrl: string;
+}
+
+/**
+ * Universal array extractor from PostEx API responses
+ */
+function extractArray(data: any): any[] {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.distList)) return data.distList;
+  if (Array.isArray(data.response)) return data.response;
+  if (Array.isArray(data.data)) return data.data;
+  if (Array.isArray(data.items)) return data.items;
+  if (Array.isArray(data.cities)) return data.cities;
+  if (Array.isArray(data.addresses)) return data.addresses;
+  if (Array.isArray(data.orderTypes)) return data.orderTypes;
+  if (Array.isArray(data.orders)) return data.orders;
+  if (Array.isArray(data.statuses)) return data.statuses;
+
+  if (data.response && typeof data.response === 'object') {
+    if (Array.isArray(data.response.distList)) return data.response.distList;
+    if (Array.isArray(data.response.addressList)) return data.response.addressList;
+    if (Array.isArray(data.response.merchantAddressList)) return data.response.merchantAddressList;
+    if (Array.isArray(data.response.list)) return data.response.list;
+    if (Array.isArray(data.response.items)) return data.response.items;
+  }
+
+  return [];
+}
+
 export class PostExApiClient {
   private baseUrl: string;
 
@@ -169,6 +209,10 @@ export class PostExApiClient {
     return Boolean(token);
   }
 
+  public getBaseUrl(): string {
+    return this.baseUrl;
+  }
+
   /**
    * Generic authenticated HTTP fetcher
    */
@@ -187,7 +231,7 @@ export class PostExApiClient {
       return {
         ok: false,
         status: 401,
-        error: 'PostEx API token is not configured. Please set the POSTEX_API_TOKEN server environment variable or enter it in Admin Settings.',
+        error: 'PostEx API token is not configured. Please set POSTEX_API_TOKEN in server environment or Admin Settings → PostEx.',
       };
     }
 
@@ -258,58 +302,114 @@ export class PostExApiClient {
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 1. Operational Cities
-  // GET /services/integration/api/order/v2/get-operational-city
+  // GET /services/integration/api/order/v2/get-operational-city (v1 fallback)
   // ─────────────────────────────────────────────────────────────────────────────
-  async getOperationalCities(): Promise<{ success: boolean; cities: PostExOperationalCity[]; message?: string }> {
-    const res = await this.request<{ statusCode: string; statusMessage: string; response?: any[] }>(
-      '/services/integration/api/order/v2/get-operational-city',
-      { method: 'GET' }
-    );
+  async getOperationalCities(customToken?: string): Promise<{
+    success: boolean;
+    cities: PostExOperationalCity[];
+    message?: string;
+    raw?: any;
+  }> {
+    // Try v2 endpoint first
+    let res = await this.request<any>('/services/integration/api/order/v2/get-operational-city', {
+      method: 'GET',
+      customToken,
+    });
 
-    if (!res.ok || !res.data) {
-      return { success: false, cities: [], message: res.error || 'Failed to fetch operational cities' };
+    // Fallback to v1 endpoint if v2 returned empty or failed
+    if (!res.ok || extractArray(res.data).length === 0) {
+      const v1Res = await this.request<any>('/services/integration/api/order/v1/get-operational-city', {
+        method: 'GET',
+        customToken,
+      });
+      if (v1Res.ok && extractArray(v1Res.data).length > 0) {
+        res = v1Res;
+      }
     }
 
-    const list = Array.isArray(res.data.response) ? res.data.response : Array.isArray(res.data) ? (res.data as any) : [];
-    const formattedCities: PostExOperationalCity[] = list.map((item: any) => ({
-      cityId: item.cityId || item.id || item.cityName,
-      cityName: typeof item === 'string' ? item : item.cityName || item.name || '',
-      isOperational: item.isOperational ?? true,
-      transitDays: item.transitDays ?? item.deliveryDays,
-    }));
+    if (!res.ok || !res.data) {
+      return { success: false, cities: [], message: res.error || 'Failed to fetch operational cities', raw: res.data };
+    }
 
-    return { success: true, cities: formattedCities, message: res.data.statusMessage || 'Cities retrieved' };
+    const list = extractArray(res.data);
+    const formattedCities: PostExOperationalCity[] = list.map((item: any, idx: number) => {
+      if (typeof item === 'string') {
+        return {
+          cityId: item,
+          cityName: item.trim(),
+          isOperational: true,
+        };
+      }
+      return {
+        cityId: item.cityId || item.id || item.distCode || item.cityName || `CITY-${idx}`,
+        cityName: (item.cityName || item.name || item.cityNameEn || '').trim(),
+        isOperational: item.isOperational ?? true,
+        transitDays: item.transitDays ?? item.deliveryDays,
+      };
+    }).filter((c) => Boolean(c.cityName));
+
+    return {
+      success: true,
+      cities: formattedCities,
+      message: res.data?.statusMessage || `Successfully retrieved ${formattedCities.length} operational delivery cities.`,
+      raw: res.data,
+    };
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 2. Pickup Address
-  // GET /services/integration/api/order/v1/get-merchant-address
+  // GET /services/integration/api/order/v1/get-merchant-address (v2 fallback)
   // ─────────────────────────────────────────────────────────────────────────────
-  async getMerchantAddresses(customToken?: string): Promise<{ success: boolean; addresses: PostExMerchantAddress[]; message?: string }> {
-    const res = await this.request<{ statusCode: string; statusMessage: string; response?: any[] }>(
-      '/services/integration/api/order/v1/get-merchant-address',
-      { method: 'GET', customToken }
-    );
+  async getMerchantAddresses(customToken?: string): Promise<{
+    success: boolean;
+    addresses: PostExMerchantAddress[];
+    message?: string;
+    raw?: any;
+  }> {
+    // Try v1 endpoint first
+    let res = await this.request<any>('/services/integration/api/order/v1/get-merchant-address', {
+      method: 'GET',
+      customToken,
+    });
 
-    if (!res.ok || !res.data) {
-      return { success: false, addresses: [], message: res.error || 'Failed to fetch merchant addresses' };
+    // Fallback to v2 endpoint if v1 returned empty or failed
+    if (!res.ok || extractArray(res.data).length === 0) {
+      const v2Res = await this.request<any>('/services/integration/api/order/v2/get-merchant-address', {
+        method: 'GET',
+        customToken,
+      });
+      if (v2Res.ok && extractArray(v2Res.data).length > 0) {
+        res = v2Res;
+      }
     }
 
-    const list = Array.isArray(res.data.response) ? res.data.response : Array.isArray(res.data) ? (res.data as any) : [];
-    const formatted: PostExMerchantAddress[] = list.map((item: any) => {
-      const code = String(item.addressCode || item.pickupAddressCode || item.storeAddressCode || item.id || '').trim();
+    if (!res.ok || !res.data) {
+      return { success: false, addresses: [], message: res.error || 'Failed to fetch merchant addresses', raw: res.data };
+    }
+
+    const list = extractArray(res.data);
+    const formatted: PostExMerchantAddress[] = list.map((item: any, idx: number) => {
+      const rawCode = item.addressCode || item.pickupAddressCode || item.storeAddressCode || item.distCode || item.code || item.id;
+      const code = String(rawCode || `00${idx + 1}`).trim();
       return {
         addressCode: code,
         pickupAddressCode: code,
-        cityName: item.cityName || '',
-        address: item.address || item.pickupAddress || '',
-        contactPersonName: item.contactPersonName || item.merchantName || '',
-        contactPersonPhone: item.contactPersonPhone || item.merchantPhone || '',
-        isDefault: Boolean(item.isDefault || item.default),
+        cityName: (item.cityName || item.city || '').trim(),
+        address: (item.address || item.pickupAddress || item.storeAddress || item.fullAddress || '').trim(),
+        contactPersonName: (item.contactPersonName || item.merchantName || item.name || '').trim(),
+        contactPersonPhone: (item.contactPersonPhone || item.merchantPhone || item.phone || '').trim(),
+        isDefault: Boolean(item.isDefault || item.default || item.isPrimary || idx === 0),
       };
-    });
+    }).filter((a) => Boolean(a.addressCode || a.address));
 
-    return { success: true, addresses: formatted, message: res.data.statusMessage || `${formatted.length} PostEx address(es) retrieved` };
+    return {
+      success: true,
+      addresses: formatted,
+      message: res.data?.statusMessage || (formatted.length > 0
+        ? `Successfully retrieved ${formatted.length} PostEx merchant address(es).`
+        : 'PostEx account has 0 configured pickup addresses in PostEx portal.'),
+      raw: res.data,
+    };
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -344,27 +444,26 @@ export class PostExApiClient {
   // GET /services/integration/api/order/v1/get-order-types
   // ─────────────────────────────────────────────────────────────────────────────
   async getOrderTypes(): Promise<{ success: boolean; orderTypes: PostExOrderType[]; message?: string }> {
-    const res = await this.request<{ statusCode: string; statusMessage: string; response?: any[] }>(
-      '/services/integration/api/order/v1/get-order-types',
-      { method: 'GET' }
-    );
+    const res = await this.request<any>('/services/integration/api/order/v1/get-order-types', {
+      method: 'GET',
+    });
 
     if (!res.ok || !res.data) {
       return { success: false, orderTypes: [], message: res.error || 'Failed to fetch order types' };
     }
 
-    const list = Array.isArray(res.data.response) ? res.data.response : [];
+    const list = extractArray(res.data);
     const formatted: PostExOrderType[] = list.map((item: any) => ({
       orderTypeId: item.orderTypeId || item.id,
       orderTypeName: typeof item === 'string' ? item : item.orderTypeName || item.name || 'Normal',
       description: item.description,
     }));
 
-    return { success: true, orderTypes: formatted, message: res.data.statusMessage || 'Order types retrieved' };
+    return { success: true, orderTypes: formatted, message: res.data?.statusMessage || 'Order types retrieved' };
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
-  // 5. CREATE ORDER
+  // 5. CREATE ORDER (Manual Admin Dispatch Workflow Only)
   // POST /services/integration/api/order/v3/create-order
   // ─────────────────────────────────────────────────────────────────────────────
   async createOrder(payload: PostExCreateOrderRequest): Promise<{
@@ -414,7 +513,6 @@ export class PostExApiClient {
       };
     }
 
-    // PostEx v3 returns tracking number either in response object or top level
     const data = res.data;
     const trackingNumber =
       data.response?.trackingNumber ||
@@ -459,8 +557,8 @@ export class PostExApiClient {
       return { success: false, orders: [], message: res.error || 'Failed to fetch unbooked orders' };
     }
 
-    const list = Array.isArray(res.data.response) ? res.data.response : [];
-    return { success: true, orders: list, message: res.data.statusMessage || 'Unbooked orders retrieved' };
+    const list = extractArray(res.data);
+    return { success: true, orders: list, message: res.data?.statusMessage || 'Unbooked orders retrieved' };
   }
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -547,7 +645,7 @@ export class PostExApiClient {
       return { success: false, results: [], message: res.error || 'Failed to fetch bulk tracking' };
     }
 
-    const list = Array.isArray(res.data.response) ? res.data.response : [];
+    const list = extractArray(res.data);
     return { success: true, results: list, message: res.data.statusMessage || 'Bulk tracking retrieved' };
   }
 
@@ -564,7 +662,8 @@ export class PostExApiClient {
     const trackingList = Array.isArray(trackingNumbers) ? trackingNumbers.join(',') : trackingNumbers;
     const cleanParam = encodeURIComponent(trackingList.trim());
 
-    const res = await this.request(
+    // Try /getinvoice first
+    let res = await this.request(
       `/services/integration/api/order/v1/getinvoice?trackingNumbers=${cleanParam}`,
       {
         method: 'GET',
@@ -574,6 +673,23 @@ export class PostExApiClient {
         },
       }
     );
+
+    // If failed, try hyphenated endpoint /get-invoice
+    if (!res.ok || !res.buffer) {
+      const altRes = await this.request(
+        `/services/integration/api/order/v1/get-invoice?trackingNumbers=${cleanParam}`,
+        {
+          method: 'GET',
+          isBinary: true,
+          headers: {
+            Accept: 'application/pdf, application/json, */*',
+          },
+        }
+      );
+      if (altRes.ok && altRes.buffer) {
+        res = altRes;
+      }
+    }
 
     if (!res.ok || !res.buffer) {
       return {
@@ -592,14 +708,14 @@ export class PostExApiClient {
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 11. Shipper Advice (Save)
-  // PUT /service/integration/api/order/v2/save-shipper-advice
+  // PUT /services/integration/api/order/v2/save-shipper-advice
   // ─────────────────────────────────────────────────────────────────────────────
   async saveShipperAdvice(advice: PostExShipperAdviceRequest): Promise<{
     success: boolean;
     raw?: any;
     message?: string;
   }> {
-    const res = await this.request<any>('/service/integration/api/order/v2/save-shipper-advice', {
+    const res = await this.request<any>('/services/integration/api/order/v2/save-shipper-advice', {
       method: 'PUT',
       body: {
         trackingNumber: advice.trackingNumber,
@@ -624,7 +740,7 @@ export class PostExApiClient {
 
   // ─────────────────────────────────────────────────────────────────────────────
   // 12. Get Shipper Advice
-  // GET /service/integration/api/order/v1/get-shipper-advice/{trackingNumber}
+  // GET /services/integration/api/order/v1/get-shipper-advice/{trackingNumber}
   // ─────────────────────────────────────────────────────────────────────────────
   async getShipperAdvice(trackingNumber: string): Promise<{
     success: boolean;
@@ -633,7 +749,7 @@ export class PostExApiClient {
   }> {
     const cleanTracking = encodeURIComponent(trackingNumber.trim());
     const res = await this.request<any>(
-      `/service/integration/api/order/v1/get-shipper-advice/${cleanTracking}`,
+      `/services/integration/api/order/v1/get-shipper-advice/${cleanTracking}`,
       { method: 'GET' }
     );
 
@@ -716,7 +832,7 @@ export class PostExApiClient {
       return { success: false, statuses: [], message: res.error || 'Failed to fetch order statuses' };
     }
 
-    const list = Array.isArray(res.data.response) ? res.data.response : [];
+    const list = extractArray(res.data);
     return { success: true, statuses: list, message: res.data.statusMessage || 'Order statuses retrieved' };
   }
 
@@ -745,8 +861,59 @@ export class PostExApiClient {
       return { success: false, orders: [], message: res.error || 'Failed to fetch all orders from PostEx' };
     }
 
-    const list = Array.isArray(res.data.response) ? res.data.response : [];
+    const list = extractArray(res.data);
     return { success: true, orders: list, message: res.data.statusMessage || 'PostEx orders retrieved' };
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // FULL DIAGNOSTIC TEST RUNNER
+  // ─────────────────────────────────────────────────────────────────────────────
+  async testConnectionAndDiagnose(customToken?: string): Promise<PostExDiagnostics> {
+    const isConfig = customToken ? true : await this.isConfiguredAsync();
+    if (!isConfig) {
+      return {
+        configured: false,
+        citiesCount: 0,
+        addressesCount: 0,
+        addresses: [],
+        diagnosticMessage: 'POSTEX_API_TOKEN is not configured. Please enter your API token in Admin Settings or set POSTEX_API_TOKEN in server environment.',
+        environment: 'PRODUCTION',
+        baseUrl: this.baseUrl,
+      };
+    }
+
+    const [citiesRes, addressesRes] = await Promise.all([
+      this.getOperationalCities(customToken),
+      this.getMerchantAddresses(customToken),
+    ]);
+
+    const citiesCount = citiesRes.cities.length;
+    const addressesCount = addressesRes.addresses.length;
+
+    let diagnosticMessage = '';
+    if (citiesRes.success && addressesRes.success) {
+      if (addressesCount > 0) {
+        diagnosticMessage = `✓ PostEx connected successfully! Found ${citiesCount} operational delivery cities and ${addressesCount} merchant pickup address(es). Ready for express dispatch.`;
+      } else {
+        diagnosticMessage = `✓ PostEx connected successfully to ${citiesCount} operational delivery cities, but no merchant pickup addresses were returned by the API. Please configure your pickup address in the PostEx Merchant Portal or enter your pickup address code manually below.`;
+      }
+    } else if (citiesRes.success && !addressesRes.success) {
+      diagnosticMessage = `PostEx operational cities active (${citiesCount} cities), but merchant address lookup returned: ${addressesRes.message || 'Address lookup error'}.`;
+    } else {
+      diagnosticMessage = `PostEx API error: ${citiesRes.message || addressesRes.message || 'Could not authenticate with PostEx.'}`;
+    }
+
+    return {
+      configured: true,
+      httpStatus: 200,
+      statusMessage: citiesRes.message,
+      citiesCount,
+      addressesCount,
+      addresses: addressesRes.addresses,
+      diagnosticMessage,
+      environment: this.baseUrl.includes('test') || this.baseUrl.includes('staging') ? 'TEST' : 'PRODUCTION',
+      baseUrl: this.baseUrl,
+    };
   }
 }
 

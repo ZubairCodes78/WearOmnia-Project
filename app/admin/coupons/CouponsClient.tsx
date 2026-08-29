@@ -1,17 +1,31 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Tag, Plus, Check, X } from 'lucide-react';
+import { Tag, Plus, Check, X, Loader2, Sparkles, Trash2 } from 'lucide-react';
 
-export const CouponsClient: React.FC<{ initialCoupons: any[] }> = ({ initialCoupons }) => {
-  const [coupons, setCoupons] = useState(initialCoupons);
+interface CouponItem {
+  id: string;
+  code: string;
+  discountType: string;
+  discountValue: number;
+  minOrderAmount: number;
+  maxDiscountAmount: number | null;
+  usageLimit: number | null;
+  usedCount: number;
+  isActive: boolean;
+  expiryDate: string | Date | null;
+}
+
+export const CouponsClient: React.FC<{ initialCoupons: CouponItem[] }> = ({ initialCoupons }) => {
+  const [coupons, setCoupons] = useState<CouponItem[]>(initialCoupons);
   const [modalOpen, setModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const [formData, setFormData] = useState({
     code: '',
     discountType: 'PERCENTAGE',
-    discountValue: '',
+    discountValue: '10',
     minOrderAmount: '5000',
     maxDiscountAmount: '3000',
     usageLimit: '100',
@@ -20,6 +34,7 @@ export const CouponsClient: React.FC<{ initialCoupons: any[] }> = ({ initialCoup
   const handleCreateCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMessage('');
 
     try {
       const res = await fetch('/api/admin/coupons', {
@@ -28,157 +43,196 @@ export const CouponsClient: React.FC<{ initialCoupons: any[] }> = ({ initialCoup
         body: JSON.stringify(formData),
       });
       const data = await res.json();
-      if (res.ok) {
+      if (res.ok && data.coupon) {
         setCoupons([data.coupon, ...coupons]);
         setModalOpen(false);
         setFormData({
           code: '',
           discountType: 'PERCENTAGE',
-          discountValue: '',
+          discountValue: '10',
           minOrderAmount: '5000',
           maxDiscountAmount: '3000',
           usageLimit: '100',
         });
+      } else {
+        setErrorMessage(data.error || 'Failed to create coupon.');
       }
     } catch (e) {
-      console.error(e);
+      setErrorMessage('Network error creating coupon.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-offwhite p-6 rounded-3xl border border-sand shadow-sm">
+    <div className="space-y-8 text-[#FAF8F5]">
+      {/* Header */}
+      <div className="bg-[#0A2528]/85 backdrop-blur-2xl p-8 rounded-3xl border border-[#D4AF37]/30 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <span className="text-xs uppercase tracking-[0.25em] font-semibold text-champagne-700">Promotions</span>
-          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-teal mt-1">Promo Coupons ({coupons.length})</h1>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.25em] font-bold text-[#D4AF37] bg-teal-950/80 px-3.5 py-1 rounded-full border border-[#D4AF37]/30">
+              <Tag className="w-3 h-3 text-[#D4AF37]" /> Promotions & Discounts
+            </span>
+          </div>
+          <h1 className="font-serif text-3xl font-bold text-[#FAF8F5] mt-2">
+            Promo Coupons & Vouchers ({coupons.length})
+          </h1>
+          <p className="text-xs text-[#FAF8F5]/70 mt-1 font-sans">
+            Create and manage percentage or fixed discount promo codes for customer checkout.
+          </p>
         </div>
         <button
-          onClick={() => setModalOpen(true)}
-          className="bg-teal text-champagne px-6 py-3.5 rounded-xl text-xs uppercase font-bold tracking-widest hover:bg-teal-900 transition-all shadow flex items-center justify-center gap-2"
+          onClick={() => {
+            setErrorMessage('');
+            setModalOpen(true);
+          }}
+          className="bg-[#D4AF37] text-black hover:bg-white px-6 py-3 rounded-xl text-xs uppercase font-extrabold tracking-widest transition-all shadow-lg flex items-center justify-center gap-2"
         >
-          <Plus className="w-4 h-4 text-champagne" /> Create New Coupon
+          <Plus className="w-4 h-4" /> Create New Coupon
         </button>
       </div>
 
-      <div className="bg-offwhite rounded-3xl border border-sand shadow-sm overflow-hidden">
+      {/* Coupons Table */}
+      <div className="bg-[#0A2528]/80 backdrop-blur-2xl rounded-3xl border border-[#D4AF37]/20 shadow-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-sand text-charcoal uppercase tracking-wider font-semibold">
+            <thead className="bg-[#06191B] text-[#D4AF37] uppercase tracking-wider font-semibold border-b border-[#D4AF37]/15">
               <tr>
                 <th className="p-4">Coupon Code</th>
                 <th className="p-4">Discount Type</th>
-                <th className="p-4">Value</th>
+                <th className="p-4">Discount Value</th>
                 <th className="p-4">Min Spend</th>
-                <th className="p-4">Used / Limit</th>
+                <th className="p-4">Usage (Used / Limit)</th>
                 <th className="p-4">Status</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-sand">
-              {coupons.map((c) => (
-                <tr key={c.id} className="hover:bg-sand/40">
-                  <td className="p-4 font-mono font-bold text-teal flex items-center gap-2">
-                    <Tag className="w-4 h-4 text-champagne-700" /> {c.code}
-                  </td>
-                  <td className="p-4 font-semibold text-charcoal">{c.discountType}</td>
-                  <td className="p-4 font-bold text-teal">
-                    {c.discountType === 'PERCENTAGE' ? `${c.discountValue}% OFF` : `Rs. ${c.discountValue} OFF`}
-                  </td>
-                  <td className="p-4 text-charcoal-muted">Rs. {c.minOrderAmount.toLocaleString()}</td>
-                  <td className="p-4 font-mono font-bold text-charcoal">
-                    {c.usedCount} / {c.usageLimit || '∞'}
-                  </td>
-                  <td className="p-4">
-                    <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2.5 py-1 rounded-full uppercase">
-                      Active
-                    </span>
+            <tbody className="divide-y divide-[#D4AF37]/10">
+              {coupons.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-12 text-center text-[#FAF8F5]/50 italic">
+                    No promo coupons created yet. Click &quot;Create New Coupon&quot; to add one.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                coupons.map((c) => (
+                  <tr key={c.id} className="hover:bg-[#103A3E]/40 transition-colors">
+                    <td className="p-4 font-mono font-bold text-[#D4AF37] text-sm flex items-center gap-2">
+                      <Tag className="w-4 h-4 text-[#D4AF37]" /> {c.code}
+                    </td>
+                    <td className="p-4 font-semibold text-[#FAF8F5]">{c.discountType}</td>
+                    <td className="p-4 font-bold text-emerald-400 font-mono">
+                      {c.discountType === 'PERCENTAGE' ? `${c.discountValue}% OFF` : `Rs. ${c.discountValue} OFF`}
+                    </td>
+                    <td className="p-4 text-[#FAF8F5]/80 font-mono">Rs. {c.minOrderAmount.toLocaleString()}</td>
+                    <td className="p-4 font-mono font-bold text-[#FAF8F5]">
+                      {c.usedCount} / {c.usageLimit || '∞'}
+                    </td>
+                    <td className="p-4">
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
+                        c.isActive
+                          ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40'
+                          : 'bg-gray-950/60 text-gray-400 border-gray-500/40'
+                      }`}>
+                        {c.isActive ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
       </div>
 
+      {/* Create Coupon Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 bg-charcoal/70 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-offwhite w-full max-w-lg rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative border border-champagne">
-            <button onClick={() => setModalOpen(false)} className="absolute top-4 right-4 p-2 text-charcoal">
-              <X className="w-6 h-6" />
-            </button>
-
-            <div className="border-b border-sand pb-4">
-              <span className="text-xs uppercase tracking-widest font-semibold text-champagne-700">Promotions</span>
-              <h3 className="font-serif text-2xl font-bold text-teal">Create New Coupon</h3>
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0A2528] text-[#FAF8F5] border border-[#D4AF37]/30 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[#D4AF37]/20 pb-3">
+              <h3 className="font-serif text-lg font-bold text-[#D4AF37]">
+                Create Promo Coupon
+              </h3>
+              <button onClick={() => setModalOpen(false)} className="p-1.5 text-[#D4AF37] hover:bg-teal-900 rounded-lg">
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            <form onSubmit={handleCreateCoupon} className="space-y-4 text-xs">
+            {errorMessage && (
+              <div className="p-3 bg-red-950/50 border border-red-500/40 text-red-300 rounded-xl text-xs">
+                {errorMessage}
+              </div>
+            )}
+
+            <form onSubmit={handleCreateCoupon} className="space-y-4 text-xs font-sans">
               <div>
-                <label className="font-bold text-teal block mb-1">Coupon Code *</label>
+                <label className="block text-[10px] text-[#A3A3A3] uppercase mb-1 font-bold">Coupon Code *</label>
                 <input
                   type="text"
                   required
-                  placeholder="e.g. EID2026"
+                  placeholder="e.g. WELCOME10, EID2026"
                   value={formData.code}
-                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                  className="w-full px-3 py-2 bg-sand rounded-xl border border-sand font-mono uppercase focus:outline-none focus:ring-1 focus:ring-teal"
+                  onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase().trim() })}
+                  className="w-full bg-[#06191B] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 text-xs text-[#FAF8F5] font-mono focus:outline-none focus:border-[#D4AF37]"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-teal block mb-1">Discount Type</label>
+                  <label className="block text-[10px] text-[#A3A3A3] uppercase mb-1 font-bold">Discount Type</label>
                   <select
                     value={formData.discountType}
                     onChange={(e) => setFormData({ ...formData, discountType: e.target.value })}
-                    className="w-full px-3 py-2 bg-sand rounded-xl border border-sand focus:outline-none"
+                    className="w-full bg-[#06191B] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 text-xs text-[#FAF8F5] focus:outline-none"
                   >
                     <option value="PERCENTAGE">Percentage (%)</option>
                     <option value="FIXED">Fixed Amount (PKR)</option>
                   </select>
                 </div>
+
                 <div>
-                  <label className="font-bold text-teal block mb-1">Discount Value *</label>
+                  <label className="block text-[10px] text-[#A3A3A3] uppercase mb-1 font-bold">Discount Value *</label>
                   <input
                     type="number"
                     required
-                    placeholder="15"
                     value={formData.discountValue}
                     onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })}
-                    className="w-full px-3 py-2 bg-sand rounded-xl border border-sand focus:outline-none"
+                    className="w-full bg-[#06191B] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 text-xs text-[#FAF8F5] font-mono focus:outline-none"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="font-bold text-teal block mb-1">Min Order Amount (PKR)</label>
+                  <label className="block text-[10px] text-[#A3A3A3] uppercase mb-1 font-bold">Min Order Spend (PKR)</label>
                   <input
                     type="number"
                     value={formData.minOrderAmount}
                     onChange={(e) => setFormData({ ...formData, minOrderAmount: e.target.value })}
-                    className="w-full px-3 py-2 bg-sand rounded-xl border border-sand focus:outline-none"
+                    className="w-full bg-[#06191B] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 text-xs text-[#FAF8F5] font-mono focus:outline-none"
                   />
                 </div>
+
                 <div>
-                  <label className="font-bold text-teal block mb-1">Usage Limit</label>
+                  <label className="block text-[10px] text-[#A3A3A3] uppercase mb-1 font-bold">Usage Limit</label>
                   <input
                     type="number"
                     value={formData.usageLimit}
                     onChange={(e) => setFormData({ ...formData, usageLimit: e.target.value })}
-                    className="w-full px-3 py-2 bg-sand rounded-xl border border-sand focus:outline-none"
+                    className="w-full bg-[#06191B] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 text-xs text-[#FAF8F5] font-mono focus:outline-none"
                   />
                 </div>
               </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full bg-teal text-champagne py-3.5 rounded-xl text-xs uppercase font-bold tracking-widest hover:bg-teal-900 transition-all shadow"
-              >
-                {loading ? 'Creating...' : 'Save Promo Code'}
-              </button>
+              <div className="pt-2">
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-[#D4AF37] hover:bg-white text-black py-3 rounded-xl text-xs font-extrabold uppercase tracking-widest transition-all shadow-lg flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                  Save Coupon
+                </button>
+              </div>
             </form>
           </div>
         </div>

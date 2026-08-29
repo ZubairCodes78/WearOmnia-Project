@@ -155,11 +155,25 @@ export function SettingsClient({ initialSettings, initialShippingRules }: Settin
       const res = await fetch('/api/admin/courier/postex/test-connection', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ customToken: settings.postex_api_token || undefined }),
       });
       const data = await res.json();
-      setPostExTestMessage(data.message || 'PostEx API is not configured.');
+      setPostExTestMessage(data.message || (data.success ? 'PostEx connected successfully!' : 'PostEx API is not configured.'));
+      if (data.addresses && Array.isArray(data.addresses) && data.addresses.length > 0) {
+        setMerchantAddresses(data.addresses);
+        if (!settings.postex_pickup_address_code) {
+          const def = data.addresses.find((a: any) => a.isDefault) || data.addresses[0];
+          const code = def.addressCode || def.pickupAddressCode || '';
+          const name = `${def.cityName} - ${def.address}`;
+          setSettings((prev) => ({
+            ...prev,
+            postex_pickup_address_code: code,
+            postex_pickup_address_name: name,
+          }));
+        }
+      }
     } catch (e) {
-      setPostExTestMessage('PostEx API is not configured.');
+      setPostExTestMessage('PostEx API connection error.');
     } finally {
       setTestingPostEx(false);
     }

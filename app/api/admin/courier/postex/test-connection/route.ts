@@ -9,39 +9,36 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (!postexApi.isConfigured()) {
-      return NextResponse.json({
-        success: false,
-        configured: false,
-        message: 'PostEx API is not configured. POSTEX_API_TOKEN is missing in server environment.',
-      });
+    let customToken: string | undefined;
+    try {
+      const body = await req.json();
+      if (body.customToken?.trim()) {
+        customToken = body.customToken.trim();
+      }
+    } catch {
+      // JSON body is optional
     }
 
-    // Live connectivity check against PostEx Operational Cities API
-    const pingRes = await postexApi.getOperationalCities();
-
-    if (!pingRes.success) {
-      return NextResponse.json({
-        success: false,
-        configured: true,
-        message: `PostEx API Error: ${pingRes.message || 'Could not connect to PostEx API.'}`,
-      });
-    }
-
-    const cityCount = pingRes.cities?.length || 0;
+    const diagnostics = await postexApi.testConnectionAndDiagnose(customToken);
 
     return NextResponse.json({
-      success: true,
-      configured: true,
-      citiesCount: cityCount,
-      message: `PostEx connection successful! Connected to ${cityCount} operational delivery cities.`,
+      success: diagnostics.configured && diagnostics.citiesCount > 0,
+      configured: diagnostics.configured,
+      citiesCount: diagnostics.citiesCount,
+      addressesCount: diagnostics.addressesCount,
+      addresses: diagnostics.addresses,
+      message: diagnostics.diagnosticMessage,
+      environment: diagnostics.environment,
+      baseUrl: diagnostics.baseUrl,
     });
   } catch (error: any) {
     return NextResponse.json({
       success: false,
       configured: false,
+      citiesCount: 0,
+      addressesCount: 0,
+      addresses: [],
       message: error?.message || 'PostEx API connection failed.',
     }, { status: 500 });
   }
 }
-
