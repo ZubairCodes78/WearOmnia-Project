@@ -6,7 +6,7 @@ export async function POST(req: Request) {
   try {
     const isAuthenticated = await verifyAdminSession();
     if (!isAuthenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized. Admin session required.' }, { status: 401 });
     }
 
     let customToken: string | undefined;
@@ -30,6 +30,7 @@ export async function POST(req: Request) {
       message: diagnostics.diagnosticMessage,
       environment: diagnostics.environment,
       baseUrl: diagnostics.baseUrl,
+      operationalCitiesSample: diagnostics.operationalCitiesSample,
     });
   } catch (error: any) {
     return NextResponse.json({

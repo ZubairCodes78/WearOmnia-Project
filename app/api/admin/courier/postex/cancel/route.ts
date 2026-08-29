@@ -8,7 +8,7 @@ export async function POST(req: Request) {
   try {
     const isAuthenticated = await verifyAdminSession();
     if (!isAuthenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized. Admin session required.' }, { status: 401 });
     }
 
     const { trackingNumber, orderId } = await req.json();
@@ -32,15 +32,21 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'No tracking number found to cancel.' }, { status: 404 });
     }
 
-    // Call PostEx Cancel Order API
-    const cancelRes = await postexApi.cancelOrder({
-      trackingNumber: targetTracking,
-      orderRefNumber: targetOrder?.orderNumber,
+    // Check existing shipment status - prevent cancelling delivered parcels
+    const existingShipment = await prisma.shipment.findFirst({
+      where: { trackingNumber: targetTracking },
     });
+
+    if (existingShipment && ['DELIVERED', 'Delivered'].includes(existingShipment.status)) {
+      return NextResponse.json({ error: 'Delivered shipments cannot be cancelled.' }, { status: 400 });
+    }
+
+    // Call PostEx Cancel Order API
+    const cancelRes = await postexApi.cancelOrder(targetTracking);
 
     if (!cancelRes.success) {
       return NextResponse.json({
-        error: cancelRes.message || 'PostEx API refused cancellation.',
+        error: cancelRes.message || 'PostEx API refused shipment cancellation.',
       }, { status: 400 });
     }
 

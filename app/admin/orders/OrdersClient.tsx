@@ -253,8 +253,9 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
                         href={`/admin/orders/${order.id}/label`}
                         target="_blank"
                         className="bg-champagne text-teal-950 px-3 py-1.5 rounded-lg font-bold uppercase text-[10px] hover:bg-offwhite transition-colors inline-flex items-center gap-1"
+                        title="Print Official PostEx Airway Bill PDF"
                       >
-                        <Printer className="w-3 h-3" /> Label
+                        <Printer className="w-3 h-3" /> Official AWB
                       </Link>
                     </td>
                   </tr>

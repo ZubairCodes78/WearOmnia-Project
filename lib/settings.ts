@@ -32,19 +32,20 @@ export interface SiteSettingsData {
   whatsapp_customer_notify_enabled: boolean;
   whatsapp_admin_notify_enabled: boolean;
   whatsapp_sound_enabled: boolean;
-  // PostEx Courier Settings
+  // Official PostEx Courier Settings (M-v4.1.9 Specification)
   postex_enabled: boolean;
   postex_api_url: string;
-  postex_api_key: string;
   postex_api_token: string;
-  postex_merchant_id: string;
-  postex_account_id: string;
   postex_webhook_url: string;
   postex_environment: 'TEST' | 'PRODUCTION';
   postex_pickup_address_code: string;
   postex_store_address_code: string;
   postex_pickup_address_name?: string;
   postex_store_address_name?: string;
+  // Legacy optional fields preserved for data compatibility
+  postex_api_key?: string;
+  postex_merchant_id?: string;
+  postex_account_id?: string;
 }
 
 export const DEFAULT_SITE_SETTINGS: SiteSettingsData = {
@@ -79,13 +80,10 @@ export const DEFAULT_SITE_SETTINGS: SiteSettingsData = {
   whatsapp_customer_notify_enabled: true,
   whatsapp_admin_notify_enabled: true,
   whatsapp_sound_enabled: true,
-  // PostEx Courier Settings Default (EMPTY credentials)
+  // PostEx Courier Settings Default (Strictly Official M-v4.1.9 Specification)
   postex_enabled: false,
-  postex_api_url: '',
-  postex_api_key: '',
+  postex_api_url: 'https://api.postex.pk',
   postex_api_token: '',
-  postex_merchant_id: '',
-  postex_account_id: '',
   postex_webhook_url: '',
   postex_environment: 'TEST',
   postex_pickup_address_code: '',

@@ -7,7 +7,7 @@ export async function POST(req: Request) {
   try {
     const isAuthenticated = await verifyAdminSession();
     if (!isAuthenticated) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json({ error: 'Unauthorized. Admin session required.' }, { status: 401 });
     }
 
     const { trackingNumber, orderId } = await req.json();
@@ -45,13 +45,13 @@ export async function POST(req: Request) {
     await prisma.shipment.updateMany({
       where: { trackingNumber: targetTracking },
       data: {
-        settlementStatus: p.settlementStatus || 'PENDING',
+        settlementStatus: p.settlementStatus || (p.settle === 'true' || p.settle === true ? 'SETTLED' : 'PENDING'),
         settlementDate: p.settlementDate ? new Date(p.settlementDate) : undefined,
-        cprNumber: p.cprNumber || undefined,
+        cprNumber: p.cprNumber_1 || p.cprNumber_2 || p.cprNumber || undefined,
         upfrontPaymentDate: p.upfrontPaymentDate ? new Date(p.upfrontPaymentDate) : undefined,
         reservePaymentDate: p.reservePaymentDate ? new Date(p.reservePaymentDate) : undefined,
         transactionFee: p.transactionFee ?? undefined,
-        taxAmount: p.tax ?? undefined,
+        taxAmount: p.taxAmount ?? p.tax ?? undefined,
         fuelSurcharge: p.fuelSurcharge ?? undefined,
       },
     });
@@ -61,15 +61,18 @@ export async function POST(req: Request) {
       payment: {
         trackingNumber: p.trackingNumber || targetTracking,
         orderRefNumber: p.orderRefNumber,
-        settlementStatus: p.settlementStatus || 'Pending',
+        settle: p.settle,
+        settlementStatus: p.settlementStatus || (p.settle === 'true' || p.settle === true ? 'SETTLED' : 'PENDING'),
         settlementDate: p.settlementDate,
         upfrontPaymentDate: p.upfrontPaymentDate,
-        cprNumber: p.cprNumber,
+        cprNumber_1: p.cprNumber_1,
+        cprNumber_2: p.cprNumber_2,
+        cprNumber: p.cprNumber_1 || p.cprNumber_2 || p.cprNumber,
         reservePaymentDate: p.reservePaymentDate,
         codAmount: p.invoicePayment,
         netAmount: p.netAmount,
         transactionFee: p.transactionFee,
-        taxAmount: p.tax,
+        taxAmount: p.taxAmount || p.tax,
         fuelSurcharge: p.fuelSurcharge,
       },
       message: 'Settlement details retrieved and updated.',

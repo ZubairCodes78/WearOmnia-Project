@@ -7,6 +7,7 @@ import {
   CancelShipmentResult,
   SettlementResult,
   POSTEX_STATUS_MAP,
+  POSTEX_MESSAGE_CODES,
 } from './types';
 import { postexApi } from './postex-api';
 
@@ -31,7 +32,7 @@ export class PostExProvider implements CourierProvider {
         success: false,
         provider: this.name,
         status: 'UNCONFIGURED',
-        message: 'PostEx integration is not configured. Please set POSTEX_API_TOKEN in server environment variables or Admin Settings.',
+        message: 'PostEx integration is not configured. Please set POSTEX_API_TOKEN in server environment or Admin Settings → PostEx.',
       };
     }
 
@@ -52,7 +53,7 @@ export class PostExProvider implements CourierProvider {
           success: false,
           provider: this.name,
           status: 'UNCONFIGURED_ADDRESS',
-          message: 'PostEx pickup address is not configured. Please configure it in Admin Settings → PostEx.',
+          message: 'PostEx shipment could not be created because no valid merchant pickup address is configured.',
         };
       }
 
@@ -92,12 +93,12 @@ export class PostExProvider implements CourierProvider {
         provider: this.name,
         trackingNumber: result.trackingNumber,
         orderRefNumber: request.orderNumber,
-        status: 'Booked',
+        status: result.orderStatus || 'Booked',
         labelUrl: `/api/admin/courier/postex/label?trackingNumber=${encodeURIComponent(result.trackingNumber)}`,
         trackingUrl: `https://postex.pk/tracking?trackingNumber=${encodeURIComponent(result.trackingNumber)}`,
         message: 'PostEx shipment created successfully.',
         metadata: {
-          postexStatus: 'Booked',
+          postexStatus: result.orderStatus || 'Booked',
           orderRefNumber: request.orderNumber,
           createdAt: new Date().toISOString(),
         },
@@ -117,7 +118,8 @@ export class PostExProvider implements CourierProvider {
    * Retrieves shipment details from PostEx
    */
   async getShipment(trackingNumberOrId: string): Promise<ShipmentResult> {
-    if (!this.isConfigured()) {
+    const isConfig = await this.checkConfiguration();
+    if (!isConfig) {
       return {
         success: false,
         provider: this.name,
@@ -155,7 +157,8 @@ export class PostExProvider implements CourierProvider {
    * Retrieves full tracking history and mapped status
    */
   async getTracking(trackingNumber: string): Promise<TrackingResult> {
-    if (!this.isConfigured()) {
+    const isConfig = await this.checkConfiguration();
+    if (!isConfig) {
       return {
         success: false,
         provider: this.name,
@@ -183,6 +186,18 @@ export class PostExProvider implements CourierProvider {
       const rawStatus = t.orderStatus || t.transactionStatus || 'Booked';
       const mapped = POSTEX_STATUS_MAP[rawStatus] || { orderStatus: 'DISPATCHED' };
 
+      const history = (t.history || []).map((h) => {
+        const messageCode = h.messageCode;
+        const codeLabel = messageCode && POSTEX_MESSAGE_CODES[messageCode] ? POSTEX_MESSAGE_CODES[messageCode] : undefined;
+        return {
+          messageCode: messageCode,
+          status: codeLabel || h.status || rawStatus,
+          location: h.location,
+          timestamp: h.timestamp || new Date().toISOString(),
+          remarks: h.remarks,
+        };
+      });
+
       return {
         success: true,
         provider: this.name,
@@ -191,7 +206,7 @@ export class PostExProvider implements CourierProvider {
         status: mapped.orderStatus,
         rawStatus: rawStatus,
         statusDetails: t.transactionStatus || rawStatus,
-        courierName: 'PostEx',
+        courierName: 'PostEx Express',
         pickupDate: t.pickupDate,
         deliveryDate: t.deliveryDate,
         returnDate: t.returnDate,
@@ -199,20 +214,13 @@ export class PostExProvider implements CourierProvider {
         transactionFee: t.transactionFee,
         taxAmount: t.taxAmount,
         fuelSurcharge: t.fuelSurcharge,
-        history: t.history
-          ? t.history.map((h) => ({
-              status: h.status,
-              location: h.location,
-              timestamp: h.timestamp || new Date().toISOString(),
-              remarks: h.remarks,
-            }))
-          : [
-              {
-                status: rawStatus,
-                timestamp: new Date().toISOString(),
-                remarks: t.transactionStatus || `Status: ${rawStatus}`,
-              },
-            ],
+        history: history.length > 0 ? history : [
+          {
+            status: rawStatus,
+            timestamp: new Date().toISOString(),
+            remarks: t.transactionStatus || `Status: ${rawStatus}`,
+          },
+        ],
         message: 'Tracking details retrieved successfully.',
       };
     } catch (e: any) {
@@ -231,14 +239,15 @@ export class PostExProvider implements CourierProvider {
    * Cancels shipment on PostEx via PUT /services/integration/api/order/v1/cancel-order
    */
   async cancelShipment(trackingNumberOrId: string): Promise<CancelShipmentResult> {
-    if (!this.isConfigured()) {
+    const isConfig = await this.checkConfiguration();
+    if (!isConfig) {
       return {
         success: false,
         message: 'PostEx integration is not configured.',
       };
     }
 
-    const res = await postexApi.cancelOrder({ trackingNumber: trackingNumberOrId });
+    const res = await postexApi.cancelOrder(trackingNumberOrId);
     return {
       success: res.success,
       message: res.message || (res.success ? 'PostEx shipment cancelled successfully.' : 'Cancellation failed.'),
@@ -249,7 +258,8 @@ export class PostExProvider implements CourierProvider {
    * Retrieves official PostEx Airway Bill invoice PDF
    */
   async printLabel(trackingNumberOrId: string): Promise<PrintLabelResult> {
-    if (!this.isConfigured()) {
+    const isConfig = await this.checkConfiguration();
+    if (!isConfig) {
       return {
         success: false,
         message: 'PostEx API is not configured.',
@@ -277,7 +287,8 @@ export class PostExProvider implements CourierProvider {
    * Retrieves payment / COD settlement status
    */
   async getPaymentStatus(trackingNumber: string): Promise<SettlementResult> {
-    if (!this.isConfigured()) {
+    const isConfig = await this.checkConfiguration();
+    if (!isConfig) {
       return {
         success: false,
         trackingNumber,
@@ -302,15 +313,18 @@ export class PostExProvider implements CourierProvider {
       success: true,
       trackingNumber: p.trackingNumber || trackingNumber,
       orderRefNumber: p.orderRefNumber,
-      settlementStatus: p.settlementStatus || 'Pending',
+      settle: p.settle,
+      settlementStatus: p.settlementStatus || 'PENDING',
       settlementDate: p.settlementDate,
       upfrontPaymentDate: p.upfrontPaymentDate,
-      cprNumber: p.cprNumber,
+      cprNumber_1: p.cprNumber_1,
+      cprNumber_2: p.cprNumber_2,
+      cprNumber: p.cprNumber || p.cprNumber_1 || p.cprNumber_2,
       reservePaymentDate: p.reservePaymentDate,
       codAmount: p.invoicePayment,
       netAmount: p.netAmount,
       transactionFee: p.transactionFee,
-      taxAmount: p.tax,
+      taxAmount: p.taxAmount || p.tax,
       fuelSurcharge: p.fuelSurcharge,
       message: 'Settlement details retrieved successfully.',
       raw: res.raw,
@@ -322,4 +336,3 @@ export class PostExProvider implements CourierProvider {
     return tracking.rawStatus || tracking.status || 'UNKNOWN';
   }
 }
-

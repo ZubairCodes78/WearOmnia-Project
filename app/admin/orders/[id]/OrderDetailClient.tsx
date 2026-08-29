@@ -257,18 +257,11 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
 
         <div className="flex items-center gap-2">
           <Link
-            href={`/api/admin/courier/postex/label?trackingNumber=${encodeURIComponent(order.trackingNumber || trackingNumber || '')}`}
+            href={`/admin/orders/${order.id}/label`}
             target="_blank"
             className="bg-champagne text-teal-950 px-4 py-2 rounded-xl text-[10px] uppercase font-bold tracking-wider hover:bg-offwhite transition-colors flex items-center gap-1.5 shadow"
           >
-            <Printer className="w-3.5 h-3.5" /> PostEx Label (PDF)
-          </Link>
-          <Link
-            href={`/admin/orders/${order.id}/label`}
-            target="_blank"
-            className="bg-teal-900/80 text-champagne border border-champagne/20 px-4 py-2 rounded-xl text-[10px] uppercase font-bold tracking-wider hover:bg-teal-800 transition-colors flex items-center gap-1.5"
-          >
-            <Printer className="w-3.5 h-3.5" /> Thermal Label
+            <Printer className="w-3.5 h-3.5" /> Print Official AWB
           </Link>
           <Link
             href={`/admin/orders/${order.id}/invoice`}
@@ -683,12 +676,12 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                       </button>
 
                       <a
-                        href={`/api/admin/courier/postex/label?trackingNumber=${encodeURIComponent(currentTracking)}`}
+                        href={`/admin/orders/${order.id}/label`}
                         target="_blank"
                         rel="noreferrer"
                         className="bg-amber-500 hover:bg-amber-400 text-teal-950 font-bold px-3.5 py-2 rounded-xl text-[11px] uppercase tracking-wider transition-all text-center flex items-center justify-center gap-1 shadow"
                       >
-                        <Printer className="w-3.5 h-3.5" /> Print PostEx Label
+                        <Printer className="w-3.5 h-3.5" /> Print Official AWB
                       </a>
 
                       <button

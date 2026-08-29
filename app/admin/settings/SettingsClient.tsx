@@ -611,55 +611,25 @@ export function SettingsClient({ initialSettings, initialShippingRules }: Settin
               <label className="block text-xs text-[#A3A3A3] uppercase mb-1">API Base URL</label>
               <input
                 type="text"
-                value={settings.postex_api_url || ''}
+                value={settings.postex_api_url || 'https://api.postex.pk'}
                 onChange={(e) => setSettings({ ...settings, postex_api_url: e.target.value })}
-                placeholder="Leave empty by default"
+                placeholder="https://api.postex.pk"
                 className="w-full bg-[#1A1A1A] border border-[#262626] rounded-lg px-3.5 py-2.5 text-sm text-[#FAF8F5] font-mono"
               />
             </div>
 
-            <div>
-              <label className="block text-xs text-[#A3A3A3] uppercase mb-1">API Key</label>
-              <input
-                type="password"
-                value={settings.postex_api_key || ''}
-                onChange={(e) => setSettings({ ...settings, postex_api_key: e.target.value })}
-                placeholder="Leave empty by default"
-                className="w-full bg-[#1A1A1A] border border-[#262626] rounded-lg px-3.5 py-2.5 text-sm text-[#FAF8F5] font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-[#A3A3A3] uppercase mb-1">API Token</label>
+            <div className="sm:col-span-2">
+              <label className="block text-xs text-[#A3A3A3] uppercase mb-1">API Token (Secret Header)</label>
               <input
                 type="password"
                 value={settings.postex_api_token || ''}
                 onChange={(e) => setSettings({ ...settings, postex_api_token: e.target.value })}
-                placeholder="Leave empty by default"
+                placeholder="Enter official PostEx Merchant Token"
                 className="w-full bg-[#1A1A1A] border border-[#262626] rounded-lg px-3.5 py-2.5 text-sm text-[#FAF8F5] font-mono"
               />
-            </div>
-
-            <div>
-              <label className="block text-xs text-[#A3A3A3] uppercase mb-1">Merchant ID</label>
-              <input
-                type="text"
-                value={settings.postex_merchant_id || ''}
-                onChange={(e) => setSettings({ ...settings, postex_merchant_id: e.target.value })}
-                placeholder="Leave empty by default"
-                className="w-full bg-[#1A1A1A] border border-[#262626] rounded-lg px-3.5 py-2.5 text-sm text-[#FAF8F5] font-mono"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs text-[#A3A3A3] uppercase mb-1">Account ID</label>
-              <input
-                type="text"
-                value={settings.postex_account_id || ''}
-                onChange={(e) => setSettings({ ...settings, postex_account_id: e.target.value })}
-                placeholder="Leave empty by default"
-                className="w-full bg-[#1A1A1A] border border-[#262626] rounded-lg px-3.5 py-2.5 text-sm text-[#FAF8F5] font-mono"
-              />
+              <p className="text-[11px] text-[#A3A3A3] mt-1">
+                Passed securely on the server via <code className="text-[#D4AF37]">token: &lt;token&gt;</code> header.
+              </p>
             </div>
 
             <div className="sm:col-span-2">
