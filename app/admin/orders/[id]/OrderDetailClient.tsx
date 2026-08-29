@@ -26,9 +26,11 @@ import {
   ChevronRight,
   ShieldCheck,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { getValidNextStatuses, STATUS_LABELS } from '@/lib/order-status';
 import { normalizePhone } from '@/lib/phone';
+import { DeleteOrderModal } from '@/components/admin/DeleteOrderModal';
 
 interface OrderDetailClientProps {
   order: any;
@@ -52,6 +54,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   const [cancellingShipment, setCancellingShipment] = useState(false);
   const [trackingDetails, setTrackingDetails] = useState<any>(null);
   const [settlementDetails, setSettlementDetails] = useState<any>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // Customer notification state
   const [notifyingCustomer, setNotifyingCustomer] = useState(false);
@@ -61,6 +64,26 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
     isError?: boolean;
     whatsappUrl?: string;
   } | null>(null);
+
+  const handleDeleteOrder = async (reason: string) => {
+    const res = await fetch('/api/admin/orders/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderId: order.id,
+        reason,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to delete order.');
+    }
+
+    setShowDeleteModal(false);
+    router.push('/admin/orders');
+    router.refresh();
+  };
 
   const activeShipment = order.shipments?.find(
     (s: any) =>
@@ -388,6 +411,14 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             className="bg-[#0A2528] hover:bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5"
           >
             <MessageSquare className="w-3.5 h-3.5" /> WhatsApp
+          </button>
+
+          <button
+            onClick={() => setShowDeleteModal(true)}
+            className="bg-red-950/60 hover:bg-red-900/90 text-red-300 border border-red-800/50 px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 shadow"
+            title="Permanently Delete Order"
+          >
+            <Trash2 className="w-3.5 h-3.5 text-red-400" /> Delete Order
           </button>
         </div>
       </div>
@@ -722,8 +753,31 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
               </div>
             </div>
           </div>
+
+          {/* Danger Zone: Permanent Order Deletion */}
+          <div className="bg-[#0A2528] border border-red-500/30 rounded-2xl p-6 space-y-3">
+            <h2 className="font-serif text-base font-bold text-red-400 flex items-center gap-2 border-b border-red-500/20 pb-3">
+              <Trash2 className="w-4 h-4 text-red-400" /> Danger Zone
+            </h2>
+            <p className="text-xs text-[#FAF8F5]/70 leading-relaxed">
+              Permanently remove this order from all business analytics, reports, revenue, and order lists. Customer profile will remain intact.
+            </p>
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="w-full bg-red-600/90 hover:bg-red-600 text-white font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Delete Order Permanently
+            </button>
+          </div>
         </div>
       </div>
+
+      <DeleteOrderModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteOrder}
+        order={order}
+      />
     </div>
   );
 }

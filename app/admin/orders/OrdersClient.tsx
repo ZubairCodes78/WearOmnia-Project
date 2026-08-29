@@ -3,9 +3,10 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Search, Printer, Download, Eye, FileText, Truck, Package } from 'lucide-react';
+import { Search, Printer, Download, Eye, FileText, Truck, Package, Trash2 } from 'lucide-react';
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { normalizePhone } from '@/lib/phone';
+import { DeleteOrderModal } from '@/components/admin/DeleteOrderModal';
 
 interface OrderItem {
   id: string;
@@ -58,6 +59,7 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [search, setSearch] = useState(initialSearch);
   const [statusFilter, setStatusFilter] = useState(initialStatus || 'ALL');
+  const [selectedOrderForDelete, setSelectedOrderForDelete] = useState<Order | null>(null);
 
   // Real-Time SSE Stream for Instant Admin Order Updates
   React.useEffect(() => {
@@ -77,6 +79,8 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
             setOrders((prev) =>
               prev.map((o) => (o.id === data.order.id ? { ...o, ...data.order } : o))
             );
+          } else if (data.type === 'ORDER_DELETED' && data.order) {
+            setOrders((prev) => prev.filter((o) => o.id !== data.order.id));
           }
         } catch (e) {
           console.error(e);
@@ -90,6 +94,28 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
       if (eventSource) eventSource.close();
     };
   }, []);
+
+  const handleDeleteOrder = async (reason: string) => {
+    if (!selectedOrderForDelete) return;
+
+    const res = await fetch('/api/admin/orders/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderId: selectedOrderForDelete.id,
+        reason,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to delete order.');
+    }
+
+    setOrders((prev) => prev.filter((o) => o.id !== selectedOrderForDelete.id));
+    setSelectedOrderForDelete(null);
+    router.refresh();
+  };
 
   const filteredOrders = orders.filter((o) => {
     const matchesSearch =
@@ -257,6 +283,14 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
                       >
                         <Printer className="w-3 h-3" /> Official AWB
                       </Link>
+
+                      <button
+                        onClick={() => setSelectedOrderForDelete(order)}
+                        className="bg-red-950/60 hover:bg-red-900/90 text-red-300 border border-red-800/50 px-2.5 py-1.5 rounded-lg font-bold uppercase text-[10px] transition-colors inline-flex items-center gap-1"
+                        title="Permanently Delete Order"
+                      >
+                        <Trash2 className="w-3 h-3 text-red-400" /> Delete
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -265,6 +299,13 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
           </div>
         )}
       </div>
+
+      <DeleteOrderModal
+        isOpen={Boolean(selectedOrderForDelete)}
+        onClose={() => setSelectedOrderForDelete(null)}
+        onConfirm={handleDeleteOrder}
+        order={selectedOrderForDelete}
+      />
     </div>
   );
 }
