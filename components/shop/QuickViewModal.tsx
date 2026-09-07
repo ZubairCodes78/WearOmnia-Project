@@ -1,13 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingBag, Zap, Check, ShieldCheck, Truck, Ruler } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { SizeGuideModal } from './SizeGuideModal';
-import { FlyToCartAnimation, FlyingImage } from '@/components/cart/FlyToCartAnimation';
+import { useFlyToCart } from '@/components/cart/FlyToCartProvider';
 
 interface QuickViewModalProps {
   product: {
@@ -28,6 +28,8 @@ interface QuickViewModalProps {
 
 export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose }) => {
   const { addToCart } = useCart();
+  const { triggerFlyToCart } = useFlyToCart();
+  const modalImageRef = useRef<HTMLDivElement>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
@@ -46,21 +48,26 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
   const activePrice = product.discountPrice || product.basePrice;
 
   const handleAddToCart = () => {
-    addToCart({
-      productId: product.id,
-      title: product.title,
-      slug: product.slug,
-      image: product.images[0]?.url || '',
-      price: activePrice,
-      basePrice: product.basePrice,
-      size: currentSize,
-      color: currentColor,
-      sku: product.sku,
-      quantity,
-      maxStock: product.stockQuantity,
+    const currentImgSrc = product.images[selectedImage]?.url || product.images[0]?.url || '';
+    const imgEl = modalImageRef.current?.querySelector('img') || modalImageRef.current;
+
+    triggerFlyToCart(imgEl, currentImgSrc, () => {
+      addToCart({
+        productId: product.id,
+        title: product.title,
+        slug: product.slug,
+        image: currentImgSrc,
+        price: activePrice,
+        basePrice: product.basePrice,
+        size: currentSize,
+        color: currentColor,
+        sku: product.sku,
+        quantity,
+        maxStock: product.stockQuantity,
+      });
+      setAdded(true);
+      setTimeout(() => setAdded(false), 800);
     });
-    setAdded(true);
-    setTimeout(() => setAdded(false), 2000);
   };
 
   const handleBuyNow = () => {
@@ -99,7 +106,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
                 <div className="grid grid-cols-1 md:grid-cols-2">
                   {/* Gallery Side */}
                   <div className="p-4 sm:p-6 bg-sand/50 flex flex-col justify-between">
-                    <div className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-md border border-sand">
+                    <div ref={modalImageRef} className="relative aspect-[3/4] rounded-2xl overflow-hidden shadow-md border border-sand">
                       <Image
                         src={product.images[selectedImage]?.url || product.images[0]?.url}
                         alt={product.title}
@@ -113,9 +120,8 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
                           <button
                             key={i}
                             onClick={() => setSelectedImage(i)}
-                            className={`relative w-14 h-18 sm:w-16 sm:h-20 rounded-lg overflow-hidden border-2 shrink-0 transition-all ${
-                              selectedImage === i ? 'border-teal shadow-md scale-105' : 'border-transparent opacity-70'
-                            }`}
+                            className={`relative w-14 h-18 sm:w-16 sm:h-20 rounded-lg overflow-hidden border-2 shrink-0 transition-all ${selectedImage === i ? 'border-teal shadow-md scale-105' : 'border-transparent opacity-70'
+                              }`}
                           >
                             <Image src={img.url} alt="thumbnail" fill className="object-cover" />
                           </button>
@@ -167,11 +173,10 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
                             <button
                               key={sz}
                               onClick={() => setSelectedSize(sz)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase border transition-all ${
-                                currentSize === sz
-                                  ? 'bg-teal text-champagne border-teal shadow-sm'
-                                  : 'bg-sand text-charcoal border-sand hover:border-champagne'
-                              }`}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase border transition-all ${currentSize === sz
+                                ? 'bg-teal text-champagne border-teal shadow-sm'
+                                : 'bg-sand text-charcoal border-sand hover:border-champagne'
+                                }`}
                             >
                               {sz}
                             </button>
@@ -191,11 +196,10 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
                             <button
                               key={c}
                               onClick={() => setSelectedColor(c)}
-                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase border transition-all ${
-                                currentColor === c
-                                  ? 'bg-teal text-champagne border-teal shadow-sm'
-                                  : 'bg-sand text-charcoal border-sand hover:border-champagne'
-                              }`}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold uppercase border transition-all ${currentColor === c
+                                ? 'bg-teal text-champagne border-teal shadow-sm'
+                                : 'bg-sand text-charcoal border-sand hover:border-champagne'
+                                }`}
                             >
                               {c}
                             </button>

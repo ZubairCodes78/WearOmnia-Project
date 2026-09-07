@@ -33,40 +33,45 @@ export default async function OrderSuccessPage({ params }: OrderSuccessPageProps
   );
 
   return (
-    <div className="bg-offwhite min-h-screen py-16">
+    <div className="editorial-page">
       <OrderSuccessConfetti />
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
-        {/* Success Header Box */}
-        <div className="bg-teal text-offwhite p-8 sm:p-10 rounded-3xl text-center space-y-4 shadow-2xl relative overflow-hidden border border-champagne/40">
-          <div className="absolute inset-0 bg-gradient-to-br from-teal-900/30 to-transparent" />
-          <div className="relative z-10">
-            <div className="w-16 h-16 bg-champagne text-teal-950 rounded-full flex items-center justify-center mx-auto shadow-lg">
-              <CheckCircle2 className="w-10 h-10" />
+        {/* Success Header Box with 3D Depth */}
+        <div className="bg-teal text-offwhite p-8 sm:p-12 rounded-3xl text-center space-y-4 shadow-2xl relative overflow-hidden border border-champagne/40 card-3d">
+          <div className="absolute inset-0 bg-gradient-to-br from-teal-900/40 to-transparent" />
+          <div className="relative z-10 space-y-2">
+            <div className="w-16 h-16 bg-champagne text-teal-950 rounded-2xl flex items-center justify-center mx-auto shadow-xl border border-white/40 mb-3">
+              <CheckCircle2 className="w-10 h-10 text-teal" />
             </div>
-            <span className="inline-block text-xs uppercase tracking-[0.3em] font-semibold text-champagne mt-4">
-              Order Confirmed
+            <span className="font-calligraphy text-xs sm:text-sm text-champagne block tracking-[0.2em]">
+              It&apos;s Official.
             </span>
-            <h1 className="font-serif text-3xl sm:text-5xl font-bold text-offwhite">
-              Thank You, {order.customerName}!
+            <h1 className="font-serif text-3xl sm:text-5xl font-black text-offwhite tracking-tight">
+              Your Wardrobe Just Got A Little Happier.
             </h1>
-            <p className="text-xs sm:text-sm text-offwhite/80 max-w-md mx-auto leading-relaxed">
-              Your Cash On Delivery order <strong className="text-champagne font-mono">#{order.orderNumber}</strong> has been received by our team.
+            <p className="text-xs sm:text-sm text-offwhite/90 max-w-md mx-auto leading-relaxed pt-1 font-sans">
+              Now comes the hardest part: waiting for it to arrive. Your Cash On Delivery order <strong className="text-champagne font-mono font-bold">#{order.orderNumber}</strong> is confirmed and being prepared with care.
             </p>
 
-            <div className="pt-4 flex flex-wrap justify-center gap-4 text-xs font-semibold text-champagne">
-              <span className="bg-teal-900/80 px-4 py-2 rounded-full border border-champagne/30 flex items-center gap-2">
-                <Truck className="w-4 h-4 text-champagne" /> Estimated Delivery: 2 - 4 Business Days
+            <div className="pt-4 flex flex-wrap justify-center gap-3 text-xs font-semibold text-champagne">
+              <span className="bg-teal-950/80 px-4 py-2 rounded-full border border-champagne/30 flex items-center gap-2 shadow-sm">
+                <Truck className="w-4 h-4 text-champagne" /> Estimated Delivery: 2 – 4 Business Days
               </span>
-              <span className="bg-teal-900/80 px-4 py-2 rounded-full border border-champagne/30 flex items-center gap-2">
+              <span className="bg-teal-950/80 px-4 py-2 rounded-full border border-champagne/30 flex items-center gap-2 shadow-sm">
                 <ShieldCheck className="w-4 h-4 text-champagne" /> Cash On Delivery: Rs. {order.totalAmount.toLocaleString()}
               </span>
             </div>
+
+            <p className="text-[11px] text-champagne/90 pt-2 font-medium flex items-center justify-center gap-1.5">
+              <CheckCircle2 className="w-3.5 h-3.5 text-champagne shrink-0" />
+              <span>Modest enough for uni. Pretty enough for the &ldquo;Where did you get that?&rdquo;</span>
+            </p>
           </div>
         </div>
 
         {/* Order Details & Summary Card */}
-        <div className="bg-sand/60 p-6 sm:p-8 rounded-3xl border border-sand shadow-lg mt-8 space-y-6">
+        <div className="editorial-dossier mt-8 space-y-6">
           <div className="flex items-center justify-between border-b border-sand pb-4">
             <div>
               <h3 className="font-serif text-xl font-bold text-teal">Order Summary</h3>

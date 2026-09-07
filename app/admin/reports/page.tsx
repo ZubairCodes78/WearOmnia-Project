@@ -71,16 +71,17 @@ export default async function ReportsPage() {
   return (
     <div className="space-y-8 text-[#FAF8F5]">
       <div className="border-b border-[#D4AF37]/15 pb-6">
+        <p className="text-xs uppercase tracking-[0.2em] text-[#D4AF37] mb-1 font-bold">Executive Intelligence</p>
         <div className="flex items-center gap-2 mb-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#D4AF37] animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-[#D4AF37] animate-pulse" />
           <span className="text-xs uppercase font-extrabold tracking-[0.2em] text-[#D4AF37]">
-            Executive Intelligence
+            Commercial Analytics & Logistics Reports
           </span>
         </div>
         <h1 className="font-serif text-3xl font-bold tracking-tight text-[#FAF8F5]">
-          Commercial Analytics & Logistics Reports
+          Executive Analytics & Financial Performance
         </h1>
-        <p className="text-xs text-[#FAF8F5]/60 mt-1 max-w-2xl">
+        <p className="text-xs text-[#FAF8F5]/60 mt-1 max-w-2xl font-sans">
           Real-time enterprise metrics across sales performance, inventory valuation, delivery fulfillment rate, and courier settlement reconciliation.
         </p>
       </div>

@@ -3,7 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, X, Send, Sparkles, Bot, User, ChevronRight, PhoneCall, Package, Loader2 } from 'lucide-react';
+import { MessageSquare, X, Send, Headphones, ShieldCheck, User, ChevronRight, PhoneCall, Package, Loader2 } from 'lucide-react';
 
 interface ChatMessage {
   id: string;
@@ -18,13 +18,13 @@ const INITIAL_MESSAGES: ChatMessage[] = [
   {
     id: '1',
     sender: 'bot',
-    text: 'Greetings! Welcome to WearOMNIA Customer Support. How may I assist you with your luxury shopping today?',
+    text: 'Greetings! Welcome to WearOMNIA Concierge. How may our client team assist you today?',
     timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     quickReplies: [
-      '🚚 Track My Order',
-      '🧵 Custom Stitching & Sizes',
-      '📦 Shipping & COD Info',
-      '🔄 7-Day Exchange Policy',
+      'Track My Order',
+      'Custom Sizing & Stitching',
+      'Shipping & COD Info',
+      '7-Day Exchange Policy',
     ],
   },
 ];
@@ -83,7 +83,7 @@ export const SupportAssistant = () => {
         setIsTyping(false);
         addBotMessage(
           `Got it! Order ${orderNum}. For security, please enter the phone number you used during checkout.`,
-          { quickReplies: ['❌ Cancel Tracking'] }
+          { quickReplies: ['Cancel Tracking'] }
         );
       }, 600);
       return true;
@@ -96,8 +96,8 @@ export const SupportAssistant = () => {
         setIsTyping(true);
         setTimeout(() => {
           setIsTyping(false);
-          addBotMessage('No problem! How else can I help you?', {
-            quickReplies: ['🚚 Track My Order', '🧵 Custom Stitching', '📦 Shipping Info'],
+          addBotMessage('No problem! How else can I assist you?', {
+            quickReplies: ['Track My Order', 'Custom Sizing & Stitching', 'Shipping & COD Info'],
           });
         }, 400);
         return true;
@@ -121,20 +121,15 @@ export const SupportAssistant = () => {
           addBotMessage(
             `Sorry, we couldn't verify this order. ${data.error || 'Please check your order number and phone number.'}`,
             {
-              quickReplies: ['🚚 Try Again', '📞 Talk to Agent'],
+              quickReplies: ['Try Again', 'Talk to Team'],
               actionLink: { label: 'Track on Website', url: '/track-order' },
             }
           );
         } else {
           const o = data.order;
-          const statusEmojis: Record<string, string> = {
-            PENDING: '⏳', CONFIRMED: '✅', PACKING: '📦', DISPATCHED: '🚚',
-            OUT_FOR_DELIVERY: '🏍️', DELIVERED: '✅', CANCELLED: '❌', RETURNED: '↩️',
-          };
           const statusLabel = o.status.replace(/_/g, ' ');
-          const emoji = statusEmojis[o.status] || '📋';
 
-          let trackingMsg = `${emoji} Order #${o.orderNumber}\n\nStatus: ${statusLabel}\nDelivery City: ${o.shippingCity}\nTotal (COD): Rs. ${o.totalAmount.toLocaleString()}`;
+          let trackingMsg = `Order #${o.orderNumber}\n\nStatus: ${statusLabel}\nDelivery City: ${o.shippingCity}\nTotal (COD): Rs. ${o.totalAmount.toLocaleString()}`;
 
           if (o.courier) trackingMsg += `\nCourier: ${o.courier}`;
           if (o.trackingNumber) trackingMsg += `\nTracking: ${o.trackingNumber}`;
@@ -142,7 +137,7 @@ export const SupportAssistant = () => {
           trackingMsg += `\n\nItems: ${o.items.map((i: any) => `${i.title} (x${i.quantity})`).join(', ')}`;
 
           addBotMessage(trackingMsg, {
-            quickReplies: ['🛍️ Shop Collection', '📞 WhatsApp Support'],
+            quickReplies: ['Browse Catalog', 'WhatsApp Concierge'],
             actionLink: { label: 'Full Tracking Page', url: '/track-order' },
           });
         }
@@ -150,7 +145,7 @@ export const SupportAssistant = () => {
         setIsTyping(false);
         addBotMessage('Something went wrong. Please try again or track your order on our website.', {
           actionLink: { label: 'Track on Website', url: '/track-order' },
-          quickReplies: ['🚚 Try Again'],
+          quickReplies: ['Try Again'],
         });
       }
 
@@ -174,7 +169,7 @@ export const SupportAssistant = () => {
         sender: 'bot',
         text: 'I can help you track your order! Please enter your order number (e.g. OMNIA-10025).',
         timestamp: time,
-        quickReplies: ['❌ Cancel Tracking'],
+        quickReplies: ['Cancel Tracking'],
       };
     }
 
@@ -184,7 +179,7 @@ export const SupportAssistant = () => {
         sender: 'bot',
         text: 'We provide Nationwide Cash On Delivery across 200+ cities in Pakistan. Shipping is FREE on orders above Rs. 10,000 (Standard Rs. 250 fee for smaller orders). Delivery takes 2-4 business days.',
         timestamp: time,
-        quickReplies: ['🧵 Custom Stitching', '🛍️ Browse Catalog'],
+        quickReplies: ['Custom Sizing', 'Browse Catalog'],
       };
     }
 
@@ -195,7 +190,7 @@ export const SupportAssistant = () => {
         text: 'Our garments come in high-grade unstitched fabrics as well as standard sizes (S, M, L, XL). All suits include extra margins for custom tailormade fitting.',
         timestamp: time,
         actionLink: { label: 'View Size Guide', url: '/shop' },
-        quickReplies: ['🔄 Exchange Policy', '📞 Talk to Designer'],
+        quickReplies: ['Exchange Policy', 'Contact Concierge'],
       };
     }
 
@@ -206,7 +201,7 @@ export const SupportAssistant = () => {
         text: 'We offer a hassle-free 7-Day Garment Exchange Policy across Pakistan. Unstitched & stitched items can be exchanged within 7 days of delivery.',
         timestamp: time,
         actionLink: { label: 'Read Return Policy', url: '/policies/returns' },
-        quickReplies: ['🚚 Track My Order', '📦 Shipping Info'],
+        quickReplies: ['Track My Order', 'Shipping Info'],
       };
     }
 
@@ -217,7 +212,7 @@ export const SupportAssistant = () => {
         text: 'Explore our latest collection of simple, modest and stylish clothing for women.',
         timestamp: time,
         actionLink: { label: 'Visit Shop', url: '/shop' },
-        quickReplies: ['🚚 Track My Order', '📞 WhatsApp Support'],
+        quickReplies: ['Track My Order', 'WhatsApp Concierge'],
       };
     }
 
@@ -225,10 +220,10 @@ export const SupportAssistant = () => {
       return {
         id: Date.now().toString(),
         sender: 'bot',
-        text: 'You can reach our Customer Support team via WhatsApp at 03180633323 or email us at Wearomniaa@gmail.com. Support hours: Monday – Saturday: 10:00 AM – 8:00 PM.',
+        text: 'You can reach our Customer Concierge team via WhatsApp at 03180633323 or email us at Wearomniaa@gmail.com. Support hours: Monday – Saturday: 10:00 AM – 8:00 PM.',
         timestamp: time,
         actionLink: { label: 'Contact Page', url: '/contact' },
-        quickReplies: ['🛍️ Browse Catalog', '📦 Shipping Info'],
+        quickReplies: ['Browse Catalog', 'Shipping Info'],
       };
     }
 
@@ -238,7 +233,7 @@ export const SupportAssistant = () => {
         sender: 'bot',
         text: 'We currently offer Cash On Delivery (COD) for all orders across Pakistan. This allows you to inspect your package before payment. No advance payment required!',
         timestamp: time,
-        quickReplies: ['📦 Shipping Info', '🔄 Exchange Policy'],
+        quickReplies: ['Shipping Info', 'Exchange Policy'],
       };
     }
 
@@ -248,7 +243,7 @@ export const SupportAssistant = () => {
       sender: 'bot',
       text: 'I can help you with order tracking, shipping info, exchange policy, and more. Would you like to:',
       timestamp: time,
-      quickReplies: ['🚚 Track My Order', '📦 Shipping Info', '🔄 Exchange Policy', '🛍️ Browse Catalog'],
+      quickReplies: ['Track My Order', 'Shipping Info', 'Exchange Policy', 'Browse Catalog'],
     };
   };
 
@@ -292,7 +287,7 @@ export const SupportAssistant = () => {
 
   return (
     <>
-      {/* Floating SupportAssistant Trigger Button */}
+      {/* Floating Concierge Trigger Button */}
       <motion.button
         onClick={() => setIsOpen(true)}
         initial={{ scale: 0, opacity: 0 }}
@@ -301,16 +296,16 @@ export const SupportAssistant = () => {
         whileTap={{ scale: 0.95 }}
         transition={{ duration: 0.3 }}
         className="fixed bottom-4 left-4 right-auto sm:bottom-20 sm:right-6 sm:left-auto z-40 flex items-center gap-2 bg-gradient-to-r from-[#D4AF37] to-[#C5A028] text-black p-2.5 sm:px-4 sm:py-3 rounded-full shadow-2xl hover:shadow-[#D4AF37]/40 font-sans pb-safe"
-        title="Customer Support"
-        aria-label="Open Customer Support Assistant"
+        title="Client Concierge"
+        aria-label="Open Client Concierge Assistant"
       >
-        <Sparkles className="w-4 h-4 sm:w-5 sm:h-5" />
+        <Headphones className="w-4 h-4 sm:w-5 sm:h-5" />
         <span className="text-xs uppercase font-bold tracking-wider">
-          Help
+          Concierge
         </span>
       </motion.button>
 
-      {/* SupportAssistant Panel */}
+      {/* Concierge Panel */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
@@ -320,15 +315,15 @@ export const SupportAssistant = () => {
             transition={{ duration: 0.2 }}
             className="fixed bottom-16 left-4 right-auto sm:left-auto sm:bottom-8 sm:right-8 z-50 w-[calc(100%-32px)] sm:w-[400px] h-[500px] sm:h-[600px] max-h-[70vh] sm:max-h-[80vh] bg-[#141414] border border-[#262626] rounded-2xl shadow-2xl flex flex-col overflow-hidden pb-safe"
           >
-            {/* SupportAssistant Header */}
+            {/* Concierge Header */}
             <div className="bg-gradient-to-r from-[#D4AF37] to-[#C5A028] p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-black/20 flex items-center justify-center">
-                  <Bot className="w-5 h-5 text-black" />
+                  <Headphones className="w-5 h-5 text-black" />
                 </div>
                 <div>
-                  <h3 className="font-serif text-sm font-bold text-black">WearOMNIA Support</h3>
-                  <p className="text-[10px] text-black/70">Customer Service</p>
+                  <h3 className="font-serif text-sm font-bold text-black">WearOMNIA Concierge</h3>
+                  <p className="text-[10px] text-black/70">Client Care Desk</p>
                 </div>
               </div>
               <button
@@ -348,16 +343,15 @@ export const SupportAssistant = () => {
                   className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
                 >
                   <div
-                    className={`max-w-[80%] rounded-2xl p-3 ${
-                      msg.sender === 'user'
-                        ? 'bg-[#D4AF37] text-black'
-                        : 'bg-[#262626] text-[#FAF8F5]'
-                    }`}
+                    className={`max-w-[80%] rounded-2xl p-3 ${msg.sender === 'user'
+                      ? 'bg-[#D4AF37] text-black'
+                      : 'bg-[#262626] text-[#FAF8F5]'
+                      }`}
                   >
                     {msg.sender === 'bot' && (
                       <div className="flex items-center gap-2 mb-1">
-                        <Bot className="w-3 h-3 text-[#D4AF37]" />
-                        <span className="text-[10px] text-[#A3A3A3]">Support</span>
+                        <ShieldCheck className="w-3 h-3 text-[#D4AF37]" />
+                        <span className="text-[10px] text-[#A3A3A3]">Concierge</span>
                       </div>
                     )}
                     <p className="text-sm whitespace-pre-line">{msg.text}</p>
@@ -397,7 +391,7 @@ export const SupportAssistant = () => {
                   <div className="bg-[#262626] rounded-2xl p-3">
                     <div className="flex items-center gap-2">
                       <Loader2 className="w-4 h-4 text-[#D4AF37] animate-spin" />
-                      <span className="text-sm text-[#A3A3A3]">Support is typing...</span>
+                      <span className="text-sm text-[#A3A3A3]">Concierge is typing...</span>
                     </div>
                   </div>
                 </div>

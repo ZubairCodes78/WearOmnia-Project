@@ -3,14 +3,14 @@ import type { Metadata } from 'next';
 const BASE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://wearomnia.com';
 
 export function generateProductMetadata(product: any): Metadata {
-  const image = product.images[0]?.url || `${BASE_URL}/og-default.jpg`;
+  const image = product.images[0]?.url || `${BASE_URL}/images/hero-1.jpg`;
   const price = product.discountPrice || product.basePrice;
 
   return {
-    title: `${product.title} | WearOMNIA Luxury Fashion`,
+    title: product.title,
     description: product.description.slice(0, 160),
     openGraph: {
-      title: `${product.title} - WearOMNIA`,
+      title: product.title,
       description: product.description.slice(0, 160),
       url: `${BASE_URL}/product/${product.slug}`,
       siteName: 'WearOMNIA',

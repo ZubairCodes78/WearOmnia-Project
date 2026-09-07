@@ -296,7 +296,7 @@ export default function AdminSizeGuidesPage() {
   }
 
   return (
-    <div className="p-4 sm:p-8 max-w-5xl mx-auto">
+    <div className="admin-workspace admin-size-guides p-4 sm:p-8 max-w-5xl mx-auto">
       {/* Page Header */}
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">

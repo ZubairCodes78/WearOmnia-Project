@@ -3,17 +3,17 @@ import { Truck, Clock, ShieldCheck, MapPin } from 'lucide-react';
 
 export default function ShippingPolicyPage() {
   return (
-    <div className="bg-offwhite min-h-screen py-16">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-10">
-        <div className="text-center space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] font-semibold text-champagne-700">
+    <div className="editorial-page">
+      <div className="editorial-container max-w-4xl">
+        <div className="editorial-header">
+          <span className="editorial-kicker">
             Customer Information
           </span>
-          <h1 className="font-serif text-3xl sm:text-5xl font-bold text-teal">Shipping & Delivery Policy</h1>
+          <h1 className="editorial-title">Shipping & Delivery Policy</h1>
           <p className="text-xs text-charcoal-muted font-sans">Effective Date: 2026 Season • Nationwide Pakistan Dispatch</p>
         </div>
 
-        <div className="bg-sand/60 p-8 rounded-3xl border border-sand shadow-sm space-y-6 text-xs text-charcoal leading-relaxed font-sans">
+        <div className="editorial-dossier font-sans">
           <div className="space-y-3">
             <h3 className="font-serif text-xl font-bold text-teal flex items-center gap-2">
               <Truck className="w-5 h-5 text-champagne-700" /> 1. Dispatch & Delivery Timelines

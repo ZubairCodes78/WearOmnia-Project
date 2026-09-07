@@ -11,7 +11,7 @@ import {
   MapPin,
   ShoppingBag,
   Clock,
-  Sparkles,
+  CreditCard,
   TrendingUp,
   X,
   Save,
@@ -158,16 +158,16 @@ export function CustomersClient({ initialCustomers }: CustomersClientProps) {
   };
 
   return (
-    <div className="space-y-8 text-[#FAF8F5]">
+    <div className="admin-page text-[#FAF8F5]">
       {/* Header */}
-      <div className="bg-[#0A2528]/85 backdrop-blur-2xl p-8 rounded-3xl border border-[#D4AF37]/30 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="admin-page-header">
         <div>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.25em] font-bold text-[#D4AF37] bg-teal-950/80 px-3.5 py-1 rounded-full border border-[#D4AF37]/30">
               <Users className="w-3 h-3 text-[#D4AF37]" /> Clientele Intelligence
             </span>
           </div>
-          <h1 className="font-serif text-3xl font-bold text-[#FAF8F5] mt-2">
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#FAF8F5] mt-2">
             Consolidated Customer Profiles
           </h1>
           <p className="text-xs text-[#FAF8F5]/70 mt-1 font-sans">
@@ -175,7 +175,7 @@ export function CustomersClient({ initialCustomers }: CustomersClientProps) {
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <Link
             href="/admin/orders"
             className="bg-[#D4AF37] text-black hover:bg-white px-5 py-2.5 rounded-xl text-xs uppercase font-extrabold tracking-widest transition-all shadow-lg flex items-center gap-2"
@@ -187,7 +187,7 @@ export function CustomersClient({ initialCustomers }: CustomersClientProps) {
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-[#0A2528]/70 backdrop-blur-md p-6 rounded-2xl border border-[#D4AF37]/20 shadow-xl space-y-2">
+        <div className="admin-stat-card">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#D4AF37]">Total Customer Base</span>
             <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center">
@@ -198,7 +198,7 @@ export function CustomersClient({ initialCustomers }: CustomersClientProps) {
           <span className="text-[11px] text-[#FAF8F5]/60 font-semibold">Verified Contact Profiles</span>
         </div>
 
-        <div className="bg-[#0A2528]/70 backdrop-blur-md p-6 rounded-2xl border border-amber-500/30 shadow-xl space-y-2">
+        <div className="admin-stat-card border-amber-500/30">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400">VIP Clientele</span>
             <div className="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center">
@@ -209,7 +209,7 @@ export function CustomersClient({ initialCustomers }: CustomersClientProps) {
           <span className="text-[11px] text-amber-300 font-semibold">High-Value Brand Patrons</span>
         </div>
 
-        <div className="bg-[#0A2528]/70 backdrop-blur-md p-6 rounded-2xl border border-emerald-500/30 shadow-xl space-y-2">
+        <div className="admin-stat-card border-emerald-500/30">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Repeat Buyers</span>
             <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
@@ -220,11 +220,11 @@ export function CustomersClient({ initialCustomers }: CustomersClientProps) {
           <span className="text-[11px] text-emerald-300/80 font-semibold">Multiple Nationwide Orders</span>
         </div>
 
-        <div className="bg-[#0A2528]/70 backdrop-blur-md p-6 rounded-2xl border border-[#D4AF37]/20 shadow-xl space-y-2">
+        <div className="admin-stat-card">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#D4AF37]">Avg. Lifetime Spend</span>
             <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center">
-              <Sparkles className="w-5 h-5" />
+              <CreditCard className="w-5 h-5" />
             </div>
           </div>
           <p className="font-serif text-3xl font-bold text-[#FAF8F5]">Rs. {avgLifetimeValue.toLocaleString()}</p>
@@ -237,25 +237,22 @@ export function CustomersClient({ initialCustomers }: CustomersClientProps) {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setVipFilter('ALL')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-              vipFilter === 'ALL' ? 'bg-[#D4AF37] text-black shadow' : 'bg-[#06191B] text-[#FAF8F5]/80 hover:text-[#D4AF37]'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${vipFilter === 'ALL' ? 'bg-[#D4AF37] text-black shadow' : 'bg-[#06191B] text-[#FAF8F5]/80 hover:text-[#D4AF37]'
+              }`}
           >
             All Customers ({customers.length})
           </button>
           <button
             onClick={() => setVipFilter('VIP')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-              vipFilter === 'VIP' ? 'bg-amber-500 text-black shadow' : 'bg-[#06191B] text-amber-300 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${vipFilter === 'VIP' ? 'bg-amber-500 text-black shadow' : 'bg-[#06191B] text-amber-300 hover:text-white'
+              }`}
           >
             VIP Patrons ({vipCount})
           </button>
           <button
             onClick={() => setVipFilter('REGULAR')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-              vipFilter === 'REGULAR' ? 'bg-[#D4AF37] text-black shadow' : 'bg-[#06191B] text-[#FAF8F5]/80 hover:text-[#D4AF37]'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${vipFilter === 'REGULAR' ? 'bg-[#D4AF37] text-black shadow' : 'bg-[#06191B] text-[#FAF8F5]/80 hover:text-[#D4AF37]'
+              }`}
           >
             Standard Clientele
           </button>
@@ -274,10 +271,10 @@ export function CustomersClient({ initialCustomers }: CustomersClientProps) {
       </div>
 
       {/* Customers Table */}
-      <div className="bg-[#0A2528]/80 backdrop-blur-2xl rounded-3xl border border-[#D4AF37]/20 shadow-2xl overflow-hidden">
+      <div className="admin-table-wrapper">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#06191B] text-[#D4AF37] uppercase tracking-wider font-semibold border-b border-[#D4AF37]/15">
+          <table className="admin-table">
+            <thead>
               <tr>
                 <th className="p-4">Customer</th>
                 <th className="p-4">Phone / WhatsApp</th>
@@ -316,30 +313,31 @@ export function CustomersClient({ initialCustomers }: CustomersClientProps) {
                     <td className="p-4">
                       <button
                         onClick={() => handleToggleVIP(customer)}
-                        className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border flex items-center gap-1 w-fit ${
-                          customer.isVIP
+                        className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border flex items-center gap-1 w-fit ${customer.isVIP
                             ? 'bg-amber-500/20 text-amber-300 border-amber-500/50 shadow-sm'
                             : 'bg-[#06191B] text-[#FAF8F5]/60 border-white/10 hover:border-[#D4AF37]'
-                        }`}
+                          }`}
                       >
                         <Crown className={`w-3 h-3 ${customer.isVIP ? 'text-amber-400 fill-amber-400' : 'text-gray-400'}`} />
                         {customer.isVIP ? 'VIP Patron' : 'Set VIP'}
                       </button>
                     </td>
-                    <td className="p-4 text-right space-x-2">
-                      <button
-                        onClick={() => handleOpenCustomer(customer)}
-                        className="bg-[#D4AF37]/10 hover:bg-[#D4AF37] text-[#D4AF37] hover:text-black px-3.5 py-1.5 rounded-lg text-xs font-bold uppercase transition-all border border-[#D4AF37]/30"
-                      >
-                        Profile →
-                      </button>
-                      <button
-                        onClick={() => setDeleteCustomerModal(customer)}
-                        className="bg-red-950/40 hover:bg-red-900/70 text-red-300 border border-red-800/40 p-1.5 rounded-lg text-xs transition-all inline-block align-middle"
-                        title="Delete Customer Profile"
-                      >
-                        <Trash2 className="w-3.5 h-3.5 text-red-400" />
-                      </button>
+                    <td className="p-4 text-right">
+                      <div className="admin-action-group">
+                        <button
+                          onClick={() => handleOpenCustomer(customer)}
+                          className="admin-btn border-[#D4AF37]/30 text-[#D4AF37] hover:text-black hover:bg-[#D4AF37]"
+                        >
+                          Profile →
+                        </button>
+                        <button
+                          onClick={() => setDeleteCustomerModal(customer)}
+                          className="admin-btn border-rose-500/30 text-rose-300 hover:bg-rose-950/50"
+                          title="Delete Customer Profile"
+                        >
+                          <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

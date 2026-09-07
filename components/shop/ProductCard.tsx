@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Eye, ShoppingBag, Zap, Check, Loader2 } from 'lucide-react';
+import { Heart, ShoppingBag, Check, Loader2 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
+import { useFlyToCart } from '@/components/cart/FlyToCartProvider';
 
 export interface ProductCardProps {
   id: string;
@@ -43,11 +44,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 }) => {
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
+  const { triggerFlyToCart } = useFlyToCart();
+  const cardRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
   const [addState, setAddState] = useState<'idle' | 'loading' | 'added'>('idle');
-  const [buyLoading, setBuyLoading] = useState(false);
 
-  const primaryImage = images[0]?.url || 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop';
+  const primaryImage = images[0]?.url || '/images/kaftan-1.jpg';
   const secondaryImage = images[1]?.url || primaryImage;
 
   const inWishlist = isInWishlist(id);
@@ -65,8 +67,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     setAddState('loading');
     const firstVariant = variants[0] || { size: 'Standard', color: 'Default', stock: 10 };
 
-    // Brief loading state for premium feel
-    setTimeout(() => {
+    // Trigger visual luxury fly-to-cart animation, synchronized with arrival in the cart
+    const imgEl =
+      (e.currentTarget.closest('.group')?.querySelector('img') as HTMLElement) ||
+      cardRef.current?.querySelector('img') ||
+      null;
+
+    triggerFlyToCart(imgEl, primaryImage, () => {
       addToCart({
         productId: id,
         title,
@@ -81,88 +88,64 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         maxStock: stockQuantity,
       });
       setAddState('added');
-      setTimeout(() => setAddState('idle'), 2000);
-    }, 400);
-  };
-
-  const handleBuyNow = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (buyLoading) return;
-
-    setBuyLoading(true);
-    const firstVariant = variants[0] || { size: 'Standard', color: 'Default', stock: 10 };
-    addToCart({
-      productId: id,
-      title,
-      slug,
-      image: primaryImage,
-      price: activePrice,
-      basePrice,
-      size: firstVariant.size,
-      color: firstVariant.color,
-      sku,
-      quantity: 1,
-      maxStock: stockQuantity,
+      setTimeout(() => setAddState('idle'), 800);
     });
-    setTimeout(() => {
-      window.location.href = '/checkout';
-    }, 300);
   };
+
+
 
   return (
     <motion.div
+      ref={cardRef}
       initial={{ opacity: 0, y: 15 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="group relative bg-offwhite flex flex-col justify-between"
+      className="group relative bg-offwhite flex flex-col justify-between card-3d-subtle rounded-2xl p-2 sm:p-2.5 border border-sand/40 hover:border-champagne/40 hover:bg-white transition-all duration-400"
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
       <div>
-        {/* Image Container with Smooth Crossfade Hover */}
-        <div className="relative aspect-[3/4] w-full bg-sand/60 overflow-hidden rounded-2xl border border-sand/40 transition-all duration-400 group-hover:border-champagne/50 group-hover:shadow-lg group-hover:shadow-champagne/10">
+        {/* Image Container with Smooth Crossfade Hover and 3D Depth */}
+        <div className="relative aspect-[3/4] w-full bg-sand/40 overflow-hidden rounded-xl border border-sand/60 transition-all duration-500 group-hover:border-champagne/50 group-hover:shadow-lg group-hover:shadow-champagne/10">
           <Link href={`/product/${slug}`} className="block w-full h-full">
             {/* Primary Image */}
             <Image
               src={primaryImage}
-              alt={title}
+              alt={images[0]?.altText || `${title} product image`}
               fill
               sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
               loading="lazy"
               quality={85}
-              className={`object-cover object-center transition-all duration-500 ${
-                isHovered ? 'opacity-0 scale-105' : 'opacity-100 scale-100'
-              }`}
+              className={`object-cover object-center transition-all duration-700 ease-premium ${isHovered ? 'opacity-0 scale-105' : 'opacity-100 scale-100'
+                }`}
             />
             {/* Secondary Image (crossfade) */}
             <Image
               src={secondaryImage}
-              alt={`${title} - alternate`}
+              alt={images[1]?.altText || `${title} alternate product view`}
               fill
               sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
               loading="lazy"
               quality={85}
-              className={`object-cover object-center transition-all duration-500 absolute inset-0 ${
-                isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
-              }`}
+              className={`object-cover object-center transition-all duration-700 ease-premium absolute inset-0 ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
+                }`}
             />
           </Link>
 
-          {/* Minimal Badges */}
-          <div className="absolute top-3 left-3 flex flex-col gap-1 z-10">
+          {/* 3D Minimal Badges */}
+          <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
             {!inStock || stockQuantity <= 0 ? (
-              <span className="bg-charcoal/90 backdrop-blur-md text-offwhite text-[9px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-full">
+              <span className="badge-3d bg-charcoal/90 backdrop-blur-md text-offwhite text-[9px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-full border border-white/20">
                 Out of Stock
               </span>
             ) : discountPercent > 0 ? (
-              <span className="bg-champagne/90 backdrop-blur-md text-teal-950 text-[9px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-full border border-champagne">
-                -{discountPercent}%
+              <span className="badge-3d bg-champagne text-teal-950 text-[9px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full border border-white/40 shadow-sm">
+                -{discountPercent}% OFF
               </span>
             ) : isNewArrival ? (
-              <span className="bg-teal/90 backdrop-blur-md text-champagne text-[9px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-full border border-champagne/30">
-                New
+              <span className="badge-3d bg-teal text-champagne text-[9px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full border border-champagne/40 shadow-sm">
+                New Arrival
               </span>
             ) : null}
           </div>
@@ -183,8 +166,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 sku,
               });
             }}
-            className="absolute top-3 right-3 z-10 w-8 h-8 rounded-full bg-offwhite/80 backdrop-blur-md flex items-center justify-center text-charcoal hover:text-red-600 transition-all duration-300 shadow-sm"
+            className="absolute top-2.5 right-2.5 z-10 w-8 h-8 rounded-full bg-offwhite/90 backdrop-blur-md flex items-center justify-center text-charcoal hover:text-red-600 transition-all duration-300 shadow-sm hover:scale-110"
             title="Wishlist"
+            aria-label="Save to wishlist"
           >
             <motion.div
               animate={inWishlist ? { scale: [1, 1.3, 1] } : {}}
@@ -193,68 +177,25 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               <Heart className={`w-3.5 h-3.5 transition-colors duration-300 ${inWishlist ? 'fill-red-600 text-red-600' : ''}`} />
             </motion.div>
           </motion.button>
-
-          {/* Action Overlay Buttons */}
-          <div className="absolute inset-x-2 sm:inset-x-3 bottom-2 sm:bottom-3 z-10 flex gap-1.5 sm:gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transform sm:translate-y-2 sm:group-hover:translate-y-0 transition-all duration-400 ease-premium">
-            {onQuickView && (
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  onQuickView();
-                }}
-                className="flex-1 bg-offwhite/90 backdrop-blur-md text-teal py-1.5 sm:py-2 rounded-xl text-[9px] sm:text-[10px] uppercase font-bold tracking-wider sm:tracking-widest hover:bg-champagne hover:text-teal transition-all duration-300 flex items-center justify-center gap-1 shadow-md border border-sand/40"
-              >
-                <Eye className="w-3 h-3" /> <span className="hidden xs:inline">Quick</span> View
-              </motion.button>
-            )}
-            {inStock && (
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={handleQuickAdd}
-                disabled={addState !== 'idle'}
-                className="flex-1 bg-teal text-champagne py-1.5 sm:py-2 rounded-xl text-[9px] sm:text-[10px] uppercase font-bold tracking-wider sm:tracking-widest hover:bg-teal-900 transition-all duration-300 flex items-center justify-center gap-1 shadow-md disabled:opacity-80"
-              >
-                <AnimatePresence mode="wait">
-                  {addState === 'loading' ? (
-                    <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1">
-                      <Loader2 className="w-3 h-3 animate-spin" /> Adding...
-                    </motion.span>
-                  ) : addState === 'added' ? (
-                    <motion.span key="added" initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1">
-                      <Check className="w-3 h-3 text-champagne" /> Added
-                    </motion.span>
-                  ) : (
-                    <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1">
-                      <ShoppingBag className="w-3 h-3" /> + Bag
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </motion.button>
-            )}
-          </div>
         </div>
 
         {/* Product Information */}
-        <div className="pt-2.5 sm:pt-3 pb-1 space-y-0.5 sm:space-y-1">
-          {categoryName && (
-            <span className="text-[8px] sm:text-[9px] uppercase tracking-[0.15em] sm:tracking-[0.2em] font-semibold text-champagne-700 block">
-              {categoryName}
-            </span>
-          )}
+        <div className="pt-2.5 sm:pt-3 pb-1 space-y-1">
+          <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-champagne-700 block truncate">
+            {categoryName || (isNewArrival ? 'New Arrivals' : 'Ready-to-Wear')}
+          </span>
           <Link href={`/product/${slug}`} className="block">
-            <h3 className="font-serif text-xs sm:text-base font-bold text-teal group-hover:text-champagne-700 transition-colors duration-300 line-clamp-1">
+            <h3 className="font-serif text-sm sm:text-base font-bold text-teal group-hover:text-champagne-700 transition-colors duration-300 line-clamp-1">
               {title}
             </h3>
           </Link>
 
-          <div className="flex items-baseline gap-1.5 sm:gap-2 pt-0.5">
-            <span className="font-sans font-bold text-xs sm:text-xs text-teal">
+          <div className="flex items-baseline gap-2 pt-0.5">
+            <span className="font-sans font-black text-sm sm:text-base text-teal">
               Rs. {activePrice.toLocaleString()}
             </span>
             {discountPrice && (
-              <span className="text-[10px] sm:text-[11px] text-charcoal-muted line-through">
+              <span className="text-xs text-charcoal-muted line-through font-medium">
                 Rs. {basePrice.toLocaleString()}
               </span>
             )}
@@ -262,24 +203,41 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         </div>
       </div>
 
-      {/* Buy Now Button */}
-      {inStock && (
-        <div className="pt-1">
-          <motion.button
-            whileHover={{ translateY: -1 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={handleBuyNow}
-            disabled={buyLoading}
-            className="w-full bg-sand/60 hover:bg-champagne text-teal py-1.5 rounded-lg text-[9px] sm:text-[10px] uppercase font-bold tracking-wider sm:tracking-widest transition-all duration-300 flex items-center justify-center gap-1 border border-sand/60 disabled:opacity-70"
-          >
-            {buyLoading ? (
-              <><Loader2 className="w-3 h-3 animate-spin" /> Processing...</>
+      {/* Primary Action & Humor Micro-copy */}
+      <div className="pt-2.5 mt-1 space-y-1.5 border-t border-sand/30">
+        {/* Single Primary Action: + Add to Bag */}
+        <motion.button
+          whileHover={{ scale: 1.01 }}
+          whileTap={{ scale: 0.96 }}
+          onClick={handleQuickAdd}
+          disabled={!inStock || stockQuantity <= 0 || addState !== 'idle'}
+          className="w-full min-h-[44px] h-11 bg-teal text-champagne rounded-xl text-xs uppercase font-extrabold tracking-wider hover:bg-teal-900 transition-all duration-300 flex items-center justify-center gap-1.5 shadow-md disabled:opacity-50 cursor-pointer border border-champagne/20 select-none"
+          aria-label={inStock ? `Add ${title} to bag` : `${title} is out of stock`}
+        >
+          <AnimatePresence mode="wait">
+            {addState === 'loading' ? (
+              <motion.span key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 text-xs">
+                <Loader2 className="w-3.5 h-3.5 animate-spin" /> Adding...
+              </motion.span>
+            ) : addState === 'added' ? (
+              <motion.span key="added" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 text-xs text-champagne font-black">
+                <Check className="w-3.5 h-3.5 text-champagne" /> Added to Bag!
+              </motion.span>
+            ) : !inStock || stockQuantity <= 0 ? (
+              <span key="out">Out of Stock</span>
             ) : (
-              <><Zap className="w-3 h-3 text-teal" /> Instant COD Checkout</>
+              <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5">
+                <ShoppingBag className="w-3.5 h-3.5" /> + Add to Bag
+              </motion.span>
             )}
-          </motion.button>
-        </div>
-      )}
+          </AnimatePresence>
+        </motion.button>
+
+        {/* Small Humorous Micro-copy */}
+        <p className="text-[10px] text-charcoal-muted/80 text-center font-sans italic line-clamp-1 select-none">
+          Good choice. Your wardrobe approves.
+        </p>
+      </div>
     </motion.div>
   );
 };

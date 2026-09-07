@@ -1,18 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import {
-  RotateCcw,
   Search,
-  RefreshCw,
   Send,
   Loader2,
-  AlertTriangle,
-  CheckCircle2,
-  Phone,
-  MapPin,
-  ExternalLink,
 } from 'lucide-react';
 import { POSTEX_STATUS_MAP } from '@/lib/courier/types';
 
@@ -87,29 +79,35 @@ export function ReturnsClient({ initialShipments }: { initialShipments: Shipment
   });
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="relative flex-1 w-full max-w-md">
+    <div className="admin-page">
+      <div className="admin-page-header">
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-[#D4AF37] font-bold mb-1">Customer Care</p>
+          <h1 className="font-serif text-2xl font-bold text-[#FAF8F5]">Returns & Failed Delivery Management</h1>
+          <p className="text-xs text-[#FAF8F5]/60 font-sans mt-0.5">Submit immediate shipper advice and manage parcels requiring re-attempt or return.</p>
+        </div>
+
+        <div className="relative w-full sm:w-80">
           <Search className="w-4 h-4 text-[#D4AF37]/70 absolute left-3.5 top-1/2 -translate-y-1/2" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search return by tracking #, order #, customer, city..."
-            className="w-full bg-[#0A2528] border border-[#D4AF37]/20 rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#FAF8F5]"
+            className="w-full bg-[#06191B] border border-[#D4AF37]/25 rounded-xl pl-10 pr-4 py-2.5 text-xs text-[#FAF8F5] placeholder-[#FAF8F5]/40 focus:outline-none focus:border-[#D4AF37] font-sans"
           />
         </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Table list */}
-        <div className="lg:col-span-2 bg-[#0A2528] border border-[#D4AF37]/20 rounded-2xl overflow-hidden">
-          <div className="p-4 border-b border-[#D4AF37]/15">
-            <h2 className="font-serif text-sm font-bold text-[#FAF8F5]">Parcels in Review / Returned</h2>
+        <div className="lg:col-span-2 admin-table-wrapper">
+          <div className="p-5 border-b border-[#D4AF37]/15">
+            <h2 className="font-serif text-base font-bold text-[#FAF8F5]">Parcels in Review / Returned</h2>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-sans">
+            <table className="admin-table">
               <thead className="bg-[#06191B] text-[#D4AF37] text-[10px] font-bold uppercase tracking-wider border-b border-[#D4AF37]/20">
                 <tr>
                   <th className="p-3.5">Order / Tracking</th>
@@ -206,7 +204,7 @@ export function ReturnsClient({ initialShipments }: { initialShipments: Shipment
               <label className="block text-xs uppercase font-bold text-[#D4AF37]/80 mb-1">Instruction</label>
               <select
                 value={adviceAction}
-                onChange={(e) => setAdviceAction(e.target.value as any)}
+                onChange={(e) => setAdviceAction(e.target.value as '1' | '2')}
                 className="w-full bg-[#06191B] border border-[#D4AF37]/20 rounded-xl px-3.5 py-2 text-xs text-[#FAF8F5]"
               >
                 <option value="2">2 — Mark Retry Attempt (Re-dispatch parcel to customer)</option>

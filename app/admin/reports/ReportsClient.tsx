@@ -52,10 +52,10 @@ export function ReportsClient({ metrics, orders }: ReportsClientProps) {
     : 0;
 
   return (
-    <div className="space-y-6 font-sans">
+    <div className="admin-page font-sans">
       {/* Top Executive KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#0A2528] border border-[#D4AF37]/20 p-5 rounded-2xl">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="admin-stat-card">
           <span className="text-[10px] uppercase font-bold tracking-widest text-[#D4AF37]/80 block">
             Commercial Gross Revenue
           </span>
@@ -67,8 +67,8 @@ export function ReportsClient({ metrics, orders }: ReportsClientProps) {
           </div>
         </div>
 
-        <div className="bg-[#0A2528] border border-[#D4AF37]/20 p-5 rounded-2xl">
-          <span className="text-[10px] uppercase font-bold tracking-widest text-[#D4AF37]/80 block">
+        <div className="admin-stat-card border-emerald-500/30">
+          <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-400 block">
             Delivered Realized Revenue
           </span>
           <div className="text-2xl font-bold font-serif text-emerald-400 mt-2">
@@ -79,7 +79,7 @@ export function ReportsClient({ metrics, orders }: ReportsClientProps) {
           </div>
         </div>
 
-        <div className="bg-[#0A2528] border border-[#D4AF37]/20 p-5 rounded-2xl">
+        <div className="admin-stat-card">
           <span className="text-[10px] uppercase font-bold tracking-widest text-[#D4AF37]/80 block">
             Inventory Stock Valuation
           </span>
@@ -91,8 +91,8 @@ export function ReportsClient({ metrics, orders }: ReportsClientProps) {
           </div>
         </div>
 
-        <div className="bg-[#0A2528] border border-[#D4AF37]/20 p-5 rounded-2xl">
-          <span className="text-[10px] uppercase font-bold tracking-widest text-[#D4AF37]/80 block">
+        <div className="admin-stat-card border-amber-500/30">
+          <span className="text-[10px] uppercase font-bold tracking-widest text-amber-400 block">
             Fulfillment Delivery Rate
           </span>
           <div className="text-2xl font-bold font-serif text-[#FAF8F5] mt-2">
@@ -114,7 +114,7 @@ export function ReportsClient({ metrics, orders }: ReportsClientProps) {
               : 'bg-[#0A2528] text-[#FAF8F5]/70 hover:text-[#D4AF37]'
           }`}
         >
-          Sales & Order Volume
+          Sales &amp; Order Volume
         </button>
         <button
           onClick={() => setReportType('courier')}
@@ -129,7 +129,7 @@ export function ReportsClient({ metrics, orders }: ReportsClientProps) {
       </div>
 
       {/* Report Content */}
-      <div className="bg-[#0A2528] border border-[#D4AF37]/20 rounded-2xl p-6 space-y-4">
+      <div className="admin-table-wrapper p-6 space-y-4">
         <div className="flex items-center justify-between border-b border-[#D4AF37]/15 pb-4">
           <h2 className="font-serif text-lg font-bold text-[#FAF8F5]">
             {reportType === 'sales' ? 'Orders Transaction Audit' : 'PostEx Logistics Dispatch Report'}
@@ -138,7 +138,7 @@ export function ReportsClient({ metrics, orders }: ReportsClientProps) {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs font-sans">
+          <table className="admin-table">
             <thead className="bg-[#06191B] text-[#D4AF37] text-[10px] font-bold uppercase tracking-wider border-b border-[#D4AF37]/20">
               <tr>
                 <th className="p-3.5">Order #</th>

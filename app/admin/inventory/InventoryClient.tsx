@@ -12,7 +12,7 @@ import {
   Minus,
   FileText,
   TrendingDown,
-  Sparkles,
+  Banknote,
   CheckCircle2,
   X,
   Loader2,
@@ -149,16 +149,16 @@ export function InventoryClient({ initialProducts, totalLogsCount }: InventoryCl
   };
 
   return (
-    <div className="space-y-8 text-[#FAF8F5]">
+    <div className="admin-page text-[#FAF8F5]">
       {/* Header */}
-      <div className="bg-[#0A2528]/85 backdrop-blur-2xl p-8 rounded-3xl border border-[#D4AF37]/30 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="admin-page-header">
         <div>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.25em] font-bold text-[#D4AF37] bg-teal-950/80 px-3.5 py-1 rounded-full border border-[#D4AF37]/30">
               <Boxes className="w-3 h-3 text-[#D4AF37]" /> Inventory Control Console
             </span>
           </div>
-          <h1 className="font-serif text-3xl font-bold text-[#FAF8F5] mt-2">
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#FAF8F5] mt-2">
             Live Stock Intelligence & Alerts
           </h1>
           <p className="text-xs text-[#FAF8F5]/70 mt-1 font-sans">
@@ -166,7 +166,7 @@ export function InventoryClient({ initialProducts, totalLogsCount }: InventoryCl
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 shrink-0">
           <Link
             href="/admin/inventory/logs"
             className="bg-[#0D3337] hover:bg-[#103A3E] text-[#D4AF37] border border-[#D4AF37]/40 px-5 py-3 rounded-xl text-xs uppercase font-bold tracking-widest transition-all shadow-lg flex items-center gap-2"
@@ -184,7 +184,7 @@ export function InventoryClient({ initialProducts, totalLogsCount }: InventoryCl
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-[#0A2528]/70 backdrop-blur-md p-6 rounded-2xl border border-[#D4AF37]/20 shadow-xl space-y-2">
+        <div className="admin-stat-card">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#D4AF37]">Total Available Stock</span>
             <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center">
@@ -195,18 +195,18 @@ export function InventoryClient({ initialProducts, totalLogsCount }: InventoryCl
           <span className="text-[11px] text-[#FAF8F5]/60 font-semibold">Across {products.length} Catalog Items</span>
         </div>
 
-        <div className="bg-[#0A2528]/70 backdrop-blur-md p-6 rounded-2xl border border-[#D4AF37]/20 shadow-xl space-y-2">
+        <div className="admin-stat-card">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#D4AF37]">Catalog Valuation</span>
             <div className="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
-              <Sparkles className="w-5 h-5" />
+              <Banknote className="w-5 h-5" />
             </div>
           </div>
           <p className="font-serif text-3xl font-bold text-emerald-400">Rs. {totalValuation.toLocaleString()}</p>
           <span className="text-[11px] text-emerald-300/80 font-semibold">Total Retail Inventory Value</span>
         </div>
 
-        <div className="bg-[#0A2528]/70 backdrop-blur-md p-6 rounded-2xl border border-amber-500/30 shadow-xl space-y-2">
+        <div className="admin-stat-card border-amber-500/30">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400">Low Stock Alerts</span>
             <div className="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center">
@@ -217,7 +217,7 @@ export function InventoryClient({ initialProducts, totalLogsCount }: InventoryCl
           <span className="text-[11px] text-amber-300 font-semibold">Items with &le; 5 units remaining</span>
         </div>
 
-        <div className="bg-[#0A2528]/70 backdrop-blur-md p-6 rounded-2xl border border-red-500/30 shadow-xl space-y-2">
+        <div className="admin-stat-card border-red-500/30">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-red-400">Out of Stock</span>
             <div className="w-9 h-9 rounded-xl bg-red-500/15 text-red-400 flex items-center justify-center">
@@ -234,33 +234,29 @@ export function InventoryClient({ initialProducts, totalLogsCount }: InventoryCl
         <div className="flex flex-wrap items-center gap-2">
           <button
             onClick={() => setFilterTab('ALL')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-              filterTab === 'ALL' ? 'bg-[#D4AF37] text-black shadow' : 'bg-[#06191B] text-[#FAF8F5]/80 hover:text-[#D4AF37]'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${filterTab === 'ALL' ? 'bg-[#D4AF37] text-black shadow' : 'bg-[#06191B] text-[#FAF8F5]/80 hover:text-[#D4AF37]'
+              }`}
           >
             All Products ({products.length})
           </button>
           <button
             onClick={() => setFilterTab('LOW_STOCK')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-              filterTab === 'LOW_STOCK' ? 'bg-amber-500 text-black shadow' : 'bg-[#06191B] text-amber-300 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${filterTab === 'LOW_STOCK' ? 'bg-amber-500 text-black shadow' : 'bg-[#06191B] text-amber-300 hover:text-white'
+              }`}
           >
             Low Stock ({lowStockCount})
           </button>
           <button
             onClick={() => setFilterTab('OUT_OF_STOCK')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-              filterTab === 'OUT_OF_STOCK' ? 'bg-red-500 text-white shadow' : 'bg-[#06191B] text-red-300 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${filterTab === 'OUT_OF_STOCK' ? 'bg-red-500 text-white shadow' : 'bg-[#06191B] text-red-300 hover:text-white'
+              }`}
           >
             Out of Stock ({outOfStockCount})
           </button>
           <button
             onClick={() => setFilterTab('IN_STOCK')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-              filterTab === 'IN_STOCK' ? 'bg-emerald-500 text-black shadow' : 'bg-[#06191B] text-emerald-300 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${filterTab === 'IN_STOCK' ? 'bg-emerald-500 text-black shadow' : 'bg-[#06191B] text-emerald-300 hover:text-white'
+              }`}
           >
             In Stock
           </button>
@@ -294,13 +290,12 @@ export function InventoryClient({ initialProducts, totalLogsCount }: InventoryCl
             return (
               <div
                 key={p.id}
-                className={`p-6 rounded-3xl border transition-all shadow-xl space-y-4 ${
-                  isOutOfStock
+                className={`p-6 rounded-3xl border transition-all shadow-xl space-y-4 ${isOutOfStock
                     ? 'bg-[#150A0A]/90 border-red-500/40'
                     : isLowStock
-                    ? 'bg-[#14120A]/90 border-amber-500/40'
-                    : 'bg-[#0A2528]/80 border-[#D4AF37]/20'
-                }`}
+                      ? 'bg-[#14120A]/90 border-amber-500/40'
+                      : 'bg-[#0A2528]/80 border-[#D4AF37]/20'
+                  }`}
               >
                 <div className="flex items-start gap-4">
                   <div className="relative w-20 h-24 rounded-2xl overflow-hidden bg-[#06191B] border border-[#D4AF37]/20 shrink-0">
@@ -321,13 +316,12 @@ export function InventoryClient({ initialProducts, totalLogsCount }: InventoryCl
                     <span className="font-mono text-xs text-[#FAF8F5]/60 block">{p.sku}</span>
 
                     <div className="mt-2.5 flex items-center justify-between">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                        isOutOfStock
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${isOutOfStock
                           ? 'bg-red-950 text-red-400 border-red-500/40'
                           : isLowStock
-                          ? 'bg-amber-950 text-amber-400 border-amber-500/40 animate-pulse'
-                          : 'bg-teal-950 text-emerald-400 border-emerald-500/30'
-                      }`}>
+                            ? 'bg-amber-950 text-amber-400 border-amber-500/40 animate-pulse'
+                            : 'bg-teal-950 text-emerald-400 border-emerald-500/30'
+                        }`}>
                         {isOutOfStock ? 'Out of Stock' : isLowStock ? `⚠️ Low Stock (${p.stockQuantity})` : `${p.stockQuantity} Units`}
                       </span>
                       <span className="text-xs font-mono font-bold text-[#D4AF37]">
@@ -389,9 +383,8 @@ export function InventoryClient({ initialProducts, totalLogsCount }: InventoryCl
             </div>
 
             {message && (
-              <div className={`p-3 rounded-xl text-xs font-medium ${
-                message.isError ? 'bg-red-950/50 text-red-300 border border-red-500/40' : 'bg-emerald-950/50 text-emerald-300 border border-emerald-500/40'
-              }`}>
+              <div className={`p-3 rounded-xl text-xs font-medium ${message.isError ? 'bg-red-950/50 text-red-300 border border-red-500/40' : 'bg-emerald-950/50 text-emerald-300 border border-emerald-500/40'
+                }`}>
                 {message.text}
               </div>
             )}

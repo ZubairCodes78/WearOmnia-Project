@@ -1,4 +1,15 @@
 import React from 'react';
+
+// ─── Coming Soon Mode ────────────────────────────────────────────────────────
+// Set COMING_SOON="true" in .env to show the Coming Soon page instead of the
+// storefront homepage. All underlying routes, admin, APIs stay untouched.
+// To go live: remove the flag or set COMING_SOON="false".
+const IS_COMING_SOON = process.env.COMING_SOON === 'true';
+
+// ─── Coming Soon (no store shell) ───────────────────────────────────────────
+import { ComingSoonPage } from '@/components/ComingSoonPage';
+
+// ─── Live Storefront imports (only used when IS_COMING_SOON is false) ────────
 import { prisma } from '@/lib/prisma';
 import { HeroSlider } from '@/components/home/HeroSlider';
 import { ProductCard } from '@/components/shop/ProductCard';
@@ -23,6 +34,12 @@ async function getLaunchProducts() {
 export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
+  // ── Coming Soon Mode ─────────────────────────────────────────────────────
+  if (IS_COMING_SOON) {
+    return <ComingSoonPage />;
+  }
+
+  // ── Live Storefront ──────────────────────────────────────────────────────
   const launchProducts = await getLaunchProducts();
 
   return (
@@ -33,19 +50,19 @@ export default async function HomePage() {
 
         {/* Exclusive Single Product Launch Showcase */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto space-y-3 mb-12">
-            <span className="text-[10px] uppercase tracking-[0.3em] font-semibold text-champagne-700 block">
-              New Arrivals
+          <div className="text-center max-w-2xl mx-auto space-y-2 mb-12">
+            <span className="font-calligraphy text-xs sm:text-sm text-champagne-700 block tracking-[0.2em]">
+              The Daily Rotation
             </span>
-            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-teal">
-              Our Collection
+            <h2 className="font-serif text-3xl sm:text-5xl font-black text-teal tracking-tight">
+              The Ones You'll Reach For Again.
             </h2>
-            <p className="text-xs text-charcoal-muted font-sans">
-              Simple, modest and stylish clothing for women.
+            <p className="text-xs sm:text-sm text-charcoal-muted font-sans max-w-md mx-auto">
+              Because apparently wearing the same favourite outfit three times a week is frowned upon. Modest, comfortable, and made to be worn on repeat.
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             {launchProducts.map((product) => (
               <ProductCard
                 key={product.id}
@@ -64,6 +81,15 @@ export default async function HomePage() {
                 variants={product.variants}
               />
             ))}
+          </div>
+
+          <div className="text-center pt-10">
+            <a
+              href="/shop"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-teal text-champagne font-bold text-xs uppercase tracking-widest hover:bg-teal-900 transition-all duration-300 shadow-xl border border-champagne/30 hover:-translate-y-0.5"
+            >
+              Explore Full Collection →
+            </a>
           </div>
         </section>
 

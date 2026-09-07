@@ -23,7 +23,7 @@ export const WhatsAppFloat = () => {
           setPhoneNumber(international);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const whatsappUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(defaultMessage)}`;

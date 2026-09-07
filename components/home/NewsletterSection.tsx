@@ -18,20 +18,20 @@ export const NewsletterSection = () => {
   };
 
   return (
-    <section className="py-20 bg-sand/60 border-t border-sand">
+    <section className="py-20 bg-sand/40 border-t border-sand">
       <div className="max-w-4xl mx-auto px-6 text-center">
         <ScrollReveal variant="fade-up">
-          <div className="w-12 h-12 bg-teal text-champagne rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-md">
-            <Mail className="w-6 h-6" />
+          <div className="w-14 h-14 bg-teal text-champagne rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-xl border border-champagne/30 card-3d">
+            <Mail className="w-7 h-7 text-champagne" />
           </div>
-          <span className="text-xs uppercase tracking-[0.3em] font-semibold text-champagne-700">
-            Stay Updated
+          <span className="font-calligraphy text-xs sm:text-sm text-champagne-700 block tracking-[0.2em]">
+            Stay Connected
           </span>
-          <h2 className="font-serif text-3xl sm:text-4xl font-bold text-teal mt-1">
-            Subscribe To Our Newsletter
+          <h2 className="font-serif text-3xl sm:text-5xl font-black text-teal mt-1 tracking-tight">
+            Join Our VIP Circle
           </h2>
           <p className="text-xs sm:text-sm text-charcoal-muted mt-2 max-w-lg mx-auto leading-relaxed">
-            Be the first to know about new arrivals, special offers, and updates.
+            Receive instant notifications for new arrivals and seasonal drops (zero spam—we&apos;re too busy tailoring).
           </p>
         </ScrollReveal>
 

@@ -385,17 +385,18 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
   };
 
   return (
-    <div className="space-y-8 text-[#FAF8F5]">
+    <div className="admin-page text-[#FAF8F5]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#141414] p-6 border border-[#262626] rounded-xl">
+      <div className="admin-page-header">
         <div>
-          <h1 className="text-2xl font-serif text-[#FAF8F5]">Admin & Site Settings</h1>
-          <p className="text-xs text-[#A3A3A3] mt-1">Configure business profile, WhatsApp automation number, shipping rates, COD fees, announcement bar, and footer.</p>
+          <p className="text-xs uppercase tracking-[0.2em] text-[#D4AF37] mb-1 font-bold">System Configuration</p>
+          <h1 className="text-2xl font-serif font-bold text-[#FAF8F5]">Admin &amp; Site Settings</h1>
+          <p className="text-xs text-[#FAF8F5]/60 mt-1 font-sans">Configure business profile, WhatsApp automation number, shipping rates, COD fees, announcement bar, and footer.</p>
         </div>
         <button
           onClick={handleSaveSettings}
           disabled={savingSettings}
-          className="flex items-center gap-2 bg-[#D4AF37] hover:bg-[#C5A028] text-black px-6 py-2.5 rounded-lg font-semibold text-sm transition-colors shadow-lg shadow-[#D4AF37]/10 disabled:opacity-50"
+          className="flex items-center gap-2 bg-[#D4AF37] hover:bg-white text-black px-6 py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all shadow-xl disabled:opacity-50 btn-3d shrink-0"
         >
           <Save className="w-4 h-4" /> {savingSettings ? 'Saving...' : 'Save All Settings'}
         </button>

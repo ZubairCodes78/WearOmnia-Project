@@ -1,102 +1,94 @@
 'use client';
 
-import React, { createContext, useContext, useState, useCallback, useRef, useEffect } from 'react';
-import { useCart } from '@/context/CartContext';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // ─────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────
 
-interface FlyToCartItem {
-  productId: string;
-  title: string;
-  slug: string;
-  image: string;
-  price: number;
-  basePrice: number;
-  size: string;
-  color: string;
-  sku: string;
-  quantity: number;
-  maxStock: number;
-}
-
-interface FlyAnimation {
+interface FlightInstance {
   id: string;
   imageSrc: string;
-  startRect: DOMRect;
-  endRect: DOMRect;
+  startCenterX: number;
+  startCenterY: number;
+  initialWidth: number;
+  initialHeight: number;
+  midX: number;
+  midY: number;
+  targetCenterX: number;
+  targetCenterY: number;
+  onArrival?: () => void;
 }
 
 interface FlyToCartContextType {
-  flyToCart: (item: FlyToCartItem, sourceElement: HTMLElement | null) => Promise<boolean>;
-  isAnimating: boolean;
+  triggerFlyToCart: (
+    source: HTMLElement | DOMRect | null,
+    imageSrc?: string,
+    onArrival?: () => void
+  ) => void;
 }
 
-const FlyToCartContext = createContext<FlyToCartContextType | undefined>(undefined);
+const FlyToCartContext = createContext<FlyToCartContextType>({
+  triggerFlyToCart: () => {},
+});
+
+export const useFlyToCart = () => useContext(FlyToCartContext);
 
 // ─────────────────────────────────────────────────────────────
-// Utility: find the cart target element
+// Helpers
 // ─────────────────────────────────────────────────────────────
 
-function getCartTargetRect(): DOMRect | null {
-  // Find all elements with data-cart-target
-  const targets = document.querySelectorAll('[data-cart-target="true"]');
-  if (targets.length === 0) return null;
-
-  // Return the first visible one (handles responsive layouts)
-  for (const target of targets) {
-    const rect = target.getBoundingClientRect();
-    // Element is visible if it has dimensions and is within viewport
-    if (rect.width > 0 && rect.height > 0 && rect.top >= -50 && rect.left >= -50) {
-      return rect;
-    }
-  }
-
-  // Fallback to first target
-  return targets[0].getBoundingClientRect();
-}
-
-// ─────────────────────────────────────────────────────────────
-// Utility: check prefers-reduced-motion
-// ─────────────────────────────────────────────────────────────
-
-function prefersReducedMotion(): boolean {
+function isReducedMotion(): boolean {
   if (typeof window === 'undefined') return false;
   return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
 
-// ─────────────────────────────────────────────────────────────
-// Utility: get the product image element from a source
-// ─────────────────────────────────────────────────────────────
+function getCartTargetCoordinates(): {
+  centerX: number;
+  centerY: number;
+  width: number;
+  height: number;
+} {
+  if (typeof window === 'undefined') {
+    return { centerX: 0, centerY: 0, width: 44, height: 44 };
+  }
 
-function getImageRect(sourceElement: HTMLElement | null): { rect: DOMRect; src: string } | null {
-  if (!sourceElement) return null;
+  // Find all cart button candidates across desktop & mobile
+  const candidates: HTMLElement[] = Array.from(
+    document.querySelectorAll<HTMLElement>(
+      '#header-cart-button, [data-cart-target="true"], button[aria-label*="Shopping bag"], button[title="Shopping Bag"]'
+    )
+  );
 
-  // Try to find the nearest img element
-  let imgEl: HTMLImageElement | null = null;
-
-  // If the source IS an image
-  if (sourceElement.tagName === 'IMG') {
-    imgEl = sourceElement as HTMLImageElement;
-  } else {
-    // Search within the source for an img
-    imgEl = sourceElement.querySelector('img');
-
-    // Search upward to find a product card / image container
-    if (!imgEl) {
-      const card = sourceElement.closest('[data-fly-source]') || sourceElement.closest('.group');
-      if (card) {
-        imgEl = card.querySelector('img');
+  for (const el of candidates) {
+    const rect = el.getBoundingClientRect();
+    // Element must be actually visible in the active viewport (not hidden, display none, or zero size)
+    if (rect.width > 0 && rect.height > 0 && rect.bottom > 0 && rect.top < window.innerHeight) {
+      const style = window.getComputedStyle(el);
+      if (style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0') {
+        const svgEl = el.querySelector('svg');
+        const measureRect = (svgEl || el).getBoundingClientRect();
+        return {
+          centerX: measureRect.left + measureRect.width / 2,
+          centerY: measureRect.top + measureRect.height / 2,
+          width: measureRect.width,
+          height: measureRect.height,
+        };
       }
     }
   }
 
-  if (!imgEl) return null;
+  // Dynamic fallback based on viewport width
+  const isMobile = window.innerWidth < 640;
+  const fallbackX = window.innerWidth - (isMobile ? 40 : 64);
+  const fallbackY = isMobile ? 30 : 36;
 
   return {
-    rect: imgEl.getBoundingClientRect(),
-    src: imgEl.src || imgEl.currentSrc,
+    centerX: fallbackX,
+    centerY: fallbackY,
+    width: 36,
+    height: 36,
   };
 }
 
@@ -105,178 +97,253 @@ function getImageRect(sourceElement: HTMLElement | null): { rect: DOMRect; src: 
 // ─────────────────────────────────────────────────────────────
 
 export const FlyToCartProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { addToCart, setIsCartOpen } = useCart();
-  const [animations, setAnimations] = useState<FlyAnimation[]>([]);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const animationLock = useRef(false);
+  const [flights, setFlights] = useState<FlightInstance[]>([]);
 
-  const flyToCart = useCallback(
-    async (item: FlyToCartItem, sourceElement: HTMLElement | null): Promise<boolean> => {
-      // Rapid click protection
-      if (animationLock.current) return false;
-      animationLock.current = true;
-      setIsAnimating(true);
+  const triggerFlyToCart = useCallback(
+    (
+      source: HTMLElement | DOMRect | null,
+      imageSrc?: string,
+      onArrival?: () => void
+    ) => {
+      if (typeof window === 'undefined') return;
 
-      try {
-        // 1. Add to cart state FIRST (animation is only visual feedback)
-        addToCart(item);
-
-        // 2. Check for reduced motion
-        if (prefersReducedMotion()) {
-          // Skip animation, just open cart
-          setTimeout(() => {
-            setIsCartOpen(true);
-          }, 150);
-          return true;
-        }
-
-        // 3. Get source image rect
-        const imageInfo = getImageRect(sourceElement);
-        const cartRect = getCartTargetRect();
-
-        if (!imageInfo || !cartRect) {
-          // No visual source or cart target found — skip animation, open cart
-          setTimeout(() => {
-            setIsCartOpen(true);
-          }, 300);
-          return true;
-        }
-
-        // 4. Create fly animation
-        const animId = `fly-${Date.now()}`;
-        const flyAnim: FlyAnimation = {
-          id: animId,
-          imageSrc: imageInfo.src || item.image,
-          startRect: imageInfo.rect,
-          endRect: cartRect,
-        };
-
-        setAnimations((prev) => [...prev, flyAnim]);
-
-        // 5. Wait for animation to complete, then open cart
-        await new Promise<void>((resolve) => {
-          setTimeout(() => {
-            // Remove animation clone
-            setAnimations((prev) => prev.filter((a) => a.id !== animId));
-            resolve();
-          }, 650); // Animation duration
-        });
-
-        // 6. Open cart drawer after animation
-        setTimeout(() => {
-          setIsCartOpen(true);
-        }, 50);
-
-        return true;
-      } catch (error) {
-        console.error('[FlyToCart] Error:', error);
-        return false;
-      } finally {
-        animationLock.current = false;
-        setIsAnimating(false);
+      // 1. Honor prefers-reduced-motion: bypass visual flight, trigger subtle bounce and arrival only
+      if (isReducedMotion()) {
+        if (onArrival) onArrival();
+        window.dispatchEvent(new CustomEvent('wearomnia-cart-bounce'));
+        return;
       }
+
+      // 2. Resolve image rect and source URL
+      let startRect: DOMRect | null = null;
+      let resolvedSrc = imageSrc || '';
+
+      if (source instanceof DOMRect) {
+        startRect = source;
+      } else if (source) {
+        let imgEl: HTMLImageElement | null = null;
+        if (source.tagName === 'IMG') {
+          imgEl = source as HTMLImageElement;
+        } else {
+          imgEl = source.querySelector('img');
+          if (!imgEl) {
+            const container =
+              source.closest('[data-fly-source]') ||
+              source.closest('.group') ||
+              source.closest('[role="dialog"]');
+            if (container) {
+              imgEl = container.querySelector('img');
+            }
+          }
+        }
+
+        if (imgEl) {
+          startRect = imgEl.getBoundingClientRect();
+          if (!resolvedSrc) {
+            resolvedSrc = imgEl.currentSrc || imgEl.src;
+          }
+        } else {
+          startRect = source.getBoundingClientRect();
+        }
+      }
+
+      if (!startRect || startRect.width <= 0 || startRect.height <= 0 || !resolvedSrc) {
+        // Source not measurable, trigger bounce and arrival fallback
+        if (onArrival) onArrival();
+        window.dispatchEvent(new CustomEvent('wearomnia-cart-bounce'));
+        return;
+      }
+
+      // 3. Resolve cart target position dynamically (handles scroll and responsive viewports)
+      const target = getCartTargetCoordinates();
+
+      const isMobile = window.innerWidth < 640;
+      const initialWidth = Math.min(startRect.width, isMobile ? 100 : 140);
+      const aspectRatio = startRect.height / (startRect.width || 1);
+      const initialHeight = initialWidth * aspectRatio;
+
+      const startCenterX = startRect.left + startRect.width / 2;
+      const startCenterY = startRect.top + startRect.height / 2;
+
+      const targetCenterX = target.centerX;
+      const targetCenterY = target.centerY;
+
+      const deltaX = targetCenterX - startCenterX;
+      const deltaY = targetCenterY - startCenterY;
+
+      // 4. Calculate Parabolic Curved Trajectory:
+      // Guarantee the curve stays gracefully within the visible viewport and never flies above the top edge
+      const headerSafetyY = targetCenterY + (isMobile ? 22 : 36);
+      const naturalArcY =
+        startCenterY + deltaY * 0.48 - Math.min(isMobile ? 55 : 90, Math.abs(deltaX) * 0.15);
+      const midY = Math.max(headerSafetyY, naturalArcY);
+      const midX = startCenterX + deltaX * 0.52;
+
+      const flightId = `flight-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+
+      const newFlight: FlightInstance = {
+        id: flightId,
+        imageSrc: resolvedSrc,
+        startCenterX,
+        startCenterY,
+        initialWidth,
+        initialHeight,
+        midX,
+        midY,
+        targetCenterX,
+        targetCenterY,
+        onArrival,
+      };
+
+      // Append flight instance to allow multiple rapid clicks across products concurrently
+      setFlights((prev) => [...prev, newFlight]);
     },
-    [addToCart, setIsCartOpen]
+    []
   );
 
+  // Global window event listener so any button or component can trigger without needing the hook
+  useEffect(() => {
+    const handleCustomFlyEvent = (e: Event) => {
+      const customEvent = e as CustomEvent<{
+        source?: HTMLElement;
+        imageSrc?: string;
+        onArrival?: () => void;
+      }>;
+      if (customEvent.detail) {
+        triggerFlyToCart(
+          customEvent.detail.source || null,
+          customEvent.detail.imageSrc,
+          customEvent.detail.onArrival
+        );
+      }
+    };
+
+    window.addEventListener('wearomnia-fly-to-cart', handleCustomFlyEvent);
+    return () => window.removeEventListener('wearomnia-fly-to-cart', handleCustomFlyEvent);
+  }, [triggerFlyToCart]);
+
+  const handleFlightComplete = useCallback((id: string) => {
+    // Clean up flight clone and trigger arrival bounce
+    window.dispatchEvent(new CustomEvent('wearomnia-cart-bounce'));
+    setFlights((prev) => prev.filter((f) => f.id !== id));
+  }, []);
+
   return (
-    <FlyToCartContext.Provider value={{ flyToCart, isAnimating }}>
+    <FlyToCartContext.Provider value={{ triggerFlyToCart }}>
       {children}
 
-      {/* Animation Portal Layer */}
-      {animations.map((anim) => (
-        <FlyingImage key={anim.id} animation={anim} />
-      ))}
+      {/* Floating Image Portal Overlay: Unclipped, full viewport layer */}
+      <div
+        id="wearomnia-fly-portal"
+        className="fixed inset-0 pointer-events-none z-[99999] overflow-hidden"
+        aria-hidden="true"
+      >
+        <AnimatePresence>
+          {flights.map((flight) => (
+            <FlyingImageClone
+              key={flight.id}
+              flight={flight}
+              onComplete={() => handleFlightComplete(flight.id)}
+            />
+          ))}
+        </AnimatePresence>
+      </div>
     </FlyToCartContext.Provider>
   );
 };
 
 // ─────────────────────────────────────────────────────────────
-// Flying Image Component (rendered in portal layer)
+// Flying Image Clone (3-Phase Full-Page Flight & True Cart Entry)
 // ─────────────────────────────────────────────────────────────
 
-const FlyingImage: React.FC<{ animation: FlyAnimation }> = ({ animation }) => {
-  const imgRef = useRef<HTMLDivElement>(null);
+interface FlyingImageCloneProps {
+  flight: FlightInstance;
+  onComplete: () => void;
+}
 
-  useEffect(() => {
-    const el = imgRef.current;
-    if (!el) return;
+const FlyingImageClone: React.FC<FlyingImageCloneProps> = ({ flight, onComplete }) => {
+  // Safe: FlyingImageClone is only ever rendered client-side (flights state is empty on SSR)
+  // Still guard for completeness
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  const duration = isMobile ? 0.70 : 0.82;
+  const hasTriggeredArrival = React.useRef(false);
 
-    const { startRect, endRect } = animation;
-
-    // Calculate the flight path
-    const startX = startRect.left;
-    const startY = startRect.top;
-    const startW = Math.min(startRect.width, 120); // Cap size for performance
-    const startH = Math.min(startRect.height, 160);
-
-    const endX = endRect.left + endRect.width / 2;
-    const endY = endRect.top + endRect.height / 2;
-
-    // Set initial position
-    el.style.left = `${startX}px`;
-    el.style.top = `${startY}px`;
-    el.style.width = `${startW}px`;
-    el.style.height = `${startH}px`;
-    el.style.opacity = '1';
-    el.style.transform = 'scale(1)';
-
-    // Force reflow
-    el.getBoundingClientRect();
-
-    // Use requestAnimationFrame for smooth start
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        // Calculate curved midpoint for arc trajectory
-        const midX = (startX + endX) / 2;
-        const midY = Math.min(startY, endY) - 60; // Arc upward
-
-        el.style.transition = 'all 600ms cubic-bezier(0.16, 1, 0.3, 1)';
-        el.style.left = `${endX - 12}px`;
-        el.style.top = `${endY - 12}px`;
-        el.style.width = '24px';
-        el.style.height = '24px';
-        el.style.opacity = '0';
-        el.style.transform = 'scale(0.3)';
-        el.style.borderRadius = '50%';
-      });
-    });
-  }, [animation]);
+  const handleArrival = () => {
+    if (!hasTriggeredArrival.current) {
+      hasTriggeredArrival.current = true;
+      if (flight.onArrival) {
+        flight.onArrival();
+      }
+    }
+  };
 
   return (
-    <div
-      ref={imgRef}
-      className="fixed pointer-events-none will-change-transform"
+    <motion.div
+      initial={{
+        position: 'fixed',
+        left: -flight.initialWidth / 2,
+        top: -flight.initialHeight / 2,
+        x: flight.startCenterX,
+        y: flight.startCenterY,
+        width: flight.initialWidth,
+        height: flight.initialHeight,
+        opacity: 1,
+        scale: 1,
+        borderRadius: 14,
+        rotate: 0,
+      }}
+      animate={{
+        // 3-Phase Movement:
+        // Phase 1 (0 -> 14%): Pick up / lift from card
+        // Phase 2 (14% -> 90%): Curved flight across full visible page right to cart
+        // Phase 3 (90% -> 100%): Enters directly inside the cart icon center
+        x: [
+          flight.startCenterX,
+          flight.startCenterX,
+          flight.midX,
+          flight.targetCenterX,
+          flight.targetCenterX,
+        ],
+        y: [
+          flight.startCenterY,
+          flight.startCenterY - (isMobile ? 12 : 20),
+          flight.midY,
+          flight.targetCenterY,
+          flight.targetCenterY,
+        ],
+        scale: [1.0, 1.05, 0.6, 0.22, 0.02],
+        // Product image stays 100% VISIBLE throughout flight; only fades inside cart opening
+        opacity: [1.0, 1.0, 1.0, 1.0, 0],
+        rotate: [0, -2, 4, 0, 0],
+        borderRadius: [14, 16, 22, 40, 50],
+      }}
+      transition={{
+        duration,
+        ease: [0.16, 1, 0.3, 1],
+        times: [0, 0.14, 0.55, 0.90, 1],
+      }}
+      onUpdate={(latest) => {
+        // As clone arrives at the cart mouth (scale <= 0.25), trigger onArrival synchronously
+        if (typeof latest.scale === 'number' && latest.scale <= 0.25) {
+          handleArrival();
+        }
+      }}
+      onAnimationComplete={() => {
+        handleArrival();
+        onComplete();
+      }}
+      className="overflow-hidden pointer-events-none will-change-transform shadow-2xl border-2 border-champagne bg-offwhite z-[99999]"
       style={{
-        zIndex: 9999,
-        overflow: 'hidden',
-        borderRadius: '12px',
-        boxShadow: '0 8px 32px rgba(16, 61, 66, 0.25)',
+        boxShadow:
+          '0 18px 40px -4px rgba(16, 61, 66, 0.5), 0 0 22px 2px rgba(223, 195, 160, 0.6)',
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img
-        src={animation.imageSrc}
-        alt=""
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          objectPosition: 'center',
-        }}
+        src={flight.imageSrc}
+        alt="Adding to bag"
+        className="w-full h-full object-cover object-center select-none"
       />
-    </div>
+    </motion.div>
   );
-};
-
-// ─────────────────────────────────────────────────────────────
-// Hook
-// ─────────────────────────────────────────────────────────────
-
-export const useFlyToCart = () => {
-  const context = useContext(FlyToCartContext);
-  if (!context) {
-    throw new Error('useFlyToCart must be used within a FlyToCartProvider');
-  }
-  return context;
 };

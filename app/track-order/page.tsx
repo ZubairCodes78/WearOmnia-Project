@@ -85,22 +85,21 @@ export default function TrackOrderPage() {
 
   return (
     <PageTransition>
-      <div className="bg-offwhite min-h-screen py-12 sm:py-20">
+      <div className="editorial-page !py-12 sm:!py-20">
         <div className="max-w-3xl mx-auto px-4 sm:px-6">
           {/* Page Header */}
-          <div className="text-center mb-10">
-            <div className="w-14 h-14 bg-teal text-champagne rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-md">
-              <Package className="w-7 h-7" />
+          <div className="editorial-header !mb-10 text-center space-y-2">
+            <div className="w-16 h-16 bg-teal text-champagne rounded-2xl flex items-center justify-center mx-auto mb-3 shadow-xl border border-champagne/30 card-3d">
+              <Package className="w-8 h-8 text-champagne" />
             </div>
-            <span className="text-xs uppercase tracking-[0.3em] font-semibold text-champagne-700">
-              WearOMNIA Order Tracking
+            <span className="font-calligraphy text-xs sm:text-sm text-champagne-700 block tracking-[0.2em]">
+              Live Parcel Status
             </span>
-            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-teal mt-1">
+            <h1 className="font-serif text-3xl sm:text-5xl font-black text-teal tracking-tight">
               Track Your Order
             </h1>
-            <p className="text-xs sm:text-sm text-charcoal-muted mt-2 max-w-md mx-auto">
-              Enter your order number and phone number to view real-time order status.
-              No account or login required.
+            <p className="text-xs sm:text-sm text-charcoal-muted max-w-md mx-auto">
+              Enter your order number or courier tracking ID to see real-time dispatch and delivery progress.
             </p>
           </div>
 
@@ -116,7 +115,7 @@ export default function TrackOrderPage() {
               >
                 <form
                   onSubmit={handleTrack}
-                  className="glass-card p-6 sm:p-8 rounded-3xl space-y-5 max-w-lg mx-auto"
+                  className="editorial-surface p-6 sm:p-8 space-y-5 max-w-lg mx-auto"
                 >
                   <div>
                     <label className="text-[10px] uppercase font-bold text-charcoal tracking-wider block mb-1.5">
@@ -254,8 +253,8 @@ export default function TrackOrderPage() {
                         >
                           <div className={
                             isCurrent ? 'timeline-dot-current' :
-                            isCompleted ? 'timeline-dot-completed' :
-                            'timeline-dot-pending'
+                              isCompleted ? 'timeline-dot-completed' :
+                                'timeline-dot-pending'
                           }>
                             <span className="text-xs">{isCompleted ? '✓' : step.icon}</span>
                           </div>

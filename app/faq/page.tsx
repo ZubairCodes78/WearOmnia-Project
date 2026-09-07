@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ChevronDown, Search, HelpCircle } from 'lucide-react';
+import { ChevronDown, Search, HelpCircle, Heart, Clock, Truck, Scissors, ShieldCheck } from 'lucide-react';
 
 const FAQS = [
   {
@@ -30,8 +30,37 @@ const FAQS = [
   },
 ];
 
+const FUNNY_FAQS = [
+  {
+    q: 'Will people ask where I bought this?',
+    a: 'Inevitably, yes. WearOMNIA outfits are natural compliment magnets on campus and at family gatherings. You are completely welcome to take the credit.',
+    icon: Heart,
+  },
+  {
+    q: 'Can I wear this to an 8AM class and straight to evening plans?',
+    a: 'That is the exact design brief. Our modest silhouettes and breathable coordinates are comfortable enough for campus lectures and chic enough for evening dinners without an outfit change.',
+    icon: Clock,
+  },
+  {
+    q: 'What if the rider arrives while I am in an online lecture or study session?',
+    a: 'Standard drill: leave exact Cash On Delivery with someone at home or step out for thirty seconds. Our courier riders deliver swiftly and discreetly.',
+    icon: Truck,
+  },
+  {
+    q: 'Can I rewear this outfit three times in two weeks?',
+    a: 'We won\'t tell anyone if you don\'t. Our pieces are specifically designed to be your go-to wardrobe favourites that look effortless every single time.',
+    icon: Scissors,
+  },
+  {
+    q: 'Why do you offer 1-click guest checkout without password requirements?',
+    a: 'Because life is too short to remember another 12-character password with an uppercase letter and a number just to treat yourself to an outfit. Seamless checkout forever.',
+    icon: ShieldCheck,
+  },
+];
+
 export default function FAQPage() {
   const [openIdx, setOpenIdx] = useState<number | null>(0);
+  const [openFunnyIdx, setOpenFunnyIdx] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredFaqs = FAQS.filter(
@@ -41,14 +70,18 @@ export default function FAQPage() {
   );
 
   return (
-    <div className="bg-offwhite min-h-screen py-16">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-10">
-        <div className="text-center space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] font-semibold text-champagne-700">
+    <div className="editorial-page">
+      <div className="editorial-container max-w-4xl space-y-12">
+        <div className="editorial-header !mb-8 space-y-2 text-center">
+          <span className="font-calligraphy text-xs sm:text-sm text-champagne-700 block tracking-[0.2em]">
             Common Inquiries
           </span>
-          <h1 className="font-serif text-3xl sm:text-5xl font-bold text-teal">Frequently Asked Questions</h1>
-          <p className="text-xs text-charcoal-muted font-sans">Find instant answers regarding COD, delivery, and suit care.</p>
+          <h1 className="font-serif text-3xl sm:text-5xl font-black text-teal tracking-tight">
+            Frequently Asked Questions
+          </h1>
+          <p className="text-xs sm:text-sm text-charcoal-muted max-w-md mx-auto">
+            Find quick, clear answers regarding nationwide delivery, sizing, returns, and Cash On Delivery.
+          </p>
         </div>
 
         {/* Search */}
@@ -58,7 +91,7 @@ export default function FAQPage() {
             placeholder="Search questions..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-12 pr-4 py-3.5 bg-sand rounded-2xl text-xs text-charcoal border border-sand focus:outline-none focus:ring-2 focus:ring-teal shadow-inner"
+            className="w-full pl-12 pr-4 py-3.5 bg-offwhite rounded-lg text-xs text-charcoal border border-champagne/50 focus:outline-none focus:ring-2 focus:ring-teal shadow-sm"
           />
           <Search className="w-5 h-5 text-teal absolute left-4 top-3.5" />
         </div>
@@ -68,7 +101,7 @@ export default function FAQPage() {
           {filteredFaqs.map((faq, idx) => (
             <div
               key={idx}
-              className="bg-sand/60 rounded-2xl border border-sand overflow-hidden transition-all"
+              className="editorial-faq-item overflow-hidden transition-all"
             >
               <button
                 onClick={() => setOpenIdx(openIdx === idx ? null : idx)}
@@ -79,9 +112,8 @@ export default function FAQPage() {
                   {faq.q}
                 </span>
                 <ChevronDown
-                  className={`w-5 h-5 text-teal transition-transform ${
-                    openIdx === idx ? 'rotate-180 text-champagne-700' : ''
-                  }`}
+                  className={`w-5 h-5 text-teal transition-transform ${openIdx === idx ? 'rotate-180 text-champagne-700' : ''
+                    }`}
                 />
               </button>
 
@@ -92,6 +124,52 @@ export default function FAQPage() {
               )}
             </div>
           ))}
+        </div>
+
+        {/* Hilarious Unofficial Real-Talk FAQs */}
+        <div className="pt-10 border-t border-sand/80 space-y-6">
+          <div className="text-center space-y-2">
+            <span className="font-calligraphy text-xs sm:text-sm text-champagne-700 block tracking-[0.2em]">
+              Real Talk Corner
+            </span>
+            <h2 className="font-serif text-2xl sm:text-4xl font-black text-teal">
+              The Unofficial WearOMNIA FAQs
+            </h2>
+            <p className="text-xs sm:text-sm text-charcoal-muted max-w-md mx-auto">
+              A lighthearted look at Pakistani fashion realities, sister closet borrowing, and tailor-free bliss.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {FUNNY_FAQS.map((item, fIdx) => {
+              const Icon = item.icon;
+              return (
+                <div
+                  key={fIdx}
+                  className="card-3d-subtle bg-sand/30 p-5 rounded-2xl border border-sand/80 hover:border-champagne transition-all duration-300 space-y-2 flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center gap-2.5 mb-2">
+                      <div className="w-8 h-8 rounded-full bg-champagne/20 text-teal flex items-center justify-center shrink-0">
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <h3 className="font-serif text-sm font-bold text-teal leading-snug">
+                        {item.q}
+                      </h3>
+                    </div>
+                    <p className="text-xs text-charcoal-muted leading-relaxed font-sans pl-10">
+                      {item.a}
+                    </p>
+                  </div>
+                  <div className="pl-10 pt-2">
+                    <span className="inline-block text-[10px] font-bold text-teal bg-champagne/30 px-2 py-0.5 rounded-full">
+                      100% Desi Truth
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

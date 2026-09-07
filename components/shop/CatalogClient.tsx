@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ProductCard } from './ProductCard';
 import { QuickViewModal } from './QuickViewModal';
-import { Filter, SlidersHorizontal, Grid2X2, Grid3X3, LayoutGrid, Search, X, Heart } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Grid2X2, Grid3X3, Heart, LayoutGrid, X, Search } from 'lucide-react';
 import { useWishlist } from '@/context/WishlistContext';
 
 interface ProductItem {
@@ -49,6 +49,8 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
   const [gridCols, setGridCols] = useState<'2' | '3' | '4'>('3');
   const [quickViewProduct, setQuickViewProduct] = useState<ProductItem | null>(null);
   const [showWishlistOnly, setShowWishlistOnly] = useState(initialWishlist);
+  const [currentPage, setCurrentPage] = useState(1);
+  const productsPerPage = 12;
 
   // Available Sizes & Colors Extracted from Data
   const availableSizes = useMemo(() => {
@@ -124,35 +126,53 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
     setInStockOnly(false);
     setShowWishlistOnly(false);
     setSortBy('newest');
+    setCurrentPage(1);
   };
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedCategory, selectedSize, selectedColor, inStockOnly, sortBy, showWishlistOnly]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / productsPerPage));
+  const visibleProducts = filteredProducts.slice(
+    (currentPage - 1) * productsPerPage,
+    currentPage * productsPerPage,
+  );
+  const pageNumbers = Array.from(
+    new Set([1, currentPage - 1, currentPage, currentPage + 1, totalPages]),
+  )
+    .filter((page) => page >= 1 && page <= totalPages)
+    .sort((a, b) => a - b);
 
   const gridClass =
     gridCols === '2'
       ? 'grid-cols-2 sm:grid-cols-2'
       : gridCols === '4'
-      ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4'
-      : 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-3';
+        ? 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-4'
+        : 'grid-cols-2 sm:grid-cols-2 lg:grid-cols-3';
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12">
-      {/* Header Title Section */}
-      <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-10">
-        <span className="text-[10px] sm:text-xs uppercase tracking-[0.25em] sm:tracking-[0.3em] font-semibold text-champagne-700">
-          New Arrivals
+      {/* Header Title Section with Clean Modern Kicker */}
+      <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12 space-y-2">
+        <span className="font-calligraphy text-xs sm:text-sm text-champagne-700 block tracking-[0.2em]">
+          {showWishlistOnly ? 'Saved Favorites' : 'Everyday Ready-to-Wear'}
         </span>
-        <h1 className="font-serif text-2xl sm:text-5xl font-bold text-teal mt-1 sm:mt-2">
-          {showWishlistOnly ? 'Your Saved Wishlist' : 'Shop Our Collection'}
+        <h1 className="font-serif text-2xl sm:text-4xl lg:text-5xl font-black text-teal tracking-tight uppercase">
+          {showWishlistOnly ? 'Your Saved Favorites' : 'The Wardrobe Upgrade'}
         </h1>
-        <p className="text-xs text-charcoal-muted mt-2">
-          Explore our latest modest and stylish stitched clothing.
+        <p className="text-xs sm:text-sm text-charcoal-muted max-w-md mx-auto leading-relaxed">
+          {showWishlistOnly
+            ? 'The outfits you have your eye on. Ready whenever you are.'
+            : 'For uni mornings, chai breaks, last-minute plans and those “I have nothing to wear” emergencies.'}
         </p>
-        <p className="text-xs text-charcoal-muted mt-1">
-          Showing {filteredProducts.length} {filteredProducts.length === 1 ? 'product' : 'products'}
+        <p className="text-xs text-charcoal-muted font-medium pt-1">
+          Showing {filteredProducts.length} {filteredProducts.length === 1 ? 'curated outfit' : 'curated outfits'}
         </p>
       </div>
 
       {/* Filter Control Bar */}
-      <div className="bg-sand/70 p-3 sm:p-4 rounded-2xl border border-sand mb-6 sm:mb-8 flex flex-col lg:flex-row items-center justify-between gap-4">
+      <div className="bg-sand/40 p-3 sm:p-4 rounded-2xl border border-sand mb-6 sm:mb-8 flex flex-col lg:flex-row items-center justify-between gap-4 shadow-sm">
         {/* Category Pills */}
         <div className="flex overflow-x-auto no-scrollbar pb-1 sm:pb-0 gap-2 w-full lg:w-auto shrink-0 flex-nowrap sm:flex-wrap">
           <button
@@ -160,11 +180,10 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
               setSelectedCategory('');
               setShowWishlistOnly(false);
             }}
-            className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs uppercase font-semibold transition-all shrink-0 ${
-              !selectedCategory && !showWishlistOnly
-                ? 'bg-teal text-champagne shadow-md'
-                : 'bg-offwhite text-charcoal hover:bg-sand'
-            }`}
+            className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs uppercase font-semibold transition-all shrink-0 ${!selectedCategory && !showWishlistOnly
+              ? 'bg-teal text-champagne shadow-md'
+              : 'bg-offwhite text-charcoal hover:bg-sand'
+              }`}
           >
             All Products
           </button>
@@ -175,22 +194,20 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
                 setSelectedCategory(c.slug);
                 setShowWishlistOnly(false);
               }}
-              className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs uppercase font-semibold transition-all shrink-0 ${
-                selectedCategory === c.slug && !showWishlistOnly
-                  ? 'bg-teal text-champagne shadow-md'
-                  : 'bg-offwhite text-charcoal hover:bg-sand'
-              }`}
+              className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs uppercase font-semibold transition-all shrink-0 ${selectedCategory === c.slug && !showWishlistOnly
+                ? 'bg-teal text-champagne shadow-md'
+                : 'bg-offwhite text-charcoal hover:bg-sand'
+                }`}
             >
               {c.name}
             </button>
           ))}
           <button
             onClick={() => setShowWishlistOnly(!showWishlistOnly)}
-            className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs uppercase font-semibold flex items-center gap-1.5 transition-all shrink-0 ${
-              showWishlistOnly
-                ? 'bg-red-700 text-offwhite shadow-md'
-                : 'bg-offwhite text-charcoal hover:bg-sand'
-            }`}
+            className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs uppercase font-semibold flex items-center gap-1.5 transition-all shrink-0 ${showWishlistOnly
+              ? 'bg-red-700 text-offwhite shadow-md'
+              : 'bg-offwhite text-charcoal hover:bg-sand'
+              }`}
           >
             <Heart className="w-3.5 h-3.5 fill-current" /> Wishlist ({wishlist.length})
           </button>
@@ -213,27 +230,24 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
           <div className="hidden sm:flex items-center gap-1 bg-offwhite p-1 rounded-xl border border-sand">
             <button
               onClick={() => setGridCols('2')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                gridCols === '2' ? 'bg-teal text-champagne' : 'text-charcoal-muted'
-              }`}
+              className={`p-1.5 rounded-lg transition-colors ${gridCols === '2' ? 'bg-teal text-champagne' : 'text-charcoal-muted'
+                }`}
               title="2 Column Grid"
             >
               <Grid2X2 className="w-4 h-4" />
             </button>
             <button
               onClick={() => setGridCols('3')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                gridCols === '3' ? 'bg-teal text-champagne' : 'text-charcoal-muted'
-              }`}
+              className={`p-1.5 rounded-lg transition-colors ${gridCols === '3' ? 'bg-teal text-champagne' : 'text-charcoal-muted'
+                }`}
               title="3 Column Grid"
             >
               <Grid3X3 className="w-4 h-4" />
             </button>
             <button
               onClick={() => setGridCols('4')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                gridCols === '4' ? 'bg-teal text-champagne' : 'text-charcoal-muted'
-              }`}
+              className={`p-1.5 rounded-lg transition-colors ${gridCols === '4' ? 'bg-teal text-champagne' : 'text-charcoal-muted'
+                }`}
               title="4 Column Grid"
             >
               <LayoutGrid className="w-4 h-4" />
@@ -297,21 +311,24 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
 
       {/* Product Grid Listing */}
       {filteredProducts.length === 0 ? (
-        <div className="text-center py-20 bg-sand/40 rounded-3xl border border-sand">
-          <h3 className="font-serif text-2xl text-teal">No Products Found</h3>
-          <p className="text-xs text-charcoal-muted mt-2 max-w-sm mx-auto">
-            We couldn't find any suit matching your exact filters. Try clearing your search or filters.
+        <div className="text-center py-20 bg-sand/40 rounded-3xl border border-sand space-y-3">
+          <div className="w-12 h-12 mx-auto rounded-full bg-sand-dark/25 text-teal flex items-center justify-center mb-1">
+            <Search className="w-6 h-6 text-teal" />
+          </div>
+          <h3 className="font-serif text-2xl font-bold text-teal">Nothing Here Just Yet</h3>
+          <p className="text-xs text-charcoal-muted max-w-sm mx-auto leading-relaxed">
+            Your search might be more specific than your assignment deadline. Try clearing your filters or exploring our full collection.
           </p>
           <button
             onClick={resetFilters}
-            className="mt-6 bg-teal text-champagne px-6 py-3 rounded-xl text-xs uppercase font-bold tracking-widest hover:bg-teal-900 transition-all shadow"
+            className="mt-3 bg-teal text-champagne px-7 py-3.5 rounded-xl text-xs uppercase font-bold tracking-widest hover:bg-teal-900 transition-all shadow"
           >
             Reset All Filters
           </button>
         </div>
       ) : (
         <div className={`grid ${gridClass} gap-6 sm:gap-8`}>
-          {filteredProducts.map((product) => (
+          {visibleProducts.map((product) => (
             <ProductCard
               key={product.id}
               id={product.id}
@@ -331,6 +348,55 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
             />
           ))}
         </div>
+      )}
+
+      {filteredProducts.length > productsPerPage && (
+        <nav
+          aria-label="Product catalog pagination"
+          className="mt-10 flex flex-col sm:flex-row items-center justify-between gap-4 border-t border-sand pt-6"
+        >
+          <p className="text-xs text-charcoal-muted">
+            Showing {(currentPage - 1) * productsPerPage + 1}-{Math.min(currentPage * productsPerPage, filteredProducts.length)} of {filteredProducts.length} products
+          </p>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              disabled={currentPage === 1}
+              aria-label="Previous page"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-sand text-teal transition-colors hover:border-champagne disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            {pageNumbers.map((page, index) => (
+              <React.Fragment key={page}>
+                {index > 0 && pageNumbers[index - 1] !== page - 1 && (
+                  <span className="px-1 text-xs text-charcoal-muted" aria-hidden="true">...</span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage(page)}
+                  aria-current={page === currentPage ? 'page' : undefined}
+                  className={`flex h-9 min-w-9 items-center justify-center rounded-lg px-2 text-xs font-semibold transition-colors ${page === currentPage
+                    ? 'bg-teal text-champagne'
+                    : 'border border-sand text-charcoal hover:border-champagne'
+                    }`}
+                >
+                  {page}
+                </button>
+              </React.Fragment>
+            ))}
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+              disabled={currentPage === totalPages}
+              aria-label="Next page"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-sand text-teal transition-colors hover:border-champagne disabled:cursor-not-allowed disabled:opacity-35"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </nav>
       )}
 
       {/* Quick View Modal Handler */}

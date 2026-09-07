@@ -13,12 +13,12 @@ interface ShopPageProps {
 
 export async function generateMetadata({ searchParams }: ShopPageProps) {
   const { category, search } = await searchParams;
-  let title = 'Shop Our Collection | WearOMNIA';
+  let title = 'Shop Our Collection';
   let description = 'Explore our latest modest and stylish stitched clothing.';
   if (category) {
-    title = `${category.replace('-', ' ').toUpperCase()} Collection | WearOMNIA`;
+    title = `${category.replace('-', ' ').toUpperCase()} Collection`;
   } else if (search) {
-    title = `Search Results for "${search}" | WearOMNIA`;
+    title = `Search Results for "${search}"`;
   }
   return generateCategoryMetadata(title, description);
 }

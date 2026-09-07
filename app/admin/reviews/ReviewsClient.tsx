@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Image from 'next/image';
-import { Star, CheckCircle2, XCircle, Trash2, Search, Sparkles, AlertCircle } from 'lucide-react';
+import { Star, CheckCircle2, XCircle, Trash2, Search, AlertCircle } from 'lucide-react';
 
 interface ReviewItem {
   id: string;
@@ -67,16 +67,16 @@ export function ReviewsClient({ initialReviews }: { initialReviews: ReviewItem[]
   });
 
   return (
-    <div className="space-y-8 text-[#FAF8F5]">
+    <div className="admin-page text-[#FAF8F5]">
       {/* Header */}
-      <div className="bg-[#0A2528]/85 backdrop-blur-2xl p-8 rounded-3xl border border-[#D4AF37]/30 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="admin-page-header">
         <div>
           <div className="flex items-center gap-2">
             <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.25em] font-bold text-[#D4AF37] bg-teal-950/80 px-3.5 py-1 rounded-full border border-[#D4AF37]/30">
               <Star className="w-3 h-3 text-[#D4AF37] fill-[#D4AF37]" /> Reputation & Feedback
             </span>
           </div>
-          <h1 className="font-serif text-3xl font-bold text-[#FAF8F5] mt-2">
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#FAF8F5] mt-2">
             Customer Reviews Moderation Queue
           </h1>
           <p className="text-xs text-[#FAF8F5]/70 mt-1 font-sans">
@@ -87,17 +87,17 @@ export function ReviewsClient({ initialReviews }: { initialReviews: ReviewItem[]
 
       {/* Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        <div className="bg-[#0A2528]/70 backdrop-blur-md p-5 rounded-2xl border border-[#D4AF37]/20 shadow-xl space-y-1">
+        <div className="admin-stat-card">
           <span className="text-[10px] uppercase font-bold text-[#D4AF37]">Total Submissions</span>
           <p className="font-serif text-2xl font-bold text-[#FAF8F5]">{reviews.length}</p>
         </div>
 
-        <div className="bg-[#0A2528]/70 backdrop-blur-md p-5 rounded-2xl border border-amber-500/30 shadow-xl space-y-1">
+        <div className="admin-stat-card border-amber-500/30">
           <span className="text-[10px] uppercase font-bold text-amber-400">Pending Approval</span>
           <p className="font-serif text-2xl font-bold text-amber-400">{pendingCount}</p>
         </div>
 
-        <div className="bg-[#0A2528]/70 backdrop-blur-md p-5 rounded-2xl border border-emerald-500/30 shadow-xl space-y-1">
+        <div className="admin-stat-card border-emerald-500/30">
           <span className="text-[10px] uppercase font-bold text-emerald-400">Published Live</span>
           <p className="font-serif text-2xl font-bold text-emerald-400">{approvedCount}</p>
         </div>
@@ -108,25 +108,22 @@ export function ReviewsClient({ initialReviews }: { initialReviews: ReviewItem[]
         <div className="flex items-center gap-2">
           <button
             onClick={() => setStatusFilter('ALL')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-              statusFilter === 'ALL' ? 'bg-[#D4AF37] text-black shadow' : 'bg-[#06191B] text-[#FAF8F5]/80 hover:text-[#D4AF37]'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${statusFilter === 'ALL' ? 'bg-[#D4AF37] text-black shadow' : 'bg-[#06191B] text-[#FAF8F5]/80 hover:text-[#D4AF37]'
+              }`}
           >
             All Reviews ({reviews.length})
           </button>
           <button
             onClick={() => setStatusFilter('PENDING')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-              statusFilter === 'PENDING' ? 'bg-amber-500 text-black shadow' : 'bg-[#06191B] text-amber-300 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${statusFilter === 'PENDING' ? 'bg-amber-500 text-black shadow' : 'bg-[#06191B] text-amber-300 hover:text-white'
+              }`}
           >
             Pending ({pendingCount})
           </button>
           <button
             onClick={() => setStatusFilter('APPROVED')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-              statusFilter === 'APPROVED' ? 'bg-emerald-500 text-black shadow' : 'bg-[#06191B] text-emerald-300 hover:text-white'
-            }`}
+            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${statusFilter === 'APPROVED' ? 'bg-emerald-500 text-black shadow' : 'bg-[#06191B] text-emerald-300 hover:text-white'
+              }`}
           >
             Approved ({approvedCount})
           </button>
@@ -145,10 +142,10 @@ export function ReviewsClient({ initialReviews }: { initialReviews: ReviewItem[]
       </div>
 
       {/* Reviews Table */}
-      <div className="bg-[#0A2528]/80 backdrop-blur-2xl rounded-3xl border border-[#D4AF37]/20 shadow-2xl overflow-hidden">
+      <div className="admin-table-wrapper">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#06191B] text-[#D4AF37] uppercase tracking-wider font-semibold border-b border-[#D4AF37]/15">
+          <table className="admin-table">
+            <thead>
               <tr>
                 <th className="p-4">Customer</th>
                 <th className="p-4">Product</th>
@@ -186,44 +183,45 @@ export function ReviewsClient({ initialReviews }: { initialReviews: ReviewItem[]
                       &quot;{rev.comment}&quot;
                     </td>
                     <td className="p-4">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
-                        rev.isApproved
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${rev.isApproved
                           ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40'
                           : 'bg-amber-950/60 text-amber-300 border-amber-500/40'
-                      }`}>
+                        }`}>
                         {rev.isApproved ? 'Published Live' : 'Pending Review'}
                       </span>
                     </td>
-                    <td className="p-4 text-right space-x-1.5 whitespace-nowrap">
-                      {!rev.isApproved ? (
+                    <td className="p-4 text-right whitespace-nowrap">
+                      <div className="admin-action-group">
+                        {!rev.isApproved ? (
+                          <button
+                            onClick={() => handleAction(rev.id, true)}
+                            disabled={actionLoading === rev.id}
+                            className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all shadow disabled:opacity-50"
+                          >
+                            Approve
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleAction(rev.id, false)}
+                            disabled={actionLoading === rev.id}
+                            className="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all shadow disabled:opacity-50"
+                          >
+                            Unapprove
+                          </button>
+                        )}
                         <button
-                          onClick={() => handleAction(rev.id, true)}
+                          onClick={() => {
+                            if (confirm('Delete this customer review permanently?')) {
+                              handleAction(rev.id, false, 'delete');
+                            }
+                          }}
                           disabled={actionLoading === rev.id}
-                          className="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all shadow"
+                          className="p-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-300 rounded-lg border border-red-800/40 transition-all inline-block align-middle disabled:opacity-50"
+                          title="Delete Review"
                         >
-                          Approve
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
-                      ) : (
-                        <button
-                          onClick={() => handleAction(rev.id, false)}
-                          disabled={actionLoading === rev.id}
-                          className="bg-amber-600 hover:bg-amber-500 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all shadow"
-                        >
-                          Unapprove
-                        </button>
-                      )}
-                      <button
-                        onClick={() => {
-                          if (confirm('Delete this customer review permanently?')) {
-                            handleAction(rev.id, false, 'delete');
-                          }
-                        }}
-                        disabled={actionLoading === rev.id}
-                        className="p-1.5 bg-red-950/40 hover:bg-red-900/60 text-red-300 rounded-lg border border-red-800/40 transition-all inline-block align-middle"
-                        title="Delete Review"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      </div>
                     </td>
                   </tr>
                 ))

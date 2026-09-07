@@ -30,7 +30,7 @@ export default function ContactPage() {
           });
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   const whatsappInternational = settings.whatsappNumber.replace(/^0/, '92').replace(/\s/g, '');
@@ -41,25 +41,25 @@ export default function ContactPage() {
   };
 
   return (
-    <div className="bg-offwhite min-h-screen py-16">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="editorial-page">
+      <div className="editorial-container max-w-7xl">
         {/* Title */}
-        <div className="text-center max-w-2xl mx-auto mb-16">
-          <span className="text-xs uppercase tracking-[0.3em] font-semibold text-champagne-700">
-            Customer Support
+        <div className="editorial-header space-y-2">
+          <span className="font-calligraphy text-xs sm:text-sm text-champagne-700 block tracking-[0.2em]">
+            We Are Here For You
           </span>
-          <h1 className="font-serif text-3xl sm:text-5xl font-bold text-teal mt-2">
+          <h1 className="font-serif text-3xl sm:text-5xl font-black text-teal tracking-tight">
             Contact WearOMNIA
           </h1>
-          <p className="text-xs sm:text-sm text-charcoal-muted mt-3 leading-relaxed font-sans">
-            Our customer support team is available to assist you with suit sizing, order customization, dispatch details, and nationwide COD inquiries.
+          <p className="text-xs sm:text-sm text-charcoal-muted max-w-md mx-auto leading-relaxed">
+            Our customer support team is happy to assist you with sizing advice, custom requests, dispatch details, and Cash On Delivery inquiries.
           </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           {/* Left Info Cards */}
           <div className="lg:col-span-5 space-y-6">
-            <div className="bg-sand/60 p-8 rounded-3xl border border-sand space-y-6 shadow-sm">
+            <div className="editorial-surface p-6 sm:p-8 space-y-6">
               <h3 className="font-serif text-xl font-bold text-teal border-b border-sand pb-3">
                 Contact Information
               </h3>
@@ -122,7 +122,7 @@ export default function ContactPage() {
             </div>
 
             {/* Social Media Links */}
-            <div className="bg-sand/60 p-8 rounded-3xl border border-sand space-y-4 shadow-sm">
+            <div className="editorial-surface p-6 sm:p-8 space-y-4">
               <h3 className="font-serif text-xl font-bold text-teal">Follow Us</h3>
               <div className="flex flex-col gap-3">
                 <a href={settings.instagramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-teal hover:text-champagne-700 transition-colors">
@@ -142,7 +142,7 @@ export default function ContactPage() {
           </div>
 
           {/* Right Form */}
-          <div className="lg:col-span-7 bg-offwhite p-8 sm:p-10 rounded-3xl border border-sand shadow-lg space-y-6">
+          <div className="lg:col-span-7 editorial-surface p-6 sm:p-10 space-y-6">
             <h3 className="font-serif text-2xl font-bold text-teal">Send Us A Message</h3>
             <p className="text-xs text-charcoal-muted font-sans">
               Fill out the form below and an WearOMNIA styling specialist will respond within 24 hours.

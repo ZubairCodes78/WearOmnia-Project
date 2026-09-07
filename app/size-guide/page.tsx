@@ -4,7 +4,7 @@ import { Ruler, Info } from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Size Guide | WearOMNIA — Luxury Pakistani Fashion',
+  title: 'Size Guide',
   description: 'Find your perfect size with our comprehensive measurement guide for pret, unstitched, kaftans, and more.',
 };
 
@@ -17,29 +17,29 @@ export default async function SizeGuidePage() {
   });
 
   return (
-    <div className="bg-offwhite min-h-screen py-16">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6">
+    <div className="editorial-page">
+      <div className="editorial-container max-w-4xl">
         {/* Header */}
-        <div className="text-center mb-12">
-          <div className="w-14 h-14 bg-teal text-champagne rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+        <div className="editorial-header">
+          <div className="w-14 h-14 bg-teal text-champagne rounded-lg flex items-center justify-center mx-auto mb-4 shadow-lg">
             <Ruler className="w-7 h-7" />
           </div>
-          <span className="text-xs uppercase tracking-[0.3em] font-semibold text-champagne-700">
+          <span className="editorial-kicker">
             Measurement Reference
           </span>
-          <h1 className="font-serif text-3xl sm:text-5xl font-bold text-teal mt-2">Size Guide</h1>
-          <p className="text-xs sm:text-sm text-charcoal-muted mt-3 max-w-lg mx-auto leading-relaxed">
+          <h1 className="editorial-title">Size Guide</h1>
+          <p className="editorial-lede">
             Find the perfect fit with our comprehensive sizing charts. All measurements are approximate and may vary
             slightly between styles. When in between sizes, we recommend sizing up.
           </p>
         </div>
 
         {sizeGuides.length === 0 ? (
-          <div className="text-center py-20 bg-sand/40 rounded-3xl border border-sand">
+          <div className="editorial-surface text-center py-20">
             <Ruler className="w-10 h-10 text-champagne-700 mx-auto mb-3" />
-            <h3 className="font-serif text-xl text-teal">Size Guide Coming Soon</h3>
-            <p className="text-xs text-charcoal-muted mt-2 max-w-sm mx-auto">
-              Our size guide is currently being prepared. Please contact us via WhatsApp for sizing assistance.
+            <h3 className="font-serif text-xl font-bold text-teal uppercase tracking-tight">Coming Soon.</h3>
+            <p className="text-xs text-charcoal-muted mt-2 max-w-sm mx-auto leading-relaxed font-sans">
+              We&apos;re making something worth getting dressed for. Need fit advice right now? Reach out on WhatsApp for quick, friendly sizing assistance!
             </p>
           </div>
         ) : (
@@ -52,7 +52,7 @@ export default async function SizeGuidePage() {
                 <section
                   key={guide.id}
                   id={guide.slug}
-                  className="bg-white/80 rounded-3xl border border-sand shadow-lg overflow-hidden"
+                  className="editorial-surface overflow-hidden"
                 >
                   {/* Section Header */}
                   <div className="p-6 sm:p-8 border-b border-sand bg-sand/30">
@@ -143,7 +143,7 @@ export default async function SizeGuidePage() {
             })}
 
             {/* How to Measure Section */}
-            <section className="bg-sand/60 rounded-3xl border border-sand p-6 sm:p-8 space-y-4">
+            <section className="editorial-surface p-6 sm:p-8 space-y-4">
               <h2 className="font-serif text-xl font-bold text-teal">How To Measure</h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs text-charcoal-muted leading-relaxed">
                 <div className="space-y-2">

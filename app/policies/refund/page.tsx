@@ -3,17 +3,17 @@ import { Banknote, ShieldCheck } from 'lucide-react';
 
 export default function RefundPolicyPage() {
   return (
-    <div className="bg-offwhite min-h-screen py-16">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-10">
-        <div className="text-center space-y-2">
-          <span className="text-xs uppercase tracking-[0.3em] font-semibold text-champagne-700">
+    <div className="editorial-page">
+      <div className="editorial-container max-w-4xl">
+        <div className="editorial-header">
+          <span className="editorial-kicker">
             Terms & Assurance
           </span>
-          <h1 className="font-serif text-3xl sm:text-5xl font-bold text-teal">Refund & Financial Guidelines</h1>
+          <h1 className="editorial-title">Refund & Financial Guidelines</h1>
           <p className="text-xs text-charcoal-muted font-sans">Clear, Transparent Cash On Delivery Terms</p>
         </div>
 
-        <div className="bg-sand/60 p-8 rounded-3xl border border-sand shadow-sm space-y-6 text-xs text-charcoal leading-relaxed font-sans">
+        <div className="editorial-dossier font-sans">
           <div className="space-y-3">
             <h3 className="font-serif text-xl font-bold text-teal flex items-center gap-2">
               <Banknote className="w-5 h-5 text-champagne-700" /> 1. Cash On Delivery Refunds

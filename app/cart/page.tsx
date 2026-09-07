@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, ShieldCheck, Tag, ArrowLeft } from 'lucide-react';
+import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, ShieldCheck, Tag, ArrowLeft, CheckCircle2, Heart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 
 export default function CartPage() {
@@ -53,36 +53,37 @@ export default function CartPage() {
   };
 
   return (
-    <div className="bg-offwhite min-h-screen py-10 font-sans text-teal">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+    <div className="editorial-page !py-10 font-sans text-teal">
+      <div className="editorial-container max-w-7xl space-y-8">
         {/* Header */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-sand pb-6">
-          <div>
-            <span className="text-xs uppercase tracking-[0.25em] font-semibold text-champagne-700">Shopping Cart</span>
-            <h1 className="font-serif text-3xl sm:text-4xl font-bold text-teal mt-1">Your Shopping Bag</h1>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-sand/80 pb-6">
+          <div className="space-y-1">
+            <span className="font-calligraphy text-xs sm:text-sm text-champagne-700 block tracking-[0.2em]">Review &amp; Checkout</span>
+            <h1 className="font-serif text-3xl sm:text-5xl font-black text-teal tracking-tight">Your Shopping Bag</h1>
+            <p className="text-xs text-charcoal-muted font-sans pt-0.5">Good choice. Your wardrobe agrees.</p>
           </div>
           <Link
             href="/shop"
-            className="flex items-center gap-2 text-xs uppercase tracking-widest font-bold text-teal hover:text-champagne-700 transition-colors"
+            className="inline-flex items-center gap-2 text-xs uppercase tracking-widest font-bold text-teal hover:text-champagne-700 transition-colors bg-sand/50 px-4 py-2 rounded-xl border border-sand/80"
           >
             <ArrowLeft className="w-4 h-4" /> Continue Shopping
           </Link>
         </div>
 
         {cart.length === 0 ? (
-          <div className="bg-sand/30 rounded-3xl p-12 text-center max-w-md mx-auto space-y-4 border border-sand">
+          <div className="editorial-surface p-12 text-center max-w-md mx-auto space-y-4">
             <div className="w-16 h-16 rounded-full bg-sand flex items-center justify-center mx-auto text-teal">
               <ShoppingBag className="w-8 h-8 text-champagne-700" />
             </div>
-            <h2 className="font-serif text-2xl font-bold">Your Bag is Empty</h2>
-            <p className="text-xs text-charcoal-muted">
-              Explore our luxury couture collection and add handcrafted garments to your bag.
+            <h2 className="font-serif text-2xl font-bold text-teal uppercase tracking-tight">Your Cart is Taking a Break.</h2>
+            <p className="text-xs text-charcoal-muted leading-relaxed font-sans">
+              Give it something to do. Your wardrobe called — it wants better attendance.
             </p>
             <Link
               href="/shop"
               className="inline-block bg-teal text-champagne px-8 py-3.5 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-teal-900 transition-all shadow-md"
             >
-              Explore Collection
+              Continue Shopping
             </Link>
           </div>
         ) : (
@@ -90,19 +91,20 @@ export default function CartPage() {
             {/* Item List */}
             <div className="lg:col-span-8 space-y-4">
               {/* Free Shipping Alert Bar */}
-              <div className="bg-sand/60 p-4 rounded-2xl border border-sand text-xs">
+              <div className="editorial-surface p-4 text-xs">
                 {remainingForFreeShipping > 0 ? (
                   <p className="text-charcoal">
                     Add <span className="font-bold text-teal">Rs. {remainingForFreeShipping.toLocaleString()}</span> PKR more to qualify for <span className="font-bold text-teal">Free Express Nationwide Shipping</span>.
                   </p>
                 ) : (
                   <p className="text-teal font-bold flex items-center gap-1.5">
-                    🎉 You have unlocked Free Express Nationwide Shipping across Pakistan!
+                    <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />
+                    <span>You have unlocked Free Express Nationwide Shipping across Pakistan!</span>
                   </p>
                 )}
               </div>
 
-              <div className="bg-offwhite rounded-3xl border border-sand overflow-hidden shadow-sm">
+              <div className="editorial-surface overflow-hidden">
                 <div className="divide-y divide-sand">
                   {cart.map((item) => (
                     <div key={item.id} className="p-6 flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between">
@@ -164,7 +166,7 @@ export default function CartPage() {
 
             {/* Order Summary Sidebar */}
             <div className="lg:col-span-4 space-y-6">
-              <div className="bg-sand/40 p-6 rounded-3xl border border-sand space-y-6 shadow-sm">
+              <div className="editorial-surface p-6 space-y-6">
                 <h3 className="font-serif text-xl font-bold text-teal border-b border-sand pb-3">Order Summary</h3>
 
                 {/* Promo Code Form */}
@@ -219,14 +221,27 @@ export default function CartPage() {
                   </div>
                 </div>
 
+                {/* Humorous Relatable Tip */}
+                <div className="bg-sand/60 border border-champagne/60 p-3 rounded-2xl flex items-start gap-2.5 text-xs text-charcoal">
+                  <Heart className="w-4 h-4 text-teal shrink-0 mt-0.5" />
+                  <div className="space-y-0.5">
+                    <p className="font-bold text-teal text-[11px] uppercase tracking-wider">
+                      Sister-Theft Advisory
+                    </p>
+                    <p className="text-[10.5px] text-charcoal-muted leading-tight">
+                      Checkout before your sister spots this tab and claims she was going to wear it first!
+                    </p>
+                  </div>
+                </div>
+
                 <Link
                   href="/checkout"
-                  className="w-full bg-teal text-champagne py-4 rounded-xl text-xs font-bold uppercase tracking-widest hover:bg-teal-900 transition-all shadow-md flex items-center justify-center gap-2"
+                  className="w-full btn-premium btn-primary !py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl flex items-center justify-center gap-2 border border-champagne/30 cursor-pointer"
                 >
-                  Proceed To Checkout <ArrowRight className="w-4 h-4" />
+                  Proceed To Instant Checkout <ArrowRight className="w-4 h-4 text-champagne" />
                 </Link>
 
-                <div className="flex items-center justify-center gap-2 text-[11px] text-charcoal-muted pt-2">
+                <div className="flex items-center justify-center gap-2 text-[11px] text-charcoal-muted pt-2 font-medium">
                   <ShieldCheck className="w-4 h-4 text-teal" />
                   <span>Cash On Delivery Available Nationwide Across Pakistan</span>
                 </div>

@@ -205,15 +205,15 @@ export default function CheckoutPage() {
           <div className="w-16 h-16 bg-sand rounded-full flex items-center justify-center mx-auto text-teal mb-4">
             <Truck className="w-8 h-8 text-champagne-700" />
           </div>
-          <h1 className="font-serif text-3xl font-bold text-teal">Your Shopping Bag is Empty</h1>
-          <p className="text-xs text-charcoal-muted mt-2">
-            Explore our unstitched lawn, silk chiffon, and velvet couture collections.
+          <h1 className="font-serif text-3xl font-bold text-teal uppercase tracking-tight">Your Cart is Taking a Break.</h1>
+          <p className="text-xs text-charcoal-muted mt-2 max-w-sm mx-auto leading-relaxed font-sans">
+            Give it something to do! Explore our ready-to-wear silhouettes and find your next go-to outfit.
           </p>
           <Link
             href="/shop"
             className="inline-block mt-6 bg-teal text-champagne px-8 py-3.5 rounded-xl text-xs uppercase font-bold tracking-widest shadow-md hover:bg-teal-900 transition-all"
           >
-            Explore Catalog
+            Continue Shopping
           </Link>
         </div>
       </PageTransition>
@@ -222,27 +222,30 @@ export default function CheckoutPage() {
 
   return (
     <PageTransition>
-      <div className="bg-offwhite min-h-screen py-12">
+      <div className="editorial-page !py-6 sm:!py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Header */}
-          <div className="border-b border-sand/80 pb-6 mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div>
-              <span className="text-[10px] uppercase tracking-[0.3em] font-semibold text-champagne-700 block">
-                WearOMNIA Guest Portal
+          <div className="border-b border-sand/80 pb-6 mb-8 sm:mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <span className="font-calligraphy text-xs sm:text-sm text-champagne-700 block tracking-[0.2em]">
+                Fast &amp; Simple
               </span>
-              <h1 className="font-serif text-3xl sm:text-4xl font-bold text-teal mt-0.5">
-                Single Page Express Checkout
+              <h1 className="font-serif text-2xl sm:text-4xl lg:text-5xl font-black text-teal tracking-tight">
+                Cash On Delivery Checkout
               </h1>
+              <p className="text-xs text-charcoal-muted pt-0.5 font-sans">
+                Almost there. Your next favourite outfit is waiting.
+              </p>
             </div>
-            <div className="flex items-center gap-2 text-xs text-teal bg-sand/60 px-4 py-2 rounded-full border border-sand/80">
-              <ShieldCheck className="w-4 h-4 text-champagne-700" />
-              <span>Zero Registration Required • Encrypted COD</span>
+            <div className="flex items-center gap-2 text-xs text-teal bg-sand/60 px-4 py-2.5 rounded-2xl border border-sand/80 font-medium self-start sm:self-auto">
+              <ShieldCheck className="w-4 h-4 text-teal shrink-0" />
+              <span>No Account Required • Pay When You Receive</span>
             </div>
           </div>
 
-          <form onSubmit={handleSubmitOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+          <form onSubmit={handleSubmitOrder} className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12">
             {/* Left Column: Form Steps */}
-            <div className="lg:col-span-7 space-y-8">
+            <div className="lg:col-span-7 space-y-6 sm:space-y-8">
               {/* Error Alert */}
               {formErrors._form && (
                 <div className="bg-red-50 text-red-700 border border-red-200 p-4 rounded-2xl text-xs font-semibold flex items-start gap-2">
@@ -252,7 +255,7 @@ export default function CheckoutPage() {
               )}
 
               {/* Step 1: Customer Contact */}
-              <div className="bg-offwhite p-6 sm:p-8 rounded-3xl border border-sand/80 shadow-sm space-y-6">
+              <div className="editorial-surface p-4 sm:p-6 lg:p-8 space-y-6">
                 <div className="flex items-center gap-3 border-b border-sand/60 pb-4">
                   <span className="w-7 h-7 rounded-full bg-teal text-champagne font-bold text-xs flex items-center justify-center">
                     1
@@ -274,9 +277,8 @@ export default function CheckoutPage() {
                         setFormData({ ...formData, fullName: e.target.value });
                         if (formErrors.fullName) setFormErrors({ ...formErrors, fullName: '' });
                       }}
-                      className={`w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border focus:outline-none focus:ring-1 ${
-                        formErrors.fullName ? 'border-red-500 focus:ring-red-500' : 'border-sand/80 focus:ring-teal'
-                      }`}
+                      className={`w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border focus:outline-none focus:ring-1 ${formErrors.fullName ? 'border-red-500 focus:ring-red-500' : 'border-sand/80 focus:ring-teal'
+                        }`}
                     />
                     {formErrors.fullName && (
                       <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1">
@@ -300,9 +302,8 @@ export default function CheckoutPage() {
                           setFormData({ ...formData, phone: e.target.value });
                           if (formErrors.phone) setFormErrors({ ...formErrors, phone: '' });
                         }}
-                        className={`w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border focus:outline-none focus:ring-1 ${
-                          formErrors.phone ? 'border-red-500 focus:ring-red-500' : 'border-sand/80 focus:ring-teal'
-                        }`}
+                        className={`w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border focus:outline-none focus:ring-1 ${formErrors.phone ? 'border-red-500 focus:ring-red-500' : 'border-sand/80 focus:ring-teal'
+                          }`}
                       />
                       {formErrors.phone && (
                         <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1">
@@ -323,9 +324,8 @@ export default function CheckoutPage() {
                           setFormData({ ...formData, whatsapp: e.target.value });
                           if (formErrors.whatsapp) setFormErrors({ ...formErrors, whatsapp: '' });
                         }}
-                        className={`w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border focus:outline-none focus:ring-1 ${
-                          formErrors.whatsapp ? 'border-red-500 focus:ring-red-500' : 'border-sand/80 focus:ring-teal'
-                        }`}
+                        className={`w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border focus:outline-none focus:ring-1 ${formErrors.whatsapp ? 'border-red-500 focus:ring-red-500' : 'border-sand/80 focus:ring-teal'
+                          }`}
                       />
                       {formErrors.whatsapp && (
                         <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1">
@@ -348,9 +348,8 @@ export default function CheckoutPage() {
                         setFormData({ ...formData, email: e.target.value });
                         if (formErrors.email) setFormErrors({ ...formErrors, email: '' });
                       }}
-                      className={`w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border focus:outline-none focus:ring-1 ${
-                        formErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-sand/80 focus:ring-teal'
-                      }`}
+                      className={`w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border focus:outline-none focus:ring-1 ${formErrors.email ? 'border-red-500 focus:ring-red-500' : 'border-sand/80 focus:ring-teal'
+                        }`}
                     />
                     {formErrors.email && (
                       <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1">
@@ -363,7 +362,7 @@ export default function CheckoutPage() {
               </div>
 
               {/* Step 2: Shipping Destination */}
-              <div className="bg-offwhite p-6 sm:p-8 rounded-3xl border border-sand/80 shadow-sm space-y-6">
+              <div className="editorial-surface p-4 sm:p-6 lg:p-8 space-y-6">
                 <div className="flex items-center gap-3 border-b border-sand/60 pb-4">
                   <span className="w-7 h-7 rounded-full bg-teal text-champagne font-bold text-xs flex items-center justify-center">
                     2
@@ -421,9 +420,8 @@ export default function CheckoutPage() {
                         setFormData({ ...formData, address: e.target.value });
                         if (formErrors.address) setFormErrors({ ...formErrors, address: '' });
                       }}
-                      className={`w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border focus:outline-none focus:ring-1 ${
-                        formErrors.address ? 'border-red-500 focus:ring-red-500' : 'border-sand/80 focus:ring-teal'
-                      }`}
+                      className={`w-full px-4 py-3 bg-sand/50 rounded-xl text-xs text-charcoal border focus:outline-none focus:ring-1 ${formErrors.address ? 'border-red-500 focus:ring-red-500' : 'border-sand/80 focus:ring-teal'
+                        }`}
                     />
                     {formErrors.address && (
                       <p className="text-[11px] text-red-600 mt-1 flex items-center gap-1">
@@ -463,7 +461,7 @@ export default function CheckoutPage() {
               </div>
 
               {/* Step 3: Payment Method */}
-              <div className="bg-offwhite p-6 sm:p-8 rounded-3xl border border-sand/80 shadow-sm space-y-4">
+              <div className="editorial-surface p-4 sm:p-6 lg:p-8 space-y-4">
                 <div className="flex items-center gap-3 border-b border-sand/60 pb-4">
                   <span className="w-7 h-7 rounded-full bg-teal text-champagne font-bold text-xs flex items-center justify-center">
                     3
@@ -489,7 +487,7 @@ export default function CheckoutPage() {
 
             {/* Right Column: Order Summary & Place Order */}
             <div className="lg:col-span-5 space-y-6">
-              <div className="bg-sand/60 p-6 sm:p-8 rounded-3xl border border-sand/80 shadow-lg sticky top-4 sm:top-28 space-y-6">
+              <div className="editorial-surface p-4 sm:p-6 lg:p-8 static lg:sticky lg:top-28 space-y-6">
                 <h3 className="font-serif text-xl font-bold text-teal border-b border-sand/80 pb-4">
                   Order Summary ({cart.reduce((a, b) => a + b.quantity, 0)} Items)
                 </h3>
@@ -630,7 +628,7 @@ export default function CheckoutPage() {
                   whileTap={{ scale: 0.98 }}
                   type="submit"
                   disabled={isSubmitting}
-                  className="w-full bg-teal text-champagne py-3.5 sm:py-4 rounded-xl text-sm sm:text-xs uppercase font-bold tracking-wider hover:bg-teal-900 transition-all shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 mt-6"
+                  className="w-full btn-premium btn-primary !py-4 rounded-2xl text-xs uppercase font-black tracking-widest transition-all shadow-2xl flex items-center justify-center gap-2.5 disabled:opacity-50 mt-6 border border-champagne/30 cursor-pointer"
                 >
                   {isSubmitting ? (
                     <span className="flex items-center gap-2">
@@ -638,18 +636,21 @@ export default function CheckoutPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Processing...
+                      Confirming Your Order...
                     </span>
                   ) : (
                     <>
-                      <Lock className="w-4 h-4" /> Place Order — COD <ArrowRight className="w-4 h-4" />
+                      <Lock className="w-4 h-4 text-champagne" /> Confirm Order (Cash On Delivery) <ArrowRight className="w-4 h-4 text-champagne" />
                     </>
                   )}
                 </motion.button>
 
-                <div className="text-[11px] text-center text-charcoal-muted space-y-1 pt-2">
-                  <p>🔒 7-Day Exchange Guarantee across Pakistan.</p>
-                  <p>Dispatched from Lahore via Express Courier.</p>
+                <div className="text-[11px] text-center text-charcoal-muted space-y-1 pt-2 font-medium">
+                  <p className="flex items-center justify-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-teal shrink-0" />
+                    <span>7-day easy exchange guarantee across all cities in Pakistan.</span>
+                  </p>
+                  <p>Express courier dispatch with discreet packaging (no family questions asked).</p>
                 </div>
               </div>
             </div>

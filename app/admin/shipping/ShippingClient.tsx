@@ -30,6 +30,8 @@ import {
   Phone,
   MapPin,
   HelpCircle,
+  Activity,
+  Banknote,
 } from 'lucide-react';
 import { SiteSettingsData } from '@/lib/settings';
 import {
@@ -376,7 +378,6 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
   const activeShipmentsList = shipments.filter((s) => isValidActiveShipment(s.status));
   const activeShipmentCount = activeShipmentsList.length;
   const totalActiveCod = activeShipmentsList.reduce((sum, s) => sum + (s.codAmount || 0), 0);
-
   const deliveredShipments = shipments.filter((s) => getCanonicalCourierStatus(s.status) === 'DELIVERED');
   const deliveredPendingSettlement = deliveredShipments.filter(
     (s) => s.settlementStatus !== 'SETTLED' && s.settlementStatus !== 'PAID'
@@ -384,9 +385,9 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
   const totalPendingSettlementValue = deliveredPendingSettlement.reduce((sum, s) => sum + (s.codAmount || 0), 0);
 
   return (
-    <div className="space-y-6 text-[#FAF8F5]">
+    <div className="admin-page text-[#FAF8F5]">
       {/* Header Banner */}
-      <div className="bg-[#0A2528] rounded-2xl border border-[#D4AF37]/20 p-6 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="admin-page-header">
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] font-bold text-[#D4AF37] bg-teal-950/80 px-3 py-0.5 rounded-md border border-[#D4AF37]/30">
@@ -404,29 +405,43 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2.5">
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
           <button
             onClick={handleTestDiagnostics}
             disabled={testingConnection}
-            className="bg-[#0D3337] hover:bg-[#103A3E] text-[#D4AF37] border border-[#D4AF37]/30 px-3.5 py-2 rounded-xl text-xs font-semibold tracking-wider transition-all flex items-center gap-2"
+            className="px-3 py-2 bg-[#0D3337] hover:bg-[#103A3E] text-[#D4AF37] border border-[#D4AF37]/30 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 disabled:opacity-50"
           >
-            {testingConnection ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
-            Test PostEx API
+            {testingConnection ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <Activity className="w-3.5 h-3.5" />
+            )}
+            <span>Courier Health Check</span>
           </button>
+
           <Link
-            href="/admin/settings"
-            className="bg-[#D4AF37] hover:bg-white text-black px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all shadow flex items-center gap-1.5"
+            href="/admin/shipping/returns"
+            className="px-3 py-2 bg-[#1A1505] hover:bg-[#2A2005] text-[#D4AF37] border border-[#D4AF37]/30 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5"
           >
-            Configure PostEx
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span>Returns &amp; Issues</span>
+          </Link>
+
+          <Link
+            href="/admin/shipping/cod"
+            className="px-3.5 py-2 bg-[#D4AF37] hover:bg-white text-black rounded-xl text-xs uppercase font-extrabold tracking-wider transition-all shadow-lg flex items-center gap-1.5"
+          >
+            <Banknote className="w-3.5 h-3.5" />
+            <span>COD Settlements</span>
           </Link>
         </div>
       </div>
 
-      {/* Global Alerts */}
+      {/* Diagnostics Alert */}
       {diagnosticResult && (
         <div
           className={`p-4 rounded-xl border text-xs font-medium flex items-center justify-between gap-4 ${
-            diagnosticResult.includes('✓') || diagnosticResult.includes('successfully')
+            diagnosticResult.includes('success') || diagnosticResult.includes('connected')
               ? 'bg-emerald-950/50 text-emerald-300 border-emerald-500/30'
               : 'bg-amber-950/50 text-amber-200 border-amber-500/30'
           }`}
@@ -455,8 +470,8 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
       )}
 
       {/* Metric Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#0A2528] p-4 rounded-2xl border border-[#D4AF37]/20 shadow space-y-1.5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <div className="admin-stat-card">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#D4AF37]">Active Parcels</span>
             <div className="w-7 h-7 rounded-lg bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center">
@@ -467,7 +482,7 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
           <span className="text-[11px] text-[#FAF8F5]/60 font-medium">Rs. {totalActiveCod.toLocaleString()} Active COD</span>
         </div>
 
-        <div className="bg-[#0A2528] p-4 rounded-2xl border border-amber-500/30 shadow space-y-1.5">
+        <div className="admin-stat-card border-amber-500/30">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400">Ready to Dispatch</span>
             <div className="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center">
@@ -478,9 +493,9 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
           <span className="text-[11px] text-amber-300/80 font-medium">Confirmed orders awaiting courier</span>
         </div>
 
-        <div className="bg-[#0A2528] p-4 rounded-2xl border border-emerald-500/30 shadow space-y-1.5">
+        <div className="admin-stat-card border-emerald-500/30">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Delivered & Pending CPR</span>
+            <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Delivered &amp; Pending CPR</span>
             <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
               <CreditCard className="w-3.5 h-3.5" />
             </div>
@@ -491,7 +506,7 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
           </span>
         </div>
 
-        <div className="bg-[#0A2528] p-4 rounded-2xl border border-[#D4AF37]/20 shadow space-y-1.5">
+        <div className="admin-stat-card">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#D4AF37]">Pickup Origin</span>
             <div className="w-7 h-7 rounded-lg bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center">
@@ -581,7 +596,7 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
       {/* Main Table View */}
       {statusTab === 'READY_FOR_POSTEX' ? (
         /* Confirmed Orders Awaiting Courier Dispatch */
-        <div className="bg-[#0A2528] rounded-2xl border border-[#D4AF37]/15 overflow-hidden shadow-xl">
+        <div className="admin-table-wrapper">
           <div className="p-5 border-b border-[#D4AF37]/15 flex items-center justify-between">
             <div>
               <h3 className="font-serif text-base font-bold text-[#D4AF37]">
@@ -594,7 +609,7 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="admin-table">
               <thead className="bg-[#06191B] text-[#D4AF37] uppercase tracking-wider font-semibold border-b border-[#D4AF37]/15">
                 <tr>
                   <th className="p-3.5">Order</th>
@@ -651,9 +666,9 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
         </div>
       ) : (
         /* Redesigned Enterprise Shipments Table */
-        <div className="bg-[#0A2528] rounded-2xl border border-[#D4AF37]/15 overflow-hidden shadow-xl">
+        <div className="admin-table-wrapper">
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="admin-table">
               <thead className="bg-[#06191B] text-[#D4AF37] uppercase tracking-wider font-semibold border-b border-[#D4AF37]/15">
                 <tr>
                   <th className="p-3.5">Tracking #</th>
@@ -793,7 +808,7 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
 
                         {/* Actions with Clear Hierarchy */}
                         <td className="p-3.5 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1.5">
+                          <div className="admin-action-group">
                             {/* Primary Action: Official PDF Airway Bill */}
                             {hasValidTracking && (
                               <a

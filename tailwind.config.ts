@@ -45,8 +45,11 @@ const config: Config = {
         sand: '#F4F0EA',
       },
       fontFamily: {
-        serif: ['var(--font-playfair)', 'Playfair Display', 'Georgia', 'serif'],
-        sans: ['var(--font-jost)', 'Jost', 'sans-serif'],
+        serif: ['Plus Jakarta Sans', 'Poppins', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        sans: ['Plus Jakarta Sans', 'Jost', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        calligraphy: ['Plus Jakarta Sans', 'Jost', '-apple-system', 'sans-serif'],
+        admin: ['Poppins', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        italicLuxury: ['Instrument Serif', 'Playfair Display', 'Georgia', 'serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',
@@ -55,6 +58,8 @@ const config: Config = {
         'scale-pop': 'scalePop 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
         'shimmer': 'shimmer 1.8s ease-in-out infinite',
         'badge-pop': 'badgePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
+        'float-3d': 'float3d 4s ease-in-out infinite',
+        'glow-pulse': 'glowPulse 2.5s ease-in-out infinite',
       },
       keyframes: {
         fadeIn: {
@@ -78,6 +83,14 @@ const config: Config = {
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
+        },
+        float3d: {
+          '0%, 100%': { transform: 'translateY(0px) rotateX(0deg) rotateY(0deg)' },
+          '50%': { transform: 'translateY(-6px) rotateX(1deg) rotateY(-1deg)' },
+        },
+        glowPulse: {
+          '0%, 100%': { opacity: '0.6', filter: 'drop-shadow(0 0 8px rgba(223, 195, 160, 0.3))' },
+          '50%': { opacity: '1', filter: 'drop-shadow(0 0 16px rgba(223, 195, 160, 0.6))' },
         },
       },
       aspectRatio: {

@@ -12,7 +12,7 @@ import {
   ArrowUpRight,
   MapPin,
   TrendingUp,
-  Sparkles,
+  Activity,
   RotateCcw,
   Boxes,
   CreditCard,
@@ -97,36 +97,40 @@ export default async function AdminDashboardPage() {
     .sort((a, b) => b.total - a.total);
 
   return (
-    <div className="space-y-8 text-[#FAF8F5]">
-      {/* Luxury Dark Glass Banner */}
-      <div className="bg-[#0A2528] p-6 sm:p-8 rounded-2xl border border-[#D4AF37]/20 shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] font-bold text-[#D4AF37] bg-teal-950/80 px-3 py-0.5 rounded-md border border-[#D4AF37]/30">
-              <Sparkles className="w-3 h-3 text-[#D4AF37]" /> Enterprise Command Center
+    <div className="admin-page text-[#FAF8F5]">
+      {/* Luxury Dark Glass Banner with 3D Styling */}
+      <div className="bg-[#0A2528] p-6 sm:p-8 rounded-3xl border border-[#D4AF37]/30 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6 relative overflow-hidden admin-card-3d">
+        <div className="absolute top-0 right-0 w-80 h-80 bg-[#D4AF37]/5 rounded-full blur-3xl pointer-events-none" />
+        <div className="relative z-10">
+          <p className="text-xs uppercase tracking-[0.22em] text-[#D4AF37] mb-1 font-bold">
+            Executive Command Center
+          </p>
+          <div className="flex items-center gap-2 mb-2">
+            <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.25em] font-bold text-[#D4AF37] bg-teal-950/80 px-3 py-1 rounded-full border border-[#D4AF37]/30 badge-3d">
+              <Activity className="w-3 h-3 text-[#D4AF37]" /> Live Commercial Operations
             </span>
-            <span className="text-[10px] text-emerald-400 font-mono font-bold flex items-center gap-1 bg-emerald-950/50 px-2 py-0.5 rounded-md border border-emerald-500/30">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> LIVE OPERATIONS
+            <span className="text-[10px] text-emerald-400 font-mono font-bold flex items-center gap-1.5 bg-emerald-950/60 px-2.5 py-1 rounded-full border border-emerald-500/30">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" /> System Active
             </span>
           </div>
-          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#FAF8F5]">
-            WearOMNIA Operations Hub
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#FAF8F5] tracking-tight">
+            Store Performance & Logistics Hub
           </h1>
-          <p className="text-xs text-[#FAF8F5]/70 mt-1 font-sans">
-            Real-time commercial performance, nationwide COD dispatch pipeline, and inventory intelligence.
+          <p className="text-xs text-[#FAF8F5]/70 mt-1.5 font-sans max-w-xl leading-relaxed">
+            Real-time commercial performance, nationwide Cash On Delivery dispatch pipeline, and inventory intelligence.
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 relative z-10">
           <Link
             href="/admin/shipping"
-            className="bg-[#0D3337] hover:bg-[#103A3E] text-[#D4AF37] border border-[#D4AF37]/30 px-4 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider transition-all flex items-center gap-2 shadow"
+            className="bg-[#0D3337] hover:bg-[#103A3E] text-[#D4AF37] border border-[#D4AF37]/30 px-5 py-3 rounded-xl text-xs uppercase font-bold tracking-wider transition-all flex items-center gap-2 shadow-lg btn-3d"
           >
             <Truck className="w-4 h-4" /> Shipping Hub
           </Link>
           <Link
             href="/admin/orders"
-            className="bg-[#D4AF37] text-black hover:bg-white px-5 py-2.5 rounded-xl text-xs uppercase font-extrabold tracking-wider transition-all shadow-lg flex items-center gap-1.5"
+            className="bg-[#D4AF37] text-black hover:bg-white px-6 py-3 rounded-xl text-xs uppercase font-extrabold tracking-wider transition-all shadow-xl flex items-center gap-2 btn-3d"
           >
             Orders Console <ArrowUpRight className="w-4 h-4" />
           </Link>
@@ -134,48 +138,48 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Primary KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
         {/* Today's Performance */}
-        <div className="bg-[#0A2528] p-5 rounded-2xl border border-[#D4AF37]/20 shadow space-y-2">
+        <div className="admin-stat-card admin-card-3d transition-all">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#D4AF37]">Today&apos;s Sales</span>
-            <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center border border-[#D4AF37]/30 shadow-inner">
               <Banknote className="w-4 h-4" />
             </div>
           </div>
-          <p className="font-serif text-2xl font-bold text-[#FAF8F5]">Rs. {todayRevenue.toLocaleString()}</p>
-          <div className="flex items-center justify-between text-[11px] pt-1">
-            <span className="text-emerald-400 font-semibold">{todayOrdersCount} orders placed</span>
-            <span className="text-[10px] text-[#FAF8F5]/50 font-mono">Today</span>
+          <p className="font-serif text-2xl sm:text-3xl font-bold text-[#FAF8F5]">Rs. {todayRevenue.toLocaleString()}</p>
+          <div className="flex items-center justify-between text-[11px] pt-1 border-t border-white/5">
+            <span className="text-emerald-400 font-semibold">{todayOrdersCount} orders placed today</span>
+            <span className="text-[10px] text-[#FAF8F5]/50 font-mono">Live</span>
           </div>
         </div>
 
         {/* Total Recognized Revenue */}
-        <div className="bg-[#0A2528] p-5 rounded-2xl border border-[#D4AF37]/20 shadow space-y-2">
+        <div className="admin-stat-card admin-card-3d transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-[#D4AF37]">Gross Revenue</span>
-            <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-[#D4AF37]">Total Sales Volume</span>
+            <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center border border-[#D4AF37]/30 shadow-inner">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <p className="font-serif text-2xl font-bold text-[#FAF8F5]">Rs. {totalRevenue.toLocaleString()}</p>
-          <div className="flex items-center justify-between text-[11px] pt-1">
-            <span className="text-[#D4AF37] font-semibold">AOV: Rs. {averageOrderValue.toLocaleString()}</span>
+          <p className="font-serif text-2xl sm:text-3xl font-bold text-[#FAF8F5]">Rs. {totalRevenue.toLocaleString()}</p>
+          <div className="flex items-center justify-between text-[11px] pt-1 border-t border-white/5">
+            <span className="text-[#D4AF37] font-semibold">Avg Order: Rs. {averageOrderValue.toLocaleString()}</span>
             <span className="text-[10px] text-[#FAF8F5]/50 font-mono">{validOrders.length} valid orders</span>
           </div>
         </div>
 
         {/* Inventory Stock Valuation */}
-        <div className="bg-[#0A2528] p-5 rounded-2xl border border-[#D4AF37]/20 shadow space-y-2">
+        <div className="admin-stat-card admin-card-3d transition-all">
           <div className="flex items-center justify-between">
             <span className="text-[10px] uppercase font-bold tracking-wider text-[#D4AF37]">Stock Valuation</span>
-            <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center">
+            <div className="w-9 h-9 rounded-xl bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center border border-[#D4AF37]/30 shadow-inner">
               <Boxes className="w-4 h-4" />
             </div>
           </div>
-          <p className="font-serif text-2xl font-bold text-[#FAF8F5]">Rs. {totalStockValuation.toLocaleString()}</p>
-          <div className="flex items-center justify-between text-[11px] pt-1">
-            <span className="text-emerald-400 font-semibold">{totalProducts} active catalog SKUs</span>
+          <p className="font-serif text-2xl sm:text-3xl font-bold text-[#FAF8F5]">Rs. {totalStockValuation.toLocaleString()}</p>
+          <div className="flex items-center justify-between text-[11px] pt-1 border-t border-white/5">
+            <span className="text-emerald-400 font-semibold">{totalProducts} active products</span>
             <Link href="/admin/inventory" className="text-[#D4AF37] hover:underline text-[10px] font-bold">
               Manage →
             </Link>
@@ -183,16 +187,16 @@ export default async function AdminDashboardPage() {
         </div>
 
         {/* Courier COD Pending Settlement */}
-        <div className="bg-[#0A2528] p-5 rounded-2xl border border-amber-500/30 shadow space-y-2">
+        <div className="admin-stat-card border-amber-500/35 hover:border-amber-400/60 admin-card-3d transition-all">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400">Delivered Pending CPR</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400">Delivered COD Awaiting Bank</span>
+            <div className="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center border border-amber-500/30 shadow-inner">
               <CreditCard className="w-4 h-4" />
             </div>
           </div>
-          <p className="font-serif text-2xl font-bold text-amber-400">Rs. {pendingSettlementValue.toLocaleString()}</p>
-          <div className="flex items-center justify-between text-[11px] pt-1">
-            <span className="text-amber-300 font-semibold">{deliveredUnsettledShipments.length} parcels awaiting transfer</span>
+          <p className="font-serif text-2xl sm:text-3xl font-bold text-amber-400">Rs. {pendingSettlementValue.toLocaleString()}</p>
+          <div className="flex items-center justify-between text-[11px] pt-1 border-t border-white/5">
+            <span className="text-amber-300 font-semibold">{deliveredUnsettledShipments.length} parcels pending payment</span>
             <Link href="/admin/shipping/cod" className="text-amber-400 hover:underline text-[10px] font-bold">
               Reconcile →
             </Link>
@@ -201,83 +205,84 @@ export default async function AdminDashboardPage() {
       </div>
 
       {/* Operations Pipeline Status Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
         <Link
           href="/admin/orders?status=PENDING"
-          className="bg-[#0A2528] hover:bg-[#103A3E]/60 p-4 rounded-xl border border-amber-500/30 transition-all block"
+          className="bg-[#0A2528] hover:bg-[#103A3E]/60 p-5 rounded-2xl border border-amber-500/30 transition-all block admin-card-3d group"
         >
           <span className="text-[10px] uppercase font-bold text-amber-400 block tracking-wider">Pending Orders</span>
-          <span className="font-serif text-2xl font-bold text-amber-400 block mt-1">{pendingOrders}</span>
-          <span className="text-[10px] text-[#FAF8F5]/50">Awaiting confirmation</span>
+          <span className="font-serif text-2xl font-bold text-amber-400 block mt-1.5 group-hover:scale-105 transition-transform">{pendingOrders}</span>
+          <span className="text-[10px] text-[#FAF8F5]/60 mt-0.5 block">Awaiting confirmation</span>
         </Link>
 
         <Link
           href="/admin/orders?status=CONFIRMED"
-          className="bg-[#0A2528] hover:bg-[#103A3E]/60 p-4 rounded-xl border border-blue-500/30 transition-all block"
+          className="bg-[#0A2528] hover:bg-[#103A3E]/60 p-5 rounded-2xl border border-blue-500/30 transition-all block admin-card-3d group"
         >
           <span className="text-[10px] uppercase font-bold text-blue-400 block tracking-wider">Confirmed</span>
-          <span className="font-serif text-2xl font-bold text-blue-400 block mt-1">{confirmedOrders}</span>
-          <span className="text-[10px] text-[#FAF8F5]/50">Ready for packing</span>
+          <span className="font-serif text-2xl font-bold text-blue-400 block mt-1.5 group-hover:scale-105 transition-transform">{confirmedOrders}</span>
+          <span className="text-[10px] text-[#FAF8F5]/60 mt-0.5 block">Ready for packing</span>
         </Link>
 
         <Link
           href="/admin/shipping?tab=IN_TRANSIT"
-          className="bg-[#0A2528] hover:bg-[#103A3E]/60 p-4 rounded-xl border border-cyan-500/30 transition-all block"
+          className="bg-[#0A2528] hover:bg-[#103A3E]/60 p-5 rounded-2xl border border-cyan-500/30 transition-all block admin-card-3d group"
         >
-          <span className="text-[10px] uppercase font-bold text-cyan-400 block tracking-wider">In Courier Transit</span>
-          <span className="font-serif text-2xl font-bold text-cyan-400 block mt-1">{dispatchedOrders}</span>
-          <span className="text-[10px] text-[#FAF8F5]/50">With delivery network</span>
+          <span className="text-[10px] uppercase font-bold text-cyan-400 block tracking-wider">With Courier</span>
+          <span className="font-serif text-2xl font-bold text-cyan-400 block mt-1.5 group-hover:scale-105 transition-transform">{dispatchedOrders}</span>
+          <span className="text-[10px] text-[#FAF8F5]/60 mt-0.5 block">In transit to customer</span>
         </Link>
 
         <Link
           href="/admin/orders?status=DELIVERED"
-          className="bg-[#0A2528] hover:bg-[#103A3E]/60 p-4 rounded-xl border border-emerald-500/30 transition-all block"
+          className="bg-[#0A2528] hover:bg-[#103A3E]/60 p-5 rounded-2xl border border-emerald-500/30 transition-all block admin-card-3d group"
         >
           <span className="text-[10px] uppercase font-bold text-emerald-400 block tracking-wider">Delivered</span>
-          <span className="font-serif text-2xl font-bold text-emerald-400 block mt-1">{deliveredOrders}</span>
-          <span className="text-[10px] text-[#FAF8F5]/50">Completed fulfillments</span>
+          <span className="font-serif text-2xl font-bold text-emerald-400 block mt-1.5 group-hover:scale-105 transition-transform">{deliveredOrders}</span>
+          <span className="text-[10px] text-[#FAF8F5]/60 mt-0.5 block">Successfully completed</span>
         </Link>
 
         <Link
           href="/admin/shipping/returns"
-          className="bg-[#0A2528] hover:bg-[#103A3E]/60 p-4 rounded-xl border border-rose-500/30 transition-all block"
+          className="bg-[#0A2528] hover:bg-[#103A3E]/60 p-5 rounded-2xl border border-rose-500/30 transition-all block admin-card-3d group"
         >
           <span className="text-[10px] uppercase font-bold text-rose-400 block tracking-wider">Returns / RTO</span>
-          <span className="font-serif text-2xl font-bold text-rose-400 block mt-1">{returnedOrders}</span>
-          <span className="text-[10px] text-[#FAF8F5]/50">Shipper advice required</span>
+          <span className="font-serif text-2xl font-bold text-rose-400 block mt-1.5 group-hover:scale-105 transition-transform">{returnedOrders}</span>
+          <span className="text-[10px] text-[#FAF8F5]/60 mt-0.5 block">Return advice needed</span>
         </Link>
 
         <Link
           href="/admin/inventory?filter=LOW_STOCK"
-          className="bg-[#0A2528] hover:bg-[#103A3E]/60 p-4 rounded-xl border border-amber-500/30 transition-all block"
+          className="bg-[#0A2528] hover:bg-[#103A3E]/60 p-5 rounded-2xl border border-amber-500/30 transition-all block admin-card-3d group"
         >
           <span className="text-[10px] uppercase font-bold text-amber-400 block tracking-wider">Low / Out Stock</span>
-          <span className="font-serif text-2xl font-bold text-amber-400 block mt-1">
+          <span className="font-serif text-2xl font-bold text-amber-400 block mt-1.5 group-hover:scale-105 transition-transform">
             {lowStockProducts + outOfStockProducts}
           </span>
-          <span className="text-[10px] text-[#FAF8F5]/50">{outOfStockProducts} zero stock</span>
+          <span className="text-[10px] text-[#FAF8F5]/60 mt-0.5 block">{outOfStockProducts} sold out</span>
         </Link>
       </div>
 
       {/* Main Content Split: Recent Orders Table & Regional Sales */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-7">
         {/* Recent Orders Overview */}
-        <div className="lg:col-span-2 bg-[#0A2528] rounded-2xl border border-[#D4AF37]/15 overflow-hidden shadow-xl">
-          <div className="p-5 border-b border-[#D4AF37]/15 flex items-center justify-between">
+        <div className="lg:col-span-2 bg-[#0A2528] rounded-3xl border border-[#D4AF37]/20 overflow-hidden shadow-2xl admin-card-3d">
+          <div className="p-6 border-b border-[#D4AF37]/15 flex items-center justify-between">
             <div>
-              <h2 className="font-serif text-base font-bold text-[#FAF8F5]">Recent Commercial Orders</h2>
-              <p className="text-xs text-[#FAF8F5]/60 mt-0.5">Live order feed with instant fulfillment status</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] font-bold">Live Order Feed</p>
+              <h2 className="font-serif text-lg font-bold text-[#FAF8F5]">Recent Customer Orders</h2>
+              <p className="text-xs text-[#FAF8F5]/60 mt-0.5 font-sans">Real-time orders with instant status and tracking</p>
             </div>
             <Link
               href="/admin/orders"
-              className="text-xs uppercase font-bold tracking-wider text-[#D4AF37] hover:underline"
+              className="text-xs uppercase font-bold tracking-wider text-[#D4AF37] hover:text-white transition-colors"
             >
               View All Orders →
             </Link>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="admin-table">
               <thead className="bg-[#06191B] text-[#D4AF37] text-[10px] font-bold uppercase tracking-wider border-b border-[#D4AF37]/15">
                 <tr>
                   <th className="p-3.5">Order</th>
@@ -333,34 +338,35 @@ export default async function AdminDashboardPage() {
         </div>
 
         {/* Regional City Distribution */}
-        <div className="bg-[#0A2528] rounded-2xl border border-[#D4AF37]/15 p-5 shadow-xl space-y-4">
+        <div className="bg-[#0A2528] rounded-3xl border border-[#D4AF37]/20 p-6 shadow-2xl space-y-4 admin-card-3d">
           <div>
-            <h2 className="font-serif text-base font-bold text-[#FAF8F5]">Regional Sales Breakdown</h2>
-            <p className="text-xs text-[#FAF8F5]/60 mt-0.5">Top delivery destinations by revenue</p>
+            <p className="text-[10px] uppercase tracking-[0.2em] text-[#D4AF37] font-bold">Nationwide Reach</p>
+            <h2 className="font-serif text-lg font-bold text-[#FAF8F5]">Regional Sales Breakdown</h2>
+            <p className="text-xs text-[#FAF8F5]/60 mt-0.5 font-sans">Top delivery destinations by revenue</p>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-3.5">
             {citySalesList.length === 0 ? (
-              <p className="text-xs text-[#FAF8F5]/50 py-4 text-center">No delivery data yet.</p>
+              <p className="text-xs text-[#FAF8F5]/50 py-4 text-center">No delivery data recorded yet.</p>
             ) : (
               citySalesList.slice(0, 6).map((item, idx) => {
                 const percentage = totalRevenue > 0 ? Math.round((item.total / totalRevenue) * 100) : 0;
                 return (
-                  <div key={item.city} className="space-y-1">
+                  <div key={item.city} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-1.5">
-                        <span className="w-4 h-4 rounded-full bg-[#103A3E] text-[#D4AF37] font-mono text-[9px] font-bold flex items-center justify-center">
+                      <div className="flex items-center gap-2">
+                        <span className="w-5 h-5 rounded-md bg-[#103A3E] text-[#D4AF37] font-mono text-[10px] font-bold flex items-center justify-center border border-[#D4AF37]/30 shadow-inner">
                           {idx + 1}
                         </span>
                         <span className="font-semibold text-[#FAF8F5]">{item.city}</span>
                       </div>
-                      <span className="font-mono text-[#FAF8F5]/80 font-bold">
-                        Rs. {item.total.toLocaleString()} ({item.count})
+                      <span className="font-mono text-[#FAF8F5]/90 font-bold">
+                        Rs. {item.total.toLocaleString()} <span className="text-[10px] text-[#FAF8F5]/50 font-normal">({item.count})</span>
                       </span>
                     </div>
-                    <div className="w-full h-1.5 bg-[#06191B] rounded-full overflow-hidden">
+                    <div className="w-full h-2 bg-[#06191B] rounded-full overflow-hidden p-0.5 border border-white/5">
                       <div
-                        className="h-full bg-[#D4AF37] rounded-full transition-all duration-500"
+                        className="h-full bg-gradient-to-r from-[#B38F28] via-[#D4AF37] to-[#F3E5AB] rounded-full transition-all duration-700 shadow-sm"
                         style={{ width: `${percentage}%` }}
                       />
                     </div>
@@ -370,9 +376,11 @@ export default async function AdminDashboardPage() {
             )}
           </div>
 
-          <div className="pt-3 border-t border-[#D4AF37]/15 flex items-center justify-between text-xs">
-            <span className="text-[#FAF8F5]/60">Total Active Customers:</span>
-            <span className="font-bold font-mono text-[#D4AF37]">{totalCustomers}</span>
+          <div className="pt-4 border-t border-[#D4AF37]/15 flex items-center justify-between text-xs">
+            <span className="text-[#FAF8F5]/70 font-sans">Total Registered Customers:</span>
+            <span className="font-bold font-mono text-[#D4AF37] text-sm bg-teal-950/80 px-2.5 py-0.5 rounded-md border border-[#D4AF37]/30">
+              {totalCustomers}
+            </span>
           </div>
         </div>
       </div>

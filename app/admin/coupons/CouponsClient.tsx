@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Tag, Plus, Check, X, Loader2, Sparkles, Trash2, Edit3, Power, AlertCircle } from 'lucide-react';
+import { Tag, Plus, Check, X, Loader2, Trash2, Edit3, Power, AlertCircle } from 'lucide-react';
 import { DeleteConfirmModal } from '@/components/admin/DeleteConfirmModal';
 
 interface CouponItem {
@@ -142,35 +142,36 @@ export const CouponsClient: React.FC<{ initialCoupons: CouponItem[] }> = ({ init
   };
 
   return (
-    <div className="space-y-8 text-[#FAF8F5]">
+    <div className="admin-page text-[#FAF8F5]">
       {/* Header */}
-      <div className="bg-[#0A2528]/85 backdrop-blur-2xl p-8 rounded-3xl border border-[#D4AF37]/30 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="admin-page-header">
         <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-[#D4AF37] mb-1 font-bold">Exclusive Incentives</p>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.25em] font-bold text-[#D4AF37] bg-teal-950/80 px-3.5 py-1 rounded-full border border-[#D4AF37]/30">
+            <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.25em] font-bold text-[#D4AF37] bg-teal-950/80 px-3.5 py-1 rounded-full border border-[#D4AF37]/30 badge-3d">
               <Tag className="w-3 h-3 text-[#D4AF37]" /> Promotions & Discounts
             </span>
           </div>
-          <h1 className="font-serif text-3xl font-bold text-[#FAF8F5] mt-2">
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#FAF8F5] mt-2">
             Promo Coupons & Vouchers ({coupons.length})
           </h1>
           <p className="text-xs text-[#FAF8F5]/70 mt-1 font-sans">
-            Create, edit, toggle, or permanently delete promo discount codes for customer checkout.
+            Create, edit, toggle, or delete promotional discount codes for customer checkout.
           </p>
         </div>
         <button
           onClick={openCreateModal}
-          className="bg-[#D4AF37] text-black hover:bg-white px-6 py-3 rounded-xl text-xs uppercase font-extrabold tracking-widest transition-all shadow-lg flex items-center justify-center gap-2"
+          className="bg-[#D4AF37] text-black hover:bg-white px-6 py-3 rounded-xl text-xs uppercase font-extrabold tracking-widest transition-all shadow-xl flex items-center justify-center gap-2 btn-3d shrink-0"
         >
           <Plus className="w-4 h-4" /> Create New Coupon
         </button>
       </div>
 
       {/* Coupons Table */}
-      <div className="bg-[#0A2528]/80 backdrop-blur-2xl rounded-3xl border border-[#D4AF37]/20 shadow-2xl overflow-hidden">
+      <div className="admin-table-wrapper">
         <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#06191B] text-[#D4AF37] uppercase tracking-wider font-semibold border-b border-[#D4AF37]/15">
+          <table className="admin-table">
+            <thead>
               <tr>
                 <th className="p-4">Coupon Code</th>
                 <th className="p-4">Discount Type</th>
@@ -205,31 +206,32 @@ export const CouponsClient: React.FC<{ initialCoupons: CouponItem[] }> = ({ init
                     <td className="p-4">
                       <button
                         onClick={() => handleToggleActive(c)}
-                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all inline-flex items-center gap-1 ${
-                          c.isActive
+                        className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border transition-all inline-flex items-center gap-1 ${c.isActive
                             ? 'bg-emerald-950/60 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900/80'
                             : 'bg-gray-950/60 text-gray-400 border-gray-500/40 hover:bg-gray-900/80'
-                        }`}
+                          }`}
                         title="Click to toggle Active/Inactive"
                       >
                         <Power className="w-3 h-3" />
                         {c.isActive ? 'Active' : 'Inactive'}
                       </button>
                     </td>
-                    <td className="p-4 text-right space-x-2">
-                      <button
-                        onClick={() => openEditModal(c)}
-                        className="bg-[#103A3E] hover:bg-[#D4AF37] hover:text-black text-[#D4AF37] border border-[#D4AF37]/30 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all inline-flex items-center gap-1 shadow"
-                      >
-                        <Edit3 className="w-3 h-3" /> Edit
-                      </button>
-                      <button
-                        onClick={() => setDeleteModalCoupon(c)}
-                        className="bg-red-950/40 hover:bg-red-900/70 text-red-300 border border-red-800/40 px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all inline-flex items-center gap-1 shadow"
-                        title="Permanently Delete Coupon"
-                      >
-                        <Trash2 className="w-3 h-3 text-red-400" /> Delete
-                      </button>
+                    <td className="p-4 text-right">
+                      <div className="admin-action-group">
+                        <button
+                          onClick={() => openEditModal(c)}
+                          className="admin-btn border-[#D4AF37]/30 text-[#D4AF37] hover:text-black hover:bg-[#D4AF37]"
+                        >
+                          <Edit3 className="w-3 h-3" /> Edit
+                        </button>
+                        <button
+                          onClick={() => setDeleteModalCoupon(c)}
+                          className="admin-btn border-rose-500/30 text-rose-300 hover:bg-rose-950/50"
+                          title="Permanently Delete Coupon"
+                        >
+                          <Trash2 className="w-3 h-3 text-red-400" /> Delete
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -17,9 +17,11 @@ import {
   X,
   Plus,
   Minus,
+  CheckCircle2,
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
+import { useFlyToCart } from '@/components/cart/FlyToCartProvider';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { SizeGuideModal } from '@/components/shop/SizeGuideModal';
 
@@ -31,6 +33,8 @@ interface ProductClientProps {
 export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedProducts }) => {
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
+  const { triggerFlyToCart } = useFlyToCart();
+  const mainImageRef = useRef<HTMLDivElement>(null);
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -61,21 +65,26 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
   const currentStock = currentVariant ? currentVariant.stock : product.stockQuantity;
 
   const handleAddToCart = () => {
-    addToCart({
-      productId: product.id,
-      title: product.title,
-      slug: product.slug,
-      image: images[0]?.url,
-      price: activePrice,
-      basePrice: product.basePrice,
-      size: selectedSize,
-      color: selectedColor,
-      sku: product.sku,
-      quantity,
-      maxStock: currentStock,
+    const currentImgSrc = images[selectedImageIndex]?.url || images[0]?.url || '';
+    const imgEl = mainImageRef.current?.querySelector('img') || mainImageRef.current;
+
+    triggerFlyToCart(imgEl, currentImgSrc, () => {
+      addToCart({
+        productId: product.id,
+        title: product.title,
+        slug: product.slug,
+        image: currentImgSrc,
+        price: activePrice,
+        basePrice: product.basePrice,
+        size: selectedSize,
+        color: selectedColor,
+        sku: product.sku,
+        quantity,
+        maxStock: currentStock,
+      });
+      setAddedToast(true);
+      setTimeout(() => setAddedToast(false), 800);
     });
-    setAddedToast(true);
-    setTimeout(() => setAddedToast(false), 2000);
   };
 
   const handleBuyNow = () => {
@@ -123,7 +132,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
   return (
-    <div className="bg-offwhite min-h-screen py-8 pb-24 sm:pb-8">
+    <div className="editorial-page !py-8 !pb-24 sm:!pb-8">
       {/* Breadcrumb */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-6">
         <div className="flex items-center gap-2 text-xs text-charcoal-muted uppercase tracking-wider">
@@ -154,20 +163,19 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
                   <button
                     key={i}
                     onClick={() => setSelectedImageIndex(i)}
-                    className={`relative w-20 h-24 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${
-                      selectedImageIndex === i
-                        ? 'border-teal shadow-md scale-105'
-                        : 'border-sand opacity-70 hover:opacity-100'
-                    }`}
+                    className={`relative w-20 h-24 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${selectedImageIndex === i
+                      ? 'border-teal shadow-md scale-105'
+                      : 'border-sand opacity-70 hover:opacity-100'
+                      }`}
                   >
-                    <Image 
-                      src={img.url} 
-                      alt="thumb" 
-                      fill 
+                    <Image
+                      src={img.url}
+                      alt="thumb"
+                      fill
                       sizes="80px"
                       loading="lazy"
-                      quality={80}
-                      className="object-cover" 
+                      quality={85}
+                      className="object-cover"
                     />
                   </button>
                 ))}
@@ -175,14 +183,14 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
             )}
 
             {/* Main Image with Zoom & Lightbox Trigger */}
-            <div className="relative flex-1 aspect-[3/4] rounded-3xl overflow-hidden bg-sand border border-sand shadow-lg group">
+            <div ref={mainImageRef} className="relative flex-1 aspect-[3/4] rounded-lg overflow-hidden bg-sand border border-sand shadow-lg group">
               <Image
                 src={images[selectedImageIndex]?.url}
                 alt={product.title}
                 fill
                 priority
                 sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 40vw"
-                quality={90}
+                quality={85}
                 className="object-cover transition-transform duration-300 group-hover:scale-105 cursor-zoom-in"
                 onClick={() => setLightboxOpen(true)}
               />
@@ -199,33 +207,38 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
           {/* Right: Product Purchase Details */}
           <div className="lg:col-span-5 space-y-6">
             <div>
-              <span className="text-xs uppercase tracking-[0.25em] font-semibold text-champagne-700">
-                SKU: {product.sku} • {product.category?.name || 'Luxury Fashion'}
+              <span className="text-xs uppercase tracking-[0.22em] font-bold text-champagne-700">
+                SKU: {product.sku} • {product.category?.name || 'Exclusive Collection'}
               </span>
-              <h1 className="font-serif text-3xl sm:text-4xl font-bold text-teal mt-1">
+              <h1 className="font-serif text-3xl sm:text-4xl font-black text-teal mt-1 tracking-tight">
                 {product.title}
               </h1>
 
               {/* Price & Rating */}
-              <div className="flex items-center justify-between mt-4 pb-4 border-b border-sand">
+              <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pb-4 border-b border-sand/80">
                 <div className="flex items-baseline gap-3">
-                  <span className="font-serif text-3xl font-bold text-teal">
+                  <span className="font-sans text-3xl sm:text-4xl font-black text-teal">
                     Rs. {activePrice.toLocaleString()}
                   </span>
                   {product.discountPrice && (
-                    <span className="text-sm text-charcoal-muted line-through">
-                      Rs. {product.basePrice.toLocaleString()}
-                    </span>
+                    <>
+                      <span className="text-sm sm:text-base text-charcoal-muted line-through font-medium">
+                        Rs. {product.basePrice.toLocaleString()}
+                      </span>
+                      <span className="badge-3d bg-champagne text-teal-950 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border border-champagne/40">
+                        SAVE {Math.round(((product.basePrice - product.discountPrice) / product.basePrice) * 100)}%
+                      </span>
+                    </>
                   )}
                 </div>
 
-                <div className="flex items-center gap-1 text-champagne text-xs font-semibold">
+                <div className="flex items-center gap-1.5 text-champagne text-xs font-bold">
                   <div className="flex">
                     {[...Array(5)].map((_, i) => (
                       <Star key={i} className="w-4 h-4 fill-current text-champagne" />
                     ))}
                   </div>
-                  <span className="text-charcoal font-sans">({product.reviews.length} Reviews)</span>
+                  <span className="text-charcoal-muted font-sans font-medium">({product.reviews.length} Verified Reviews)</span>
                 </div>
               </div>
             </div>
@@ -234,6 +247,14 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
             <p className="text-xs text-charcoal-muted leading-relaxed font-sans">
               {product.description}
             </p>
+
+            {/* Relatable Compliment Note */}
+            <div className="bg-sand/50 border border-sand/80 rounded-2xl p-3.5 flex items-start gap-2.5">
+              <CheckCircle2 className="w-4 h-4 text-champagne-700 shrink-0 mt-0.5" />
+              <p className="text-[11px] sm:text-xs text-charcoal/90 leading-relaxed font-sans">
+                <strong className="text-teal font-bold">The Compliment Magnet:</strong> The kind of outfit that makes <span className="italic font-medium">&ldquo;Where did you get this?&rdquo;</span> inevitable. Looks effortless — we&apos;ll let you take the credit.
+              </p>
+            </div>
 
             {/* Variants Selector */}
             {sizes.length > 0 && (
@@ -252,11 +273,10 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
                     <button
                       key={sz}
                       onClick={() => setSelectedSize(sz)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${
-                        selectedSize === sz
-                          ? 'bg-teal text-champagne border-teal shadow-md scale-105'
-                          : 'bg-sand text-charcoal border-sand hover:border-champagne'
-                      }`}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${selectedSize === sz
+                        ? 'bg-teal text-champagne border-teal shadow-md scale-105'
+                        : 'bg-sand text-charcoal border-sand hover:border-champagne'
+                        }`}
                     >
                       {sz}
                     </button>
@@ -273,11 +293,10 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
                     <button
                       key={col}
                       onClick={() => setSelectedColor(col)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${
-                        selectedColor === col
-                          ? 'bg-teal text-champagne border-teal shadow-md scale-105'
-                          : 'bg-sand text-charcoal border-sand hover:border-champagne'
-                      }`}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${selectedColor === col
+                        ? 'bg-teal text-champagne border-teal shadow-md scale-105'
+                        : 'bg-sand text-charcoal border-sand hover:border-champagne'
+                        }`}
                     >
                       {col}
                     </button>
@@ -309,21 +328,21 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
               </span>
             </div>
 
-            {/* Action Buttons */}
-            <div className="space-y-3 pt-4 border-t border-sand">
+            {/* Action Buttons with 3D Micro-Interactions */}
+            <div className="space-y-3 pt-4 border-t border-sand/80">
               <div className="flex gap-3">
                 <button
                   onClick={handleAddToCart}
                   disabled={currentStock <= 0}
-                  className="flex-1 bg-teal text-champagne py-4 rounded-xl text-xs uppercase font-bold tracking-widest hover:bg-teal-900 transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                  className="flex-1 btn-premium btn-primary !py-4 rounded-2xl text-xs uppercase font-extrabold tracking-widest transition-all shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 border border-champagne/30 cursor-pointer"
                 >
                   {addedToast ? (
                     <>
-                      <Check className="w-4 h-4 text-champagne" /> Added To Bag
+                      <Check className="w-4 h-4 text-champagne" /> Added To Bag!
                     </>
                   ) : (
                     <>
-                      <ShoppingBag className="w-4 h-4" /> Add To Shopping Bag
+                      <ShoppingBag className="w-4 h-4 text-champagne" /> + Add To Bag
                     </>
                   )}
                 </button>
@@ -340,12 +359,11 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
                       sku: product.sku,
                     })
                   }
-                  className={`p-4 rounded-xl border transition-all ${
-                    isWish
-                      ? 'bg-red-50 text-red-600 border-red-200'
-                      : 'bg-sand text-charcoal border-sand hover:border-champagne'
-                  }`}
-                  title="Wishlist"
+                  className={`p-4 rounded-2xl border transition-all card-3d-subtle cursor-pointer ${isWish
+                    ? 'bg-red-50 text-red-600 border-red-200'
+                    : 'bg-sand/60 text-charcoal border-sand hover:border-champagne'
+                    }`}
+                  title="Save to Wishlist"
                 >
                   <Heart className={`w-5 h-5 ${isWish ? 'fill-current' : ''}`} />
                 </button>
@@ -354,26 +372,42 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
               <button
                 onClick={handleBuyNow}
                 disabled={currentStock <= 0}
-                className="w-full bg-champagne text-teal-950 py-4 rounded-xl text-xs uppercase font-bold tracking-widest hover:bg-sand transition-all shadow-md flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full btn-premium btn-champagne !py-4 rounded-2xl text-xs uppercase font-black tracking-widest transition-all shadow-xl flex items-center justify-center gap-2.5 disabled:opacity-50 border border-teal/20 cursor-pointer"
               >
-                <Zap className="w-4 h-4 text-teal" /> Buy Now With Cash On Delivery
+                <Zap className="w-4 h-4 text-teal fill-current" /> Instant Checkout (Cash On Delivery)
               </button>
             </div>
 
-            {/* Guarantee Pills */}
-            <div className="grid grid-cols-3 gap-2 pt-4 border-t border-sand text-[11px] text-center text-charcoal-muted">
-              <div className="bg-sand/60 p-2.5 rounded-xl flex flex-col items-center gap-1">
+            {/* Guarantee Cards with 3D Depth */}
+            <div className="grid grid-cols-3 gap-2.5 pt-4 border-t border-sand/80 text-[11px] text-center text-charcoal-muted">
+              <div className="card-3d-subtle bg-sand/40 p-3 rounded-2xl border border-sand/70 flex flex-col items-center gap-1.5 shadow-sm">
                 <Truck className="w-4 h-4 text-teal" />
-                <span>Express COD</span>
+                <span className="font-semibold text-charcoal">Express COD</span>
+                <span className="text-[10px] text-charcoal-muted">2-4 Days</span>
               </div>
-              <div className="bg-sand/60 p-2.5 rounded-xl flex flex-col items-center gap-1">
+              <div className="card-3d-subtle bg-sand/40 p-3 rounded-2xl border border-sand/70 flex flex-col items-center gap-1.5 shadow-sm">
                 <ShieldCheck className="w-4 h-4 text-teal" />
-                <span>100% Authentic</span>
+                <span className="font-semibold text-charcoal">100% Authentic</span>
+                <span className="text-[10px] text-charcoal-muted">Premium Stitch</span>
               </div>
-              <div className="bg-sand/60 p-2.5 rounded-xl flex flex-col items-center gap-1">
+              <div className="card-3d-subtle bg-sand/40 p-3 rounded-2xl border border-sand/70 flex flex-col items-center gap-1.5 shadow-sm">
                 <RotateCcw className="w-4 h-4 text-teal" />
-                <span>7-Day Exchange</span>
+                <span className="font-semibold text-charcoal">7-Day Easy</span>
+                <span className="text-[10px] text-charcoal-muted">Exchange</span>
               </div>
+            </div>
+
+            {/* Relatable Fashion Assurance Banner */}
+            <div className="bg-sand/50 border border-champagne/60 p-3 rounded-2xl flex items-center justify-between gap-2 text-xs">
+              <div className="flex items-center gap-2">
+                <Heart className="w-4 h-4 text-teal shrink-0" />
+                <span className="text-[11px] text-charcoal-muted">
+                  <strong className="text-teal font-bold">Dawat Compliment Rate:</strong> 99.4% aunties ask where you got it.
+                </span>
+              </div>
+              <span className="text-[10px] font-bold uppercase tracking-wider text-teal bg-champagne/40 px-2.5 py-1 rounded-full border border-champagne/60 shrink-0">
+                Tailor-Free
+              </span>
             </div>
 
             {/* Accordion Specification Tabs */}
@@ -381,25 +415,22 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
               <div className="flex border-b border-sand">
                 <button
                   onClick={() => setActiveTab('fabric')}
-                  className={`pb-2 px-3 text-xs uppercase font-semibold border-b-2 transition-all ${
-                    activeTab === 'fabric' ? 'border-teal text-teal' : 'border-transparent text-charcoal-muted'
-                  }`}
+                  className={`pb-2 px-3 text-xs uppercase font-semibold border-b-2 transition-all ${activeTab === 'fabric' ? 'border-teal text-teal' : 'border-transparent text-charcoal-muted'
+                    }`}
                 >
                   Fabric & Craft
                 </button>
                 <button
                   onClick={() => setActiveTab('care')}
-                  className={`pb-2 px-3 text-xs uppercase font-semibold border-b-2 transition-all ${
-                    activeTab === 'care' ? 'border-teal text-teal' : 'border-transparent text-charcoal-muted'
-                  }`}
+                  className={`pb-2 px-3 text-xs uppercase font-semibold border-b-2 transition-all ${activeTab === 'care' ? 'border-teal text-teal' : 'border-transparent text-charcoal-muted'
+                    }`}
                 >
                   Care Details
                 </button>
                 <button
                   onClick={() => setActiveTab('shipping')}
-                  className={`pb-2 px-3 text-xs uppercase font-semibold border-b-2 transition-all ${
-                    activeTab === 'shipping' ? 'border-teal text-teal' : 'border-transparent text-charcoal-muted'
-                  }`}
+                  className={`pb-2 px-3 text-xs uppercase font-semibold border-b-2 transition-all ${activeTab === 'shipping' ? 'border-teal text-teal' : 'border-transparent text-charcoal-muted'
+                    }`}
                 >
                   Shipping Terms
                 </button>
@@ -422,11 +453,13 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
 
         {/* Customer Reviews Section */}
         <div className="mt-20 pt-12 border-t border-sand">
-          <div className="text-center max-w-2xl mx-auto mb-10">
-            <span className="text-xs uppercase tracking-[0.3em] font-semibold text-champagne-700">
-              Verified Feedback
+          <div className="text-center max-w-2xl mx-auto mb-10 space-y-1">
+            <span className="font-calligraphy text-xs sm:text-sm text-champagne-700 block tracking-[0.2em]">
+              Customer Reflections
             </span>
-            <h2 className="font-serif text-3xl font-bold text-teal mt-1">Client Product Reviews</h2>
+            <h2 className="font-serif text-3xl sm:text-4xl font-black text-teal">
+              Customer Reviews &amp; Ratings
+            </h2>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">

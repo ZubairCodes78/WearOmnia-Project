@@ -207,7 +207,7 @@ export function CategoriesClient({ initialCategories, initialCollections }: Cate
   };
 
   return (
-    <div className="space-y-12 text-[#FAF8F5]">
+    <div className="admin-workspace space-y-12 text-[#FAF8F5]">
       {/* Categories Header */}
       <div className="space-y-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#141414] p-6 border border-[#262626] rounded-xl">
