@@ -1,15 +1,18 @@
 import React from 'react';
 
 // ─── Coming Soon Mode ────────────────────────────────────────────────────────
-// Set COMING_SOON="true" in .env to show the Coming Soon page instead of the
-// storefront homepage. All underlying routes, admin, APIs stay untouched.
-// To go live: remove the flag or set COMING_SOON="false".
-const IS_COMING_SOON = process.env.COMING_SOON === 'true';
+// Set COMING_SOON="true" or NEXT_PUBLIC_COMING_SOON="true" in environment to show Coming Soon.
+function checkIsComingSoon(): boolean {
+  return (
+    process.env.NEXT_PUBLIC_COMING_SOON === 'true' ||
+    process.env.COMING_SOON === 'true'
+  );
+}
 
 // ─── Coming Soon (no store shell) ───────────────────────────────────────────
 import { ComingSoonPage } from '@/components/ComingSoonPage';
 
-// ─── Live Storefront imports (only used when IS_COMING_SOON is false) ────────
+// ─── Live Storefront imports (only used when coming soon is false) ────────
 import { prisma } from '@/lib/prisma';
 import { HeroSlider } from '@/components/home/HeroSlider';
 import { ProductCard } from '@/components/shop/ProductCard';
@@ -35,7 +38,7 @@ export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   // ── Coming Soon Mode ─────────────────────────────────────────────────────
-  if (IS_COMING_SOON) {
+  if (checkIsComingSoon()) {
     return <ComingSoonPage />;
   }
 

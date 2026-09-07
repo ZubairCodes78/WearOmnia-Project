@@ -10,21 +10,22 @@ import { SupportAssistant } from '@/components/layout/SupportAssistant';
 import { ToastProvider } from '@/components/layout/ToastProvider';
 import { FlyToCartProvider } from '@/components/cart/FlyToCartProvider';
 
-// ─── Coming Soon Switch ──────────────────────────────────────────────────────
-// Set COMING_SOON="true" in .env to show the Coming Soon page to public visitors.
-// All underlying routes (/shop, /admin, /api …) remain fully functional.
-// To go live: change to COMING_SOON="false" or remove the line entirely.
-const IS_COMING_SOON = process.env.COMING_SOON === 'true';
+function isComingSoonMode(): boolean {
+  return (
+    process.env.NEXT_PUBLIC_COMING_SOON === 'true' ||
+    process.env.COMING_SOON === 'true'
+  );
+}
 
 // ─── Metadata ────────────────────────────────────────────────────────────────
 export const metadata: Metadata = {
   title: {
-    default: IS_COMING_SOON
+    default: isComingSoonMode()
       ? 'WearOMNIA — Coming Soon'
       : 'WearOMNIA | Simple, Modest & Stylish Clothing',
     template: '%s | WearOMNIA',
   },
-  description: IS_COMING_SOON
+  description: isComingSoonMode()
     ? 'WearOMNIA — premium modest fashion for Pakistani women. Coming soon. Follow us for launch updates.'
     : 'WearOMNIA offers simple, modest and stylish stitched clothing for women. Modern Pakistani fashion with nationwide Cash On Delivery.',
   keywords: [
@@ -46,10 +47,10 @@ export const metadata: Metadata = {
     locale: 'en_PK',
     url: '/',
     siteName: 'WearOMNIA',
-    title: IS_COMING_SOON
+    title: isComingSoonMode()
       ? 'WearOMNIA — Coming Soon'
       : 'WearOMNIA | Simple, Modest & Stylish Clothing',
-    description: IS_COMING_SOON
+    description: isComingSoonMode()
       ? 'WearOMNIA — premium modest fashion for Pakistani women. Coming soon.'
       : 'WearOMNIA offers simple, modest and stylish stitched clothing for women. Modern Pakistani fashion with nationwide Cash On Delivery.',
     images: [
@@ -63,10 +64,10 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: IS_COMING_SOON
+    title: isComingSoonMode()
       ? 'WearOMNIA — Coming Soon'
       : 'WearOMNIA | Simple, Modest & Stylish Clothing',
-    description: IS_COMING_SOON
+    description: isComingSoonMode()
       ? 'WearOMNIA — premium modest fashion for Pakistani women. Coming soon.'
       : 'WearOMNIA offers simple, modest and stylish stitched clothing for women. Modern Pakistani fashion with nationwide Cash On Delivery.',
     images: ['/images/hero-1.jpg'],
@@ -97,7 +98,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   // ── Coming Soon: stripped layout — no Header / Footer / Cart ──────────────
-  if (IS_COMING_SOON) {
+  if (isComingSoonMode()) {
     return (
       <html lang="en" suppressHydrationWarning>
         <head>
@@ -114,7 +115,15 @@ export default function RootLayout({
           />
         </head>
         <body className="bg-offwhite text-charcoal antialiased" suppressHydrationWarning>
-          {children}
+          <CartProvider>
+            <WishlistProvider>
+              <ToastProvider>
+                <FlyToCartProvider>
+                  {children}
+                </FlyToCartProvider>
+              </ToastProvider>
+            </WishlistProvider>
+          </CartProvider>
         </body>
       </html>
     );

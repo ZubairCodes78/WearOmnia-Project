@@ -1,7 +1,12 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const IS_COMING_SOON = process.env.COMING_SOON === 'true';
+function isComingSoonMode(): boolean {
+  return (
+    process.env.NEXT_PUBLIC_COMING_SOON === 'true' ||
+    process.env.COMING_SOON === 'true'
+  );
+}
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -24,7 +29,7 @@ export function middleware(req: NextRequest) {
   }
 
   // ── Pre-Launch Mode: Restrict public visitors to Coming Soon page ─────────────
-  if (IS_COMING_SOON) {
+  if (isComingSoonMode()) {
     const isPublicStorefrontRoute =
       !pathname.startsWith('/api') &&
       !pathname.startsWith('/_next') &&
