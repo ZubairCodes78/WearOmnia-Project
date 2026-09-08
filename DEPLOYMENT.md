@@ -18,6 +18,11 @@ WHATSAPP_CLOUD_PHONE_ID="1029384756"  # Add real phone ID for production
 # Site Configuration
 NEXT_PUBLIC_SITE_URL="https://wearomnia.com"
 NEXT_PUBLIC_CURRENCY="PKR"
+
+# Coming Soon / Pre-Launch Mode
+# Set to "true" to show Coming Soon page instead of full storefront
+# Remove or set to "false" when ready to launch the full website
+NEXT_PUBLIC_COMING_SOON="true"
 ```
 
 ### 2. Database Setup
