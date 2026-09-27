@@ -1,12 +1,16 @@
 import React from 'react';
 
+import { getCampaignPhase } from '@/lib/preorder';
+
 // ─── Coming Soon Mode ────────────────────────────────────────────────────────
-// Set COMING_SOON="true" or NEXT_PUBLIC_COMING_SOON="true" in environment to show Coming Soon.
+// Enabled when COMING_SOON/NEXT_PUBLIC_COMING_SOON is set and before campaign start (29 Sep 2026).
 function checkIsComingSoon(): boolean {
-  return (
+  const envComingSoon =
     process.env.NEXT_PUBLIC_COMING_SOON === 'true' ||
-    process.env.COMING_SOON === 'true'
-  );
+    process.env.COMING_SOON === 'true';
+
+  const phase = getCampaignPhase();
+  return envComingSoon && phase === 'BEFORE_LAUNCH';
 }
 
 // ─── Coming Soon (no store shell) ───────────────────────────────────────────

@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
+import { getCampaignPhase } from '@/lib/preorder';
 
 function isComingSoonMode(): boolean {
-  return (
+  const envComingSoon =
     process.env.NEXT_PUBLIC_COMING_SOON === 'true' ||
-    process.env.COMING_SOON === 'true'
-  );
+    process.env.COMING_SOON === 'true';
+
+  const phase = getCampaignPhase();
+  return envComingSoon && phase === 'BEFORE_LAUNCH';
 }
 
 export function middleware(req: NextRequest) {

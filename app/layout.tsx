@@ -10,11 +10,15 @@ import { SupportAssistant } from '@/components/layout/SupportAssistant';
 import { ToastProvider } from '@/components/layout/ToastProvider';
 import { FlyToCartProvider } from '@/components/cart/FlyToCartProvider';
 
+import { getCampaignPhase } from '@/lib/preorder';
+
 function isComingSoonMode(): boolean {
-  return (
+  const envComingSoon =
     process.env.NEXT_PUBLIC_COMING_SOON === 'true' ||
-    process.env.COMING_SOON === 'true'
-  );
+    process.env.COMING_SOON === 'true';
+
+  const phase = getCampaignPhase();
+  return envComingSoon && phase === 'BEFORE_LAUNCH';
 }
 
 // ─── Metadata ────────────────────────────────────────────────────────────────

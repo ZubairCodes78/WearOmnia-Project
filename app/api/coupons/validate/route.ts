@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { WEAROMNIA_CAMPAIGN, validatePreOrderCampaignCoupon } from '@/lib/preorder';
 
 export async function POST(req: Request) {
   try {
@@ -8,8 +9,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Coupon code is required' }, { status: 400 });
     }
 
+    const cleanCode = code.trim().toUpperCase();
+
+    // Specific central campaign date enforcement for PREORDER500
+    if (cleanCode === WEAROMNIA_CAMPAIGN.code) {
+      const campaignCheck = validatePreOrderCampaignCoupon(cleanCode);
+      if (!campaignCheck.valid) {
+        return NextResponse.json({ error: campaignCheck.error }, { status: 400 });
+      }
+    }
+
     const coupon = await prisma.coupon.findUnique({
-      where: { code: code.trim().toUpperCase() },
+      where: { code: cleanCode },
     });
 
     if (!coupon || !coupon.isActive) {
