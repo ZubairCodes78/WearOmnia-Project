@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { Sparkles, ArrowRight, X } from 'lucide-react';
+import { Calendar, ArrowRight, X } from 'lucide-react';
 import { isPreOrderCampaignActive } from '@/lib/preorder';
 
 interface PreOrderLaunchOverlayProps {
@@ -121,7 +121,7 @@ export function PreOrderLaunchOverlay({ forceShowForTesting = false }: PreOrderL
             {/* Micro Badge */}
             <div className="pt-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#103A3E] text-[#D4AF37] border border-[#D4AF37]/30 text-[10.5px] font-bold tracking-wider uppercase font-mono">
-                <Sparkles className="w-3 h-3 text-[#D4AF37]" /> 29 Sep – 20 Oct 2026
+                <Calendar className="w-3 h-3 text-[#D4AF37]" /> 29 Sep – 20 Oct 2026
               </span>
             </div>
 

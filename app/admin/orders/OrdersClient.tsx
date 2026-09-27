@@ -20,7 +20,7 @@ import {
   Square,
   AlertCircle,
   ExternalLink,
-  Sparkles,
+
   ArrowUpRight,
   ShieldCheck,
   RotateCcw,

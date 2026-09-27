@@ -6,7 +6,8 @@ import { broadcastAdminEvent } from '@/lib/events/event-emitter';
 import { getSiteSettings, getPreOrderSettings } from '@/lib/settings';
 import { normalizePhone, validatePhone } from '@/lib/phone';
 import { generateNextOrderNumber } from '@/lib/order-number';
-import { calculatePreOrderAmounts, WEAROMNIA_CAMPAIGN, validatePreOrderCampaignCoupon } from '@/lib/preorder';
+import { calculatePreOrderAmounts } from '@/lib/preorder';
+import { validateCouponServer } from '@/lib/coupons';
 import { paymentProofExists } from '@/lib/storage';
 
 export const runtime = 'nodejs';
@@ -176,45 +177,22 @@ export async function POST(req: Request) {
       shippingFee = 0;
     }
 
-    // 10. Coupon calculation
+    // 10. Coupon calculation via central server validation
     let discountAmount = 0;
     if (couponCode) {
-      const cleanCode = couponCode.trim().toUpperCase();
-      let allowCoupon = true;
+      const couponValidation = await validateCouponServer({
+        code: couponCode,
+        subtotal,
+        isPreOrder: true,
+        now: new Date(),
+      });
 
-      if (cleanCode === WEAROMNIA_CAMPAIGN.code) {
-        const campaignCheck = validatePreOrderCampaignCoupon(cleanCode);
-        if (!campaignCheck.valid) {
-          allowCoupon = false;
-        }
-      }
-
-      if (allowCoupon) {
-        const coupon = await prisma.coupon.findUnique({
-          where: { code: cleanCode },
+      if (couponValidation.valid && couponValidation.calculatedDiscount) {
+        discountAmount = couponValidation.calculatedDiscount;
+        await prisma.coupon.update({
+          where: { code: couponValidation.code! },
+          data: { usedCount: { increment: 1 } },
         });
-
-        if (
-          coupon &&
-          coupon.isActive &&
-          (!coupon.expiryDate || new Date() <= coupon.expiryDate) &&
-          subtotal >= coupon.minOrderAmount
-        ) {
-          if (coupon.discountType === 'PERCENTAGE') {
-            discountAmount = (subtotal * coupon.discountValue) / 100;
-            if (coupon.maxDiscountAmount && discountAmount > coupon.maxDiscountAmount) {
-              discountAmount = coupon.maxDiscountAmount;
-            }
-          } else {
-            discountAmount = coupon.discountValue;
-          }
-          discountAmount = Math.min(discountAmount, subtotal);
-
-          await prisma.coupon.update({
-            where: { id: coupon.id },
-            data: { usedCount: { increment: 1 } },
-          });
-        }
       }
     }
 

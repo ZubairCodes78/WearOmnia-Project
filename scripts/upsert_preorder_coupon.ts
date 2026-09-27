@@ -5,21 +5,29 @@ const prisma = new PrismaClient();
 
 async function main() {
   const coupon = await prisma.coupon.upsert({
-    where: { code: WEAROMNIA_CAMPAIGN.code },
+    where: { code: 'PREORDER500' },
     update: {
       discountType: 'FIXED',
-      discountValue: WEAROMNIA_CAMPAIGN.discountAmount,
+      discountValue: 500,
       minOrderAmount: 0,
       isActive: true,
-      expiryDate: new Date(WEAROMNIA_CAMPAIGN.endIso),
+      startDate: new Date('2026-09-29T00:00:00+05:00'),
+      expiryDate: new Date('2026-10-20T23:59:59+05:00'),
+      timezone: 'Asia/Karachi',
+      isPreOrderOnly: true,
+      autoApply: false,
     },
     create: {
-      code: WEAROMNIA_CAMPAIGN.code,
+      code: 'PREORDER500',
       discountType: 'FIXED',
-      discountValue: WEAROMNIA_CAMPAIGN.discountAmount,
+      discountValue: 500,
       minOrderAmount: 0,
       isActive: true,
-      expiryDate: new Date(WEAROMNIA_CAMPAIGN.endIso),
+      startDate: new Date('2026-09-29T00:00:00+05:00'),
+      expiryDate: new Date('2026-10-20T23:59:59+05:00'),
+      timezone: 'Asia/Karachi',
+      isPreOrderOnly: true,
+      autoApply: false,
     },
   });
 

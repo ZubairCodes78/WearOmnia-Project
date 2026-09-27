@@ -1,67 +1,37 @@
 import { NextResponse } from 'next/server';
-import { prisma } from '@/lib/prisma';
-import { WEAROMNIA_CAMPAIGN, validatePreOrderCampaignCoupon } from '@/lib/preorder';
+import { validateCouponServer } from '@/lib/coupons';
+
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
-    const { code, subtotal } = await req.json();
+    const { code, subtotal, isPreOrder } = await req.json();
     if (!code) {
       return NextResponse.json({ error: 'Coupon code is required' }, { status: 400 });
     }
 
-    const cleanCode = code.trim().toUpperCase();
-
-    // Specific central campaign date enforcement for PREORDER500
-    if (cleanCode === WEAROMNIA_CAMPAIGN.code) {
-      const campaignCheck = validatePreOrderCampaignCoupon(cleanCode);
-      if (!campaignCheck.valid) {
-        return NextResponse.json({ error: campaignCheck.error }, { status: 400 });
-      }
-    }
-
-    const coupon = await prisma.coupon.findUnique({
-      where: { code: cleanCode },
+    const result = await validateCouponServer({
+      code,
+      subtotal: Number(subtotal) || 0,
+      isPreOrder: Boolean(isPreOrder),
+      now: new Date(),
     });
 
-    if (!coupon || !coupon.isActive) {
-      return NextResponse.json({ error: 'Invalid or expired promo code' }, { status: 404 });
+    if (!result.valid) {
+      return NextResponse.json({ error: result.error }, { status: 400 });
     }
-
-    if (coupon.expiryDate && new Date() > coupon.expiryDate) {
-      return NextResponse.json({ error: 'This coupon code has expired' }, { status: 400 });
-    }
-
-    if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-      return NextResponse.json({ error: 'Coupon usage limit reached' }, { status: 400 });
-    }
-
-    if (subtotal < coupon.minOrderAmount) {
-      return NextResponse.json(
-        { error: `Minimum order amount of Rs. ${coupon.minOrderAmount.toLocaleString()} required for this coupon` },
-        { status: 400 }
-      );
-    }
-
-    let calculatedDiscount = 0;
-    if (coupon.discountType === 'PERCENTAGE') {
-      calculatedDiscount = (subtotal * coupon.discountValue) / 100;
-      if (coupon.maxDiscountAmount && calculatedDiscount > coupon.maxDiscountAmount) {
-        calculatedDiscount = coupon.maxDiscountAmount;
-      }
-    } else {
-      calculatedDiscount = coupon.discountValue;
-    }
-
-    calculatedDiscount = Math.min(calculatedDiscount, subtotal);
 
     return NextResponse.json({
-      code: coupon.code,
-      discountType: coupon.discountType,
-      discountValue: coupon.discountValue,
-      calculatedDiscount,
+      code: result.code,
+      discountType: result.discountType,
+      discountValue: result.discountValue,
+      calculatedDiscount: result.calculatedDiscount,
+      isPreOrderOnly: result.isPreOrderOnly,
+      autoApply: result.autoApply,
     });
   } catch (error) {
     console.error('Coupon validation error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
+

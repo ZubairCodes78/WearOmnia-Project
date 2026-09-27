@@ -321,7 +321,13 @@ model Coupon {
   maxDiscountAmount Float?
   usageLimit        Int?
   usedCount         Int       @default(0)
-  expiryDate        DateTime?
+  perCustomerLimit  Int?
+  startDate         DateTime? // Campaign Start Date/Time
+  expiryDate        DateTime? // Campaign End Date/Time (Expiry)
+  timezone          String    @default("Asia/Karachi")
+  isPreOrderOnly    Boolean   @default(false)
+  applicableProducts String?
+  autoApply         Boolean   @default(false)
   isActive          Boolean   @default(true)
   createdAt         DateTime  @default(now())
 
