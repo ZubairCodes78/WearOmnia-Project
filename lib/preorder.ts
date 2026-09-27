@@ -87,6 +87,7 @@ export const WEAROMNIA_CAMPAIGN = {
   currency: 'PKR',
   currencySymbol: 'Rs.',
   timezone: 'Asia/Karachi',
+  productionSiteUrl: 'https://www.wearomnia.com/',
   startIso: '2026-09-29T00:00:00+05:00',
   endIso: '2026-10-20T23:59:59+05:00',
   startDateDisplay: '29 September 2026',

@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState, useRef } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import {
   WEAROMNIA_CAMPAIGN,
   getCampaignPhase,
@@ -88,24 +87,48 @@ export const ComingSoonPage: React.FC = () => {
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Time simulation ref for QA testing (?simulate_seconds_before_launch=N)
+  const simulationStartRef = useRef<{ baseSec: number; startPerf: number } | null>(null);
+
   useEffect(() => {
     setMounted(true);
     const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
     setReducedMotion(mq.matches);
 
+    // Check for test simulation parameter
+    if (typeof window !== 'undefined') {
+      const searchParams = new URLSearchParams(window.location.search);
+      const simSec = searchParams.get('simulate_seconds_before_launch');
+      if (simSec) {
+        const parsed = parseInt(simSec, 10);
+        if (!isNaN(parsed) && parsed >= 0) {
+          simulationStartRef.current = {
+            baseSec: parsed,
+            startPerf: performance.now(),
+          };
+        }
+      }
+    }
+
     // Initial calculation based on authoritative Asia/Karachi target timestamp
     const updateCountdown = () => {
-      const now = Date.now();
+      let now = Date.now();
+
+      // If in QA simulation mode, adjust current time relative to launch timestamp
+      if (simulationStartRef.current) {
+        const elapsedSec = (performance.now() - simulationStartRef.current.startPerf) / 1000;
+        const remainingSec = Math.max(0, simulationStartRef.current.baseSec - elapsedSec);
+        now = WEAROMNIA_CAMPAIGN.startTimestampMs - remainingSec * 1000;
+      }
+
       const currentPhase = getCampaignPhase(now);
       setPhase(currentPhase);
 
       if (currentPhase === 'BEFORE_LAUNCH') {
         const remaining = calculateTimeRemaining(WEAROMNIA_CAMPAIGN.startTimestampMs, now);
         setTimeRemaining(remaining);
-      } else if (currentPhase === 'ACTIVE') {
-        const remaining = calculateTimeRemaining(WEAROMNIA_CAMPAIGN.endTimestampMs, now);
-        setTimeRemaining(remaining);
       } else {
+        // Zero reached: stop and hide timer cleanly, never negative
         setTimeRemaining({
           days: 0,
           hours: 0,
@@ -145,6 +168,12 @@ export const ComingSoonPage: React.FC = () => {
     }
   };
 
+  // Redirect handler for SHOP NOW — Always redirects to the real production website
+  const handleShopNow = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault();
+    window.location.assign(WEAROMNIA_CAMPAIGN.productionSiteUrl);
+  };
+
   // Staggered entry animation style
   const animStyle = (delayMs: number): React.CSSProperties => {
     if (!mounted) {
@@ -165,6 +194,8 @@ export const ComingSoonPage: React.FC = () => {
       transition: `opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1) ${delayMs}ms, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1) ${delayMs}ms`,
     };
   };
+
+  const isLive = phase === 'ACTIVE' || phase === 'ENDED' || timeRemaining.isZero;
 
   return (
     <div className="relative min-h-screen w-full bg-[#FAF8F5] text-[#103D42] overflow-x-hidden selection:bg-[#DFC3A0] selection:text-[#103D42] flex flex-col justify-between font-sans">
@@ -228,7 +259,7 @@ export const ComingSoonPage: React.FC = () => {
         </div>
       </header>
 
-      {/* ── 3. MAIN HERO CONTENT AREA ─────────────────────────────────────── */}
+      {/* ── 3. MAIN HERO CONTENT AREA (Smooth 1.5–2.5s transition on zero) ───── */}
       <main className="relative z-20 w-full max-w-5xl mx-auto px-6 sm:px-10 lg:px-12 py-10 sm:py-14 lg:py-16 flex-1 flex flex-col justify-center items-center text-center">
 
         {/* Brand Eyebrow Tag */}
@@ -241,9 +272,16 @@ export const ComingSoonPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Main Headline */}
-        <div style={animStyle(160)} className="mb-4 sm:mb-6 max-w-3xl">
-          {phase === 'BEFORE_LAUNCH' ? (
+        {/* Main Headline (Smooth 1.5-2.5s state transition without page refresh) */}
+        <div
+          style={animStyle(160)}
+          className={`mb-4 sm:mb-6 max-w-3xl ${
+            reducedMotion
+              ? ''
+              : 'transition-all duration-[1800ms] ease-[cubic-bezier(0.16,1,0.3,1)]'
+          }`}
+        >
+          {!isLive ? (
             <h1 className="select-none tracking-tight leading-[1.05]">
               <span className="block text-xs sm:text-sm font-bold uppercase tracking-[0.3em] text-[#DFC3A0] mb-2">
                 EXCLUSIVE COLLECTION
@@ -253,36 +291,30 @@ export const ComingSoonPage: React.FC = () => {
                 <span className="italic font-normal text-[#103D42]">29 SEPTEMBER</span>
               </span>
             </h1>
-          ) : phase === 'ACTIVE' ? (
+          ) : (
             <h1 className="select-none tracking-tight leading-[1.05]">
               <span className="block text-xs sm:text-sm font-bold uppercase tracking-[0.3em] text-[#DFC3A0] mb-2">
-                COLLECTION IS LIVE
+                COLLECTION IS NOW LIVE
               </span>
               <span className="block font-serif text-3xl sm:text-5xl md:text-6xl font-bold text-[#103D42]">
                 PRE-ORDER IS <span className="italic font-normal text-[#103D42]">NOW OPEN</span>
               </span>
             </h1>
-          ) : (
-            <h1 className="select-none tracking-tight leading-[1.05]">
-              <span className="block font-serif text-3xl sm:text-5xl md:text-6xl font-bold text-[#103D42]">
-                PRE-ORDER CAMPAIGN <span className="italic font-normal text-[#103D42]">CONCLUDED</span>
-              </span>
-            </h1>
           )}
         </div>
 
-        {/* ── 4. REAL-TIME COUNTDOWN TIMER (Requirements 4, 5, 6, 7, 11, 12, 17) ── */}
-        <section
-          style={animStyle(240)}
-          aria-live="polite"
-          aria-label={
-            phase === 'BEFORE_LAUNCH'
-              ? `Pre-order starts in ${timeRemaining.days} days, ${timeRemaining.hours} hours, ${timeRemaining.minutes} minutes and ${timeRemaining.seconds} seconds`
-              : 'Pre-order is now open'
-          }
-          className="w-full max-w-xl my-6 sm:my-8"
-        >
-          {phase === 'BEFORE_LAUNCH' && (
+        {/* ── 4. REAL-TIME COUNTDOWN TIMER (Stops and disappears completely on 0) ── */}
+        {!isLive && (
+          <section
+            style={animStyle(240)}
+            aria-live="polite"
+            aria-label={`Pre-order starts in ${timeRemaining.days} days, ${timeRemaining.hours} hours, ${timeRemaining.minutes} minutes and ${timeRemaining.seconds} seconds`}
+            className={`w-full max-w-xl my-6 sm:my-8 ${
+              reducedMotion
+                ? ''
+                : 'transition-all duration-[1500ms] ease-[cubic-bezier(0.16,1,0.3,1)]'
+            }`}
+          >
             <div className="space-y-3">
               <p className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.25em] text-[#103D42]/70 font-mono">
                 PRE-ORDER STARTS IN
@@ -335,33 +367,10 @@ export const ComingSoonPage: React.FC = () => {
                 Official Countdown • Asia/Karachi (Pakistan Standard Time)
               </p>
             </div>
-          )}
+          </section>
+        )}
 
-          {phase === 'ACTIVE' && (
-            <div className="space-y-4 bg-[#F4F0EA] border border-[#DFC3A0]/80 rounded-2xl p-5 sm:p-6 shadow-sm">
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#103D42] text-[#DFC3A0] text-xs font-bold tracking-wider uppercase">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                Pre-Order Bookings Active
-              </div>
-              <p className="text-xs sm:text-sm text-[#103D42] font-serif italic max-w-md mx-auto">
-                Secure your handcrafted velvet and pure silk silhouettes with 50% advance booking.
-              </p>
-              <div className="text-[10.5px] font-mono font-bold tracking-widest text-[#103D42]/60 uppercase">
-                PRE-ORDER ENDS 20 OCTOBER 2026
-              </div>
-            </div>
-          )}
-
-          {phase === 'ENDED' && (
-            <div className="bg-[#F4F0EA] border border-[#DFC3A0]/60 rounded-2xl p-6 shadow-sm space-y-2">
-              <p className="text-sm font-serif text-[#103D42] italic">
-                Thank you for being part of our Autumn/Winter 2026 pre-order edition. Dispatch and deliveries are underway.
-              </p>
-            </div>
-          )}
-        </section>
-
-        {/* ── 5. EXCLUSIVE PRE-ORDER OFFER & COUPON CARD (Requirements 1, 2, 16, 19, 20, 21) ── */}
+        {/* ── 5. EXCLUSIVE PRE-ORDER OFFER & COUPON CARD ─────────────────────── */}
         <div style={animStyle(320)} className="w-full max-w-lg mb-8">
           <div className="relative rounded-2xl p-6 sm:p-7 bg-[#FAF8F5] border-2 border-[#DFC3A0] shadow-md space-y-4">
             {/* Offer Eyebrow */}
@@ -418,26 +427,30 @@ export const ComingSoonPage: React.FC = () => {
           </div>
         </div>
 
-        {/* ── 6. PRIMARY LAUNCH / STOREFRONT CTA (Requirements 8, 14, 28) ────── */}
+        {/* ── 6. PRIMARY LAUNCH CTA: SHOP NOW -> https://www.wearomnia.com/ ─── */}
         <div style={animStyle(400)} className="pt-2">
-          {phase === 'ACTIVE' ? (
-            <Link
-              href="/shop"
-              className="group relative inline-flex items-center gap-3 px-8 py-4 sm:px-10 sm:py-4.5 rounded-xl bg-[#103D42] text-[#DFC3A0] font-bold text-xs sm:text-sm uppercase tracking-[0.22em] border border-[#DFC3A0]/40 shadow-xl hover:bg-[#0C2E32] hover:text-[#FAF8F5] hover:border-[#DFC3A0] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
-            >
-              <span>SHOP PRE-ORDER</span>
-              <ArrowRight className="w-4 h-4 text-[#DFC3A0] group-hover:text-[#FAF8F5] group-hover:translate-x-1.5 transition-transform duration-300" />
-            </Link>
-          ) : (
+          {isLive ? (
             <a
-              href="https://www.instagram.com/wearomnia_/"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="group relative inline-flex items-center gap-3 px-8 py-4 sm:px-10 sm:py-4.5 rounded-xl bg-[#103D42] text-[#DFC3A0] font-bold text-xs sm:text-sm uppercase tracking-[0.22em] border border-[#DFC3A0]/40 shadow-xl hover:bg-[#0C2E32] hover:text-[#FAF8F5] hover:border-[#DFC3A0] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+              href={WEAROMNIA_CAMPAIGN.productionSiteUrl}
+              onClick={handleShopNow}
+              className="group relative inline-flex items-center justify-center gap-3 px-10 py-4.5 rounded-xl bg-[#103D42] text-[#DFC3A0] font-bold text-sm sm:text-base uppercase tracking-[0.22em] border border-[#DFC3A0]/40 shadow-xl hover:bg-[#0C2E32] hover:text-[#FAF8F5] hover:border-[#DFC3A0] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer min-w-[220px]"
+              aria-label="Shop now on WearOMNIA live website"
             >
-              <span>FOLLOW THE LAUNCH</span>
+              <span>SHOP NOW</span>
               <ArrowRight className="w-4 h-4 text-[#DFC3A0] group-hover:text-[#FAF8F5] group-hover:translate-x-1.5 transition-transform duration-300" />
             </a>
+          ) : (
+            <div className="flex flex-col items-center gap-3">
+              <a
+                href={WEAROMNIA_CAMPAIGN.productionSiteUrl}
+                onClick={handleShopNow}
+                className="group relative inline-flex items-center justify-center gap-3 px-8 py-4 sm:px-10 sm:py-4.5 rounded-xl bg-[#103D42] text-[#DFC3A0] font-bold text-xs sm:text-sm uppercase tracking-[0.22em] border border-[#DFC3A0]/40 shadow-xl hover:bg-[#0C2E32] hover:text-[#FAF8F5] hover:border-[#DFC3A0] transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 cursor-pointer"
+                aria-label="Visit WearOMNIA live storefront"
+              >
+                <span>ENTER STOREFRONT</span>
+                <ArrowRight className="w-4 h-4 text-[#DFC3A0] group-hover:text-[#FAF8F5] group-hover:translate-x-1.5 transition-transform duration-300" />
+              </a>
+            </div>
           )}
         </div>
 
