@@ -28,9 +28,14 @@ import { SizeGuideModal } from '@/components/shop/SizeGuideModal';
 interface ProductClientProps {
   product: any;
   relatedProducts: any[];
+  defaultAdvancePercent?: number;
 }
 
-export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedProducts }) => {
+export const ProductClient: React.FC<ProductClientProps> = ({
+  product,
+  relatedProducts,
+  defaultAdvancePercent = 50,
+}) => {
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { triggerFlyToCart } = useFlyToCart();
@@ -53,6 +58,11 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
   const images = product.images.length > 0 ? product.images : [{ url: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop' }];
   const activePrice = product.discountPrice || product.basePrice;
   const isWish = isInWishlist(product.id);
+
+  // Dynamic Pre-Order Advance Calculation
+  const advancePercent = product.preOrderAdvancePercent || defaultAdvancePercent || 50;
+  const advanceAmount = Math.round((activePrice * advancePercent) / 100);
+  const remainingAmount = Math.max(0, activePrice - advanceAmount);
 
   const sizes = Array.from(new Set(product.variants.map((v: any) => v.size))) as string[];
   const colors = Array.from(new Set(product.variants.map((v: any) => v.color))) as string[];
@@ -80,7 +90,8 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
         color: selectedColor,
         sku: product.sku,
         quantity,
-        maxStock: currentStock,
+        maxStock: product.isPreOrder ? 999 : currentStock,
+        isPreOrder: Boolean(product.isPreOrder),
       });
       setAddedToast(true);
       setTimeout(() => setAddedToast(false), 800);
@@ -99,7 +110,8 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
       color: selectedColor,
       sku: product.sku,
       quantity,
-      maxStock: currentStock,
+      maxStock: product.isPreOrder ? 999 : currentStock,
+      isPreOrder: Boolean(product.isPreOrder),
     });
     window.location.href = '/checkout';
   };
@@ -216,19 +228,32 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
 
               {/* Price & Rating */}
               <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pb-4 border-b border-sand/80">
-                <div className="flex items-baseline gap-3">
-                  <span className="font-sans text-3xl sm:text-4xl font-black text-teal">
-                    Rs. {activePrice.toLocaleString()}
-                  </span>
-                  {product.discountPrice && (
-                    <>
-                      <span className="text-sm sm:text-base text-charcoal-muted line-through font-medium">
-                        Rs. {product.basePrice.toLocaleString()}
+                <div className="space-y-1">
+                  <div className="flex items-baseline gap-3">
+                    <span className="font-sans text-3xl sm:text-4xl font-black text-teal">
+                      Rs. {activePrice.toLocaleString()}
+                    </span>
+                    {product.discountPrice && (
+                      <>
+                        <span className="text-sm sm:text-base text-charcoal-muted line-through font-medium">
+                          Rs. {product.basePrice.toLocaleString()}
+                        </span>
+                        <span className="badge-3d bg-champagne text-teal-950 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border border-champagne/40">
+                          SAVE Rs. {(product.basePrice - product.discountPrice).toLocaleString()}
+                        </span>
+                      </>
+                    )}
+                  </div>
+
+                  {product.isPreOrder && (
+                    <div className="flex items-center gap-2 pt-0.5">
+                      <span className="bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-md">
+                        PRE-ORDER
                       </span>
-                      <span className="badge-3d bg-champagne text-teal-950 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border border-champagne/40">
-                        SAVE {Math.round(((product.basePrice - product.discountPrice) / product.basePrice) * 100)}%
+                      <span className="text-xs font-semibold text-amber-900 font-sans">
+                        {advancePercent}% advance required: <strong className="font-mono text-teal">Rs. {advanceAmount.toLocaleString()}</strong>
                       </span>
-                    </>
+                    </div>
                   )}
                 </div>
 
@@ -242,6 +267,43 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
                 </div>
               </div>
             </div>
+
+            {/* Pre-Order Information Card */}
+            {product.isPreOrder && (
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 space-y-2.5 font-sans">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full">
+                    Pre-Order Garment
+                  </span>
+                  {product.preOrderEstimatedAvailability && (
+                    <span className="text-xs font-semibold text-amber-900 bg-amber-200/60 px-2.5 py-0.5 rounded-md">
+                      Est. Arrival: {product.preOrderEstimatedAvailability}
+                    </span>
+                  )}
+                </div>
+
+                {/* Clear Financial Split */}
+                <div className="grid grid-cols-2 gap-2 bg-white/70 p-3 rounded-xl border border-amber-200 text-xs">
+                  <div>
+                    <span className="text-charcoal-muted block text-[10px]">Amount Required Now ({advancePercent}%):</span>
+                    <span className="font-serif font-bold text-amber-900 text-sm">
+                      Rs. {advanceAmount.toLocaleString()}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-charcoal-muted block text-[10px]">Remaining on Delivery (COD):</span>
+                    <span className="font-serif font-bold text-teal text-sm">
+                      Rs. {remainingAmount.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+
+                <p className="text-[11px] text-amber-950/80 leading-relaxed">
+                  {product.preOrderNote ||
+                    `This artisan garment is handcrafted upon reservation. Submit your ${advancePercent}% advance payment proof at checkout to confirm production.`}
+                </p>
+              </div>
+            )}
 
             {/* Description */}
             <p className="text-xs text-charcoal-muted leading-relaxed font-sans">
@@ -333,12 +395,16 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
               <div className="flex gap-3">
                 <button
                   onClick={handleAddToCart}
-                  disabled={currentStock <= 0}
+                  disabled={!product.isPreOrder && currentStock <= 0}
                   className="flex-1 btn-premium btn-primary !py-4 rounded-2xl text-xs uppercase font-extrabold tracking-widest transition-all shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 border border-champagne/30 cursor-pointer"
                 >
                   {addedToast ? (
                     <>
                       <Check className="w-4 h-4 text-champagne" /> Added To Bag!
+                    </>
+                  ) : product.isPreOrder ? (
+                    <>
+                      <ShoppingBag className="w-4 h-4 text-champagne" /> + Pre-Order To Bag
                     </>
                   ) : (
                     <>
@@ -371,10 +437,13 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
 
               <button
                 onClick={handleBuyNow}
-                disabled={currentStock <= 0}
+                disabled={!product.isPreOrder && currentStock <= 0}
                 className="w-full btn-premium btn-champagne !py-4 rounded-2xl text-xs uppercase font-black tracking-widest transition-all shadow-xl flex items-center justify-center gap-2.5 disabled:opacity-50 border border-teal/20 cursor-pointer"
               >
-                <Zap className="w-4 h-4 text-teal fill-current" /> Instant Checkout (Cash On Delivery)
+                <Zap className="w-4 h-4 text-teal fill-current" />
+                {product.isPreOrder
+                  ? `Pre-Order Now (${product.preOrderAdvancePercent || 50}% Advance)`
+                  : 'Instant Checkout (Cash On Delivery)'}
               </button>
             </div>
 
@@ -382,8 +451,8 @@ export const ProductClient: React.FC<ProductClientProps> = ({ product, relatedPr
             <div className="grid grid-cols-3 gap-2.5 pt-4 border-t border-sand/80 text-[11px] text-center text-charcoal-muted">
               <div className="card-3d-subtle bg-sand/40 p-3 rounded-2xl border border-sand/70 flex flex-col items-center gap-1.5 shadow-sm">
                 <Truck className="w-4 h-4 text-teal" />
-                <span className="font-semibold text-charcoal">Express COD</span>
-                <span className="text-[10px] text-charcoal-muted">2-4 Days</span>
+                <span className="font-semibold text-charcoal">{product.isPreOrder ? 'Pre-Order' : 'Express COD'}</span>
+                <span className="text-[10px] text-charcoal-muted">{product.isPreOrder ? 'Handcrafted' : '2-4 Days'}</span>
               </div>
               <div className="card-3d-subtle bg-sand/40 p-3 rounded-2xl border border-sand/70 flex flex-col items-center gap-1.5 shadow-sm">
                 <ShieldCheck className="w-4 h-4 text-teal" />

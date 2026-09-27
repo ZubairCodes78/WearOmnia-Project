@@ -26,6 +26,18 @@ export default function CartPage() {
   const estimatedShipping = subtotal >= freeShippingThreshold || cart.length === 0 ? 0 : 250;
   const grandTotal = Math.max(0, subtotal - discountAmount + estimatedShipping);
 
+  const hasPreOrderItems = cart.some((i) => i.isPreOrder);
+  const hasRegularItems = cart.some((i) => !i.isPreOrder);
+  const isMixedCart = hasPreOrderItems && hasRegularItems;
+
+  const handleKeepOnlyPreOrder = () => {
+    cart.filter((i) => !i.isPreOrder).forEach((i) => removeFromCart(i.id));
+  };
+
+  const handleKeepOnlyRegular = () => {
+    cart.filter((i) => i.isPreOrder).forEach((i) => removeFromCart(i.id));
+  };
+
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!couponInput.trim()) return;
@@ -90,6 +102,39 @@ export default function CartPage() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
             {/* Item List */}
             <div className="lg:col-span-8 space-y-4">
+              {/* Mixed Cart Warning Banner */}
+              {isMixedCart && (
+                <div className="bg-amber-500/10 border-2 border-amber-500/50 rounded-2xl p-5 space-y-3">
+                  <div className="flex items-start gap-3">
+                    <span className="text-xl">⚠️</span>
+                    <div className="space-y-1">
+                      <h3 className="font-serif font-bold text-amber-950 text-sm">
+                        Pre-Order and Regular Items Cannot Be Ordered Together
+                      </h3>
+                      <p className="text-xs text-amber-900/80 leading-relaxed font-sans">
+                        Pre-order garments require an advance bank/wallet transfer with payment screenshot verification, while in-stock items are dispatched immediately via Cash On Delivery. Please separate them into two orders.
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap gap-2.5 pt-1">
+                    <button
+                      type="button"
+                      onClick={handleKeepOnlyRegular}
+                      className="px-4 py-2 bg-teal text-champagne rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-teal-900 transition-colors shadow-sm"
+                    >
+                      Keep In-Stock Items Only
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleKeepOnlyPreOrder}
+                      className="px-4 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold uppercase tracking-wider hover:bg-amber-700 transition-colors shadow-sm"
+                    >
+                      Keep Pre-Order Items Only
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* Free Shipping Alert Bar */}
               <div className="editorial-surface p-4 text-xs">
                 {remainingForFreeShipping > 0 ? (
@@ -113,7 +158,14 @@ export default function CartPage() {
                           <Image src={item.image} alt={item.title} fill className="object-cover" />
                         </div>
                         <div className="space-y-1">
-                          <h3 className="font-serif font-bold text-teal text-base">{item.title}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-serif font-bold text-teal text-base">{item.title}</h3>
+                            {item.isPreOrder && (
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold uppercase tracking-wider bg-amber-500/15 text-amber-800 border border-amber-500/30 shrink-0">
+                                Pre-Order
+                              </span>
+                            )}
+                          </div>
                           <p className="text-xs text-charcoal-muted">
                             Size: <span className="font-semibold text-teal">{item.size}</span> • Color: <span className="font-semibold text-teal">{item.color}</span>
                           </p>
@@ -234,16 +286,27 @@ export default function CartPage() {
                   </div>
                 </div>
 
-                <Link
-                  href="/checkout"
-                  className="w-full btn-premium btn-primary !py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl flex items-center justify-center gap-2 border border-champagne/30 cursor-pointer"
-                >
-                  Proceed To Instant Checkout <ArrowRight className="w-4 h-4 text-champagne" />
-                </Link>
+                {isMixedCart ? (
+                  <div className="w-full bg-amber-500/20 text-amber-950 border border-amber-500/40 p-3.5 rounded-2xl text-center text-xs font-bold">
+                    Please separate pre-order and in-stock items before checkout
+                  </div>
+                ) : (
+                  <Link
+                    href="/checkout"
+                    className="w-full btn-premium btn-primary !py-4 rounded-2xl text-xs font-black uppercase tracking-widest transition-all shadow-xl flex items-center justify-center gap-2 border border-champagne/30 cursor-pointer"
+                  >
+                    {hasPreOrderItems ? 'Proceed To Pre-Order Checkout' : 'Proceed To Instant Checkout'}{' '}
+                    <ArrowRight className="w-4 h-4 text-champagne" />
+                  </Link>
+                )}
 
-                <div className="flex items-center justify-center gap-2 text-[11px] text-charcoal-muted pt-2 font-medium">
-                  <ShieldCheck className="w-4 h-4 text-teal" />
-                  <span>Cash On Delivery Available Nationwide Across Pakistan</span>
+                <div className="flex items-center justify-center gap-2 text-[11px] text-charcoal-muted pt-2 font-medium text-center">
+                  <ShieldCheck className="w-4 h-4 text-teal shrink-0" />
+                  <span>
+                    {hasPreOrderItems
+                      ? '50% Advance Bank/Wallet Transfer Required with Screenshot Verification'
+                      : 'Cash On Delivery Available Nationwide Across Pakistan'}
+                  </span>
                 </div>
               </div>
             </div>

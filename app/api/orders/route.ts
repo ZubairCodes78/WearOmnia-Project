@@ -6,6 +6,7 @@ import { NotificationService } from '@/lib/notifications/notification-service';
 import { broadcastAdminEvent } from '@/lib/events/event-emitter';
 import { getSiteSettings } from '@/lib/settings';
 import { normalizePhone, validatePhone } from '@/lib/phone';
+import { generateNextOrderNumber } from '@/lib/order-number';
 
 export async function POST(req: Request) {
   try {
@@ -52,16 +53,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'You already placed an order recently. Please wait before placing another order.' }, { status: 429 });
     }
 
-    // Check stock availability for all items
+    // Check stock availability and pre-order status for all items
     for (const item of items) {
       if (item.productId) {
         const product = await prisma.product.findUnique({
           where: { id: item.productId },
-          select: { stockQuantity: true, title: true },
+          select: { stockQuantity: true, title: true, isPreOrder: true, basePrice: true },
         });
 
         if (!product) {
           return NextResponse.json({ error: `Product not found: ${item.title}` }, { status: 400 });
+        }
+
+        if (product.isPreOrder) {
+          return NextResponse.json({
+            error: `"${product.title}" is a pre-order piece and requires advance payment confirmation. Cash on Delivery is not available for pre-orders.`
+          }, { status: 400 });
         }
 
         if (product.stockQuantity < item.quantity) {
@@ -163,62 +170,76 @@ export async function POST(req: Request) {
       });
     }
 
-    // 5. Generate Order Number
-    const randomDigits = Math.floor(10000 + Math.random() * 90000);
-    const orderNumber = `OMNIA-${randomDigits}`;
+    // 5. Generate Sequential Order Number (0001, 0002, ...)
+    let order: any = null;
+    let orderNumber = '';
 
-    // Payment Processing (COD Abstraction)
-    const paymentResult = await defaultPaymentGateway.processPayment({
-      orderNumber,
-      amount: totalAmount,
-      currency: 'PKR',
-      customerName: fullName,
-      customerPhone: finalPhone,
-      customerEmail: email,
-      description: 'WearOMNIA Cash On Delivery Order',
-    });
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        orderNumber = await generateNextOrderNumber(prisma);
 
-    // 6. Create Order, Timeline, Items
-    const order = await prisma.order.create({
-      data: {
-        orderNumber,
-        customerId: customer.id,
-        customerName: fullName.trim(),
-        customerPhone: finalPhone,
-        customerWhatsapp: whatsapp ? normalizePhone(whatsapp) : finalPhone,
-        customerEmail: email || null,
-        shippingProvince: province,
-        shippingCity: city,
-        shippingAddress: address,
-        postalCode,
-        orderNotes,
-        subtotal,
-        discountAmount,
-        shippingFee,
-        codCharges: codFee,
-        totalAmount,
-        paymentMethod: paymentResult.paymentMethod,
-        status: 'PENDING',
-        couponCode: couponCode || null,
-        items: {
-          create: items.map((i: any) => ({
-            productId: i.productId,
-            productTitle: i.title,
-            variantInfo: `Size: ${i.size}, Color: ${i.color}`,
-            unitPrice: i.price,
-            quantity: i.quantity,
-            subtotal: i.price * i.quantity,
-          })),
-        },
-        timeline: {
-          create: {
+        // Payment Processing (COD Abstraction)
+        const paymentResult = await defaultPaymentGateway.processPayment({
+          orderNumber,
+          amount: totalAmount,
+          currency: 'PKR',
+          customerName: fullName,
+          customerPhone: finalPhone,
+          customerEmail: email,
+          description: 'WearOMNIA Cash On Delivery Order',
+        });
+
+        // 6. Create Order, Timeline, Items
+        order = await prisma.order.create({
+          data: {
+            orderNumber,
+            customerId: customer.id,
+            customerName: fullName.trim(),
+            customerPhone: finalPhone,
+            customerWhatsapp: whatsapp ? normalizePhone(whatsapp) : finalPhone,
+            customerEmail: email || null,
+            shippingProvince: province,
+            shippingCity: city,
+            shippingAddress: address,
+            postalCode,
+            orderNotes,
+            subtotal,
+            discountAmount,
+            shippingFee,
+            codCharges: codFee,
+            totalAmount,
+            amountPaid: 0,
+            paymentMethod: paymentResult.paymentMethod,
             status: 'PENDING',
-            note: 'Order placed by customer via Single Page Guest Checkout (COD)',
-            updatedBy: 'Customer (Guest)',
+            couponCode: couponCode || null,
+            items: {
+              create: items.map((i: any) => ({
+                productId: i.productId,
+                productTitle: i.title,
+                variantInfo: `Size: ${i.size}, Color: ${i.color}`,
+                unitPrice: i.price,
+                originalPrice: i.basePrice || i.price,
+                quantity: i.quantity,
+                subtotal: i.price * i.quantity,
+              })),
+            },
+            timeline: {
+              create: {
+                status: 'PENDING',
+                note: 'Order placed by customer via Single Page Guest Checkout (COD)',
+                updatedBy: 'Customer (Guest)',
+              },
+            },
           },
-        },
-      },
-    });
+        });
+        break;
+      } catch (createErr: any) {
+        if (createErr?.code === 'P2002' && attempt < 2) {
+          continue;
+        }
+        throw createErr;
+      }
+    }
 
     // 7. Inventory Logs & Stock Decrement
     for (const item of items) {
@@ -263,8 +284,8 @@ export async function POST(req: Request) {
       data: {
         orderId: order.id,
         type: 'NEW_ORDER',
-        title: `🛍️ New Order #${orderNumber}`,
-        message: `New Order #${orderNumber} placed by ${fullName} from ${city} for Rs. ${totalAmount.toLocaleString()}`,
+        title: `🛍️ New Order ${orderNumber}`,
+        message: `New Order ${orderNumber} placed by ${fullName} from ${city} for Rs. ${totalAmount.toLocaleString()}`,
       },
     }).catch(() => null);
 
@@ -277,7 +298,7 @@ export async function POST(req: Request) {
       timestamp: new Date().toISOString(),
     });
 
-    await recordAuditLog('ORDER_PLACED', 'Order', order.id, `Order #${orderNumber} placed for Rs. ${totalAmount}`);
+    await recordAuditLog('ORDER_PLACED', 'Order', order.id, `Order ${orderNumber} placed for Rs. ${totalAmount}`);
 
     return NextResponse.json({
       success: true,

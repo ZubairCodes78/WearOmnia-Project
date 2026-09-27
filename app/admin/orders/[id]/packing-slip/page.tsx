@@ -81,7 +81,7 @@ export default async function PrintPackingSlipPage({ params }: PrintPackingSlipP
       <div className="grid grid-cols-2 gap-4 border-b-2 border-black py-4 text-xs">
         <div>
           <span className="font-bold uppercase block text-gray-600">Order Number:</span>
-          <span className="font-mono text-xl font-bold">#{order.orderNumber || 'N/A'}</span>
+          <span className="font-mono text-xl font-bold">{order.orderNumber || 'N/A'}</span>
         </div>
         <div className="text-right">
           <span className="font-bold uppercase block text-gray-600">COD Collectable Amount:</span>

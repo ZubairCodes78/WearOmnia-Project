@@ -52,7 +52,7 @@ export async function POST(req: Request) {
     const cleanPhone = normalizePhone(order.customerPhone);
     const trackingUrl = `https://postex.pk/tracking?trackingNumber=${encodeURIComponent(trackingNumber)}`;
 
-    const messageText = `Hello ${order.customerName || 'Valued Customer'},\n\nYour WearOMNIA order #${order.orderNumber} has been dispatched via PostEx.\n\nTracking Number: ${trackingNumber}\n\nYou can track your shipment using the PostEx tracking service:\n${trackingUrl}\n\nThank you for shopping with WearOMNIA.`;
+    const messageText = `Hello ${order.customerName || 'Valued Customer'},\n\nYour WearOMNIA order ${order.orderNumber} has been dispatched via PostEx.\n\nTracking Number: ${trackingNumber}\n\nYou can track your shipment using the PostEx tracking service:\n${trackingUrl}\n\nThank you for shopping with WearOMNIA.`;
 
     const encodedMsg = encodeURIComponent(messageText);
     const whatsappWebUrl = `https://wa.me/${cleanPhone}?text=${encodedMsg}`;

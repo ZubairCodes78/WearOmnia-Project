@@ -36,6 +36,13 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
+    // 3b. Verify Pre-Order payment approval
+    if (order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED') {
+      return NextResponse.json({
+        error: `Cannot book courier shipment for Pre-Order ${order.orderNumber} until payment proof has been reviewed and approved. Current payment status: ${order.preOrderPaymentStatus || 'PENDING'}.`,
+      }, { status: 400 });
+    }
+
     // 4. Validate customer details
     if (!order.customerName?.trim() || !order.customerPhone?.trim() || !order.shippingAddress?.trim() || !order.shippingCity?.trim()) {
       return NextResponse.json({
@@ -83,6 +90,10 @@ export async function POST(req: Request) {
     const pickupAddressCode = body.pickupAddressCode?.trim() || settings.postex_pickup_address_code?.trim() || undefined;
     const storeAddressCode = body.storeAddressCode?.trim() || settings.postex_store_address_code?.trim() || undefined;
 
+    const shipmentCodAmount = (order.isPreOrder && order.preOrderRemainingAmount != null)
+      ? order.preOrderRemainingAmount
+      : order.totalAmount;
+
     // 7. Execute shipment creation with courier provider
     const provider = getCourierProvider(providerName);
     const result = await provider.createShipment({
@@ -95,7 +106,7 @@ export async function POST(req: Request) {
       shippingCity: order.shippingCity,
       shippingProvince: order.shippingProvince,
       postalCode: order.postalCode,
-      codAmount: order.totalAmount,
+      codAmount: shipmentCodAmount,
       orderNotes: order.orderNotes,
       pickupAddressCode,
       storeAddressCode,
@@ -115,7 +126,7 @@ export async function POST(req: Request) {
           orderId: order.id,
           provider: providerName,
           status: 'FAILED',
-          codAmount: order.totalAmount,
+          codAmount: shipmentCodAmount,
           metadata: JSON.stringify({ error: result.message }),
         },
       });
@@ -133,14 +144,15 @@ export async function POST(req: Request) {
           orderId: order.id,
           provider: providerName,
           status: 'FAILED',
-          codAmount: order.totalAmount,
+          codAmount: shipmentCodAmount,
           metadata: JSON.stringify({ error: result.message }),
         },
       });
 
       return NextResponse.json({
         error: result.message || 'PostEx shipment could not be created.',
-      }, { status: 400 });
+        status: 400,
+      });
     }
 
     // 7. Save successful Shipment record in database
@@ -154,7 +166,7 @@ export async function POST(req: Request) {
         status: result.status || 'Booked',
         labelUrl: result.labelUrl || null,
         trackingUrl: result.trackingUrl || null,
-        codAmount: order.totalAmount,
+        codAmount: shipmentCodAmount,
         settlementStatus: 'PENDING',
         metadata: result.metadata ? JSON.stringify(result.metadata) : null,
         apiResponse: result.raw ? JSON.stringify(result.raw) : null,

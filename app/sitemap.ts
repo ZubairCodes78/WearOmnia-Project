@@ -10,7 +10,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   let categories: { slug: string; updatedAt: Date }[] = [];
 
   try {
-    products = await prisma.product.findMany({ select: { slug: true, updatedAt: true } });
+    products = await prisma.product.findMany({
+      where: { status: 'PUBLISHED' },
+      select: { slug: true, updatedAt: true },
+    });
     categories = await prisma.category.findMany({ select: { slug: true, updatedAt: true } });
   } catch (e) {
     console.warn('[Sitemap Build Fallback] DB not reachable at build time, rendering static routes.');

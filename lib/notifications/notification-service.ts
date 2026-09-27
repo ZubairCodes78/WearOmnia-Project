@@ -32,7 +32,11 @@ export class NotificationService {
 
       records.forEach((rec) => {
         try {
-          settingsMap[rec.key] = JSON.parse(rec.value);
+          const parsed = JSON.parse(rec.value);
+          if (rec.key === 'site_config' && typeof parsed === 'object' && parsed !== null) {
+            Object.assign(settingsMap, parsed);
+          }
+          settingsMap[rec.key] = parsed;
         } catch {
           settingsMap[rec.key] = rec.value;
         }
@@ -256,4 +260,167 @@ export class NotificationService {
 
     return result;
   }
+
+  /**
+   * Pre-order: Send confirmation when customer submits pre-order with payment proof
+   */
+  public static async sendPreOrderReceived(order: any) {
+    const settings = await this.getSettings();
+    if (!settings.whatsapp_customer_notify_enabled) return;
+
+    // Idempotency: prevent sending twice
+    const existing = await prisma.notificationLog.findFirst({
+      where: {
+        orderId: order.id,
+        messageType: 'PRE_ORDER_RECEIVED',
+        status: 'SENT',
+      },
+    });
+    if (existing) return;
+
+    const recipientPhone = order.customerWhatsapp || order.customerPhone;
+    const logRecord = await this.logNotification({
+      orderId: order.id,
+      recipientPhone,
+      messageType: 'PRE_ORDER_RECEIVED',
+      status: 'QUEUED',
+      attempts: 1,
+    });
+
+    const result = await this.whatsappProvider.sendPreOrderReceived(order, settings);
+
+    if (logRecord) {
+      await prisma.notificationLog.update({
+        where: { id: logRecord.id },
+        data: {
+          status: result.success ? 'SENT' : 'FAILED',
+          whatsappMessageId: result.messageId,
+          errorDetails: result.error,
+        },
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * Pre-order: Send approval notification when Admin verifies payment
+   */
+  public static async sendPreOrderApproved(order: any) {
+    const settings = await this.getSettings();
+    if (!settings.whatsapp_customer_notify_enabled) return;
+
+    // Idempotency: prevent sending duplicate approval message
+    const existing = await prisma.notificationLog.findFirst({
+      where: {
+        orderId: order.id,
+        messageType: 'PRE_ORDER_APPROVED',
+        status: 'SENT',
+      },
+    });
+    if (existing) return;
+
+    const recipientPhone = order.customerWhatsapp || order.customerPhone;
+    const logRecord = await this.logNotification({
+      orderId: order.id,
+      recipientPhone,
+      messageType: 'PRE_ORDER_APPROVED',
+      status: 'QUEUED',
+      attempts: 1,
+    });
+
+    const result = await this.whatsappProvider.sendPreOrderApproved(order, settings);
+
+    if (logRecord) {
+      await prisma.notificationLog.update({
+        where: { id: logRecord.id },
+        data: {
+          status: result.success ? 'SENT' : 'FAILED',
+          whatsappMessageId: result.messageId,
+          errorDetails: result.error,
+        },
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * Pre-order: Send rejection notification if payment proof is invalid
+   */
+  public static async sendPreOrderRejected(order: any, reason: string) {
+    const settings = await this.getSettings();
+    if (!settings.whatsapp_customer_notify_enabled) return;
+
+    const recipientPhone = order.customerWhatsapp || order.customerPhone;
+    const logRecord = await this.logNotification({
+      orderId: order.id,
+      recipientPhone,
+      messageType: 'PRE_ORDER_REJECTED',
+      status: 'QUEUED',
+      attempts: 1,
+    });
+
+    const result = await this.whatsappProvider.sendPreOrderRejected(order, reason, settings);
+
+    if (logRecord) {
+      await prisma.notificationLog.update({
+        where: { id: logRecord.id },
+        data: {
+          status: result.success ? 'SENT' : 'FAILED',
+          whatsappMessageId: result.messageId,
+          errorDetails: result.error,
+        },
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * Post-Delivery: Send Review Request with real product/order review link
+   * Enforces idempotency so customer is never spammed with duplicate review requests.
+   */
+  public static async sendReviewRequest(order: any, reviewLink: string) {
+    const settings = await this.getSettings();
+    if (!settings.whatsapp_customer_notify_enabled) return;
+
+    // Duplicate protection: Check if review request was already sent for this order
+    const existing = await prisma.notificationLog.findFirst({
+      where: {
+        orderId: order.id,
+        messageType: 'REVIEW_REQUEST',
+        status: 'SENT',
+      },
+    });
+    if (existing) {
+      return { success: true, message: 'Review request already sent previously' };
+    }
+
+    const recipientPhone = order.customerWhatsapp || order.customerPhone;
+    const logRecord = await this.logNotification({
+      orderId: order.id,
+      recipientPhone,
+      messageType: 'REVIEW_REQUEST',
+      status: 'QUEUED',
+      attempts: 1,
+    });
+
+    const result = await this.whatsappProvider.sendReviewRequest(order, reviewLink, settings);
+
+    if (logRecord) {
+      await prisma.notificationLog.update({
+        where: { id: logRecord.id },
+        data: {
+          status: result.success ? 'SENT' : 'FAILED',
+          whatsappMessageId: result.messageId,
+          errorDetails: result.error,
+        },
+      });
+    }
+
+    return result;
+  }
 }
+
+

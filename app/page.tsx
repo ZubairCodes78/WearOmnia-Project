@@ -21,6 +21,8 @@ import { WhyWearOmnia } from '@/components/home/WhyWearOmnia';
 import { NewsletterSection } from '@/components/home/NewsletterSection';
 import { PageTransition } from '@/components/layout/PageTransition';
 
+import { PreOrderLaunchOverlay } from '@/components/home/PreOrderLaunchOverlay';
+
 async function getLaunchProducts() {
   try {
     return await prisma.product.findMany({
@@ -47,20 +49,23 @@ export default async function HomePage() {
 
   return (
     <PageTransition>
-      <div className="space-y-24 bg-offwhite pb-16">
+      {/* Pre-Order Launch Experience Overlay (Active 29 Sep – 20 Oct 2026, Once Per Visitor) */}
+      <PreOrderLaunchOverlay />
+
+      <div className="space-y-20 sm:space-y-24 lg:space-y-28 bg-offwhite pb-16">
         {/* Editorial Hero Slider */}
         <HeroSlider />
 
         {/* Exclusive Single Product Launch Showcase */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center max-w-2xl mx-auto space-y-2 mb-12">
+          <div className="text-center max-w-2xl mx-auto space-y-2.5 mb-12 sm:mb-14">
             <span className="font-calligraphy text-xs sm:text-sm text-champagne-700 block tracking-[0.2em]">
               The Daily Rotation
             </span>
-            <h2 className="font-serif text-3xl sm:text-5xl font-black text-teal tracking-tight">
-              The Ones You'll Reach For Again.
+            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-teal tracking-tight leading-tight">
+              The Ones You&apos;ll Reach For Again.
             </h2>
-            <p className="text-xs sm:text-sm text-charcoal-muted font-sans max-w-md mx-auto">
+            <p className="text-xs sm:text-sm text-charcoal-muted font-sans max-w-md mx-auto leading-relaxed">
               Because apparently wearing the same favourite outfit three times a week is frowned upon. Modest, comfortable, and made to be worn on repeat.
             </p>
           </div>
@@ -86,10 +91,10 @@ export default async function HomePage() {
             ))}
           </div>
 
-          <div className="text-center pt-10">
+          <div className="text-center pt-10 sm:pt-12">
             <a
               href="/shop"
-              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-teal text-champagne font-bold text-xs uppercase tracking-widest hover:bg-teal-900 transition-all duration-300 shadow-xl border border-champagne/30 hover:-translate-y-0.5"
+              className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-teal text-champagne font-bold text-xs uppercase tracking-widest hover:bg-teal-900 transition-all duration-300 shadow-md border border-champagne/30 hover:-translate-y-0.5"
             >
               Explore Full Collection →
             </a>

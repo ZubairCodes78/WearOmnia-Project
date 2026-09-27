@@ -175,7 +175,7 @@ export function AutomationLogsClient({ initialLogs }: { initialLogs: Notificatio
 
                     <td className="py-4 px-4 font-mono font-bold text-[#D4AF37]">
                       {log.order ? (
-                        <span>#{log.order.orderNumber}</span>
+                        <span>{log.order.orderNumber}</span>
                       ) : (
                         <span className="text-[#FAF8F5]/40">System Alert</span>
                       )}

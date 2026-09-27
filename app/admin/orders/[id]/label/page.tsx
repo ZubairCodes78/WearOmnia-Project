@@ -73,7 +73,7 @@ export default async function OfficialPostExLabelPage({ params }: ShippingLabelP
           <Truck className="w-12 h-12 text-amber-400 mx-auto" />
           <h2 className="font-serif text-xl font-bold text-amber-300">Shipment Not Yet Booked on PostEx</h2>
           <p className="text-xs text-[#FAF8F5]/70 leading-relaxed">
-            Order <strong>#{order.orderNumber}</strong> has not yet been dispatched to PostEx. No fake or placeholder airway bill can be generated. Please dispatch the order from the Order Detail screen to obtain the official PostEx Airway Bill PDF.
+            Order <strong>{order.orderNumber}</strong> has not yet been dispatched to PostEx. No fake or placeholder airway bill can be generated. Please dispatch the order from the Order Detail screen to obtain the official PostEx Airway Bill PDF.
           </p>
           <div className="pt-2 flex items-center justify-center gap-3">
             <Link
@@ -139,7 +139,7 @@ export default async function OfficialPostExLabelPage({ params }: ShippingLabelP
             href={`/admin/orders/${order.id}`}
             className="flex items-center gap-2 text-[#D4AF37] hover:text-[#FAF8F5] text-xs font-bold uppercase tracking-wider transition-colors"
           >
-            <ArrowLeft className="w-4 h-4" /> Order #{order.orderNumber}
+            <ArrowLeft className="w-4 h-4" /> Order {order.orderNumber}
           </Link>
           <span className="text-[#D4AF37]/30">|</span>
           <div className="flex items-center gap-2">

@@ -25,8 +25,26 @@ import {
   X,
   AlertTriangle,
   Shield,
+  CreditCard,
+  QrCode,
+  Edit,
 } from 'lucide-react';
 import { SiteSettingsData } from '@/lib/settings';
+
+interface PreOrderPaymentMethodData {
+  id: string;
+  displayName: string;
+  methodType: string;
+  accountTitle: string;
+  accountNumber: string;
+  walletNumber?: string | null;
+  bankName?: string | null;
+  iban?: string | null;
+  qrCodeImagePath?: string | null;
+  instructions?: string | null;
+  isActive: boolean;
+  displayOrder: number;
+}
 
 interface ShippingRule {
   id: string;
@@ -122,6 +140,211 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
   const [newCharge, setNewCharge] = useState('250');
   const [newMinAmount, setNewMinAmount] = useState('10000');
   const [addingRule, setAddingRule] = useState(false);
+
+  // Pre-Order Configuration State
+  const [preOrderEnabled, setPreOrderEnabled] = useState(false);
+  const [preOrderAdvancePercent, setPreOrderAdvancePercent] = useState(50);
+  const [preOrderInstructions, setPreOrderInstructions] = useState('');
+  const [paymentMethods, setPaymentMethods] = useState<PreOrderPaymentMethodData[]>([]);
+  const [savingPreOrder, setSavingPreOrder] = useState(false);
+  const [preOrderMessage, setPreOrderMessage] = useState('');
+
+  // Payment Method Modal State
+  const [methodModalOpen, setMethodModalOpen] = useState(false);
+  const [editingMethod, setEditingMethod] = useState<PreOrderPaymentMethodData | null>(null);
+  const [formDisplayName, setFormDisplayName] = useState('');
+  const [formMethodType, setFormMethodType] = useState('BANK');
+  const [formAccountTitle, setFormAccountTitle] = useState('');
+  const [formAccountNumber, setFormAccountNumber] = useState('');
+  const [formWalletNumber, setFormWalletNumber] = useState('');
+  const [formBankName, setFormBankName] = useState('');
+  const [formIban, setFormIban] = useState('');
+  const [formInstructions, setFormInstructions] = useState('');
+  const [formMethodActive, setFormMethodActive] = useState(true);
+  const [formMethodOrder, setFormMethodOrder] = useState(0);
+  const [methodQrFile, setMethodQrFile] = useState<File | null>(null);
+  const [savingMethod, setSavingMethod] = useState(false);
+  const [methodModalError, setMethodModalError] = useState('');
+
+  // Load pre-order settings & payment methods
+  React.useEffect(() => {
+    fetch('/api/admin/preorder/settings')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && data.settings) {
+          setPreOrderEnabled(Boolean(data.settings.preorder_enabled));
+          setPreOrderAdvancePercent(data.settings.preorder_advance_percent || 50);
+          setPreOrderInstructions(data.settings.preorder_payment_instructions || '');
+        }
+      })
+      .catch(() => {});
+
+    fetch('/api/admin/preorder/payment-methods')
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.methods)) {
+          setPaymentMethods(data.methods);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSavePreOrderSettings = async () => {
+    setSavingPreOrder(true);
+    setPreOrderMessage('');
+    try {
+      const res = await fetch('/api/admin/preorder/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          preorder_enabled: preOrderEnabled,
+          preorder_advance_percent: preOrderAdvancePercent,
+          preorder_payment_instructions: preOrderInstructions,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setPreOrderMessage(data.error || 'Failed to save pre-order settings');
+      } else {
+        setPreOrderMessage('✓ Pre-order settings saved successfully!');
+        setTimeout(() => setPreOrderMessage(''), 4000);
+      }
+    } catch {
+      setPreOrderMessage('Network error saving pre-order settings');
+    } finally {
+      setSavingPreOrder(false);
+    }
+  };
+
+  const openCreateMethodModal = () => {
+    setEditingMethod(null);
+    setFormDisplayName('');
+    setFormMethodType('BANK');
+    setFormAccountTitle('');
+    setFormAccountNumber('');
+    setFormWalletNumber('');
+    setFormBankName('');
+    setFormIban('');
+    setFormInstructions('');
+    setFormMethodActive(true);
+    setFormMethodOrder(paymentMethods.length);
+    setMethodQrFile(null);
+    setMethodModalError('');
+    setMethodModalOpen(true);
+  };
+
+  const openEditMethodModal = (method: PreOrderPaymentMethodData) => {
+    setEditingMethod(method);
+    setFormDisplayName(method.displayName);
+    setFormMethodType(method.methodType);
+    setFormAccountTitle(method.accountTitle);
+    setFormAccountNumber(method.accountNumber);
+    setFormWalletNumber(method.walletNumber || '');
+    setFormBankName(method.bankName || '');
+    setFormIban(method.iban || '');
+    setFormInstructions(method.instructions || '');
+    setFormMethodActive(method.isActive);
+    setFormMethodOrder(method.displayOrder);
+    setMethodQrFile(null);
+    setMethodModalError('');
+    setMethodModalOpen(true);
+  };
+
+  const handleSavePaymentMethod = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingMethod(true);
+    setMethodModalError('');
+
+    try {
+      const payload = {
+        id: editingMethod?.id,
+        displayName: formDisplayName,
+        methodType: formMethodType,
+        accountTitle: formAccountTitle,
+        accountNumber: formAccountNumber,
+        walletNumber: formWalletNumber || null,
+        bankName: formBankName || null,
+        iban: formIban || null,
+        instructions: formInstructions || null,
+        isActive: formMethodActive,
+        displayOrder: formMethodOrder,
+      };
+
+      const res = await fetch('/api/admin/preorder/payment-methods', {
+        method: editingMethod ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        setMethodModalError(data.error || 'Failed to save payment method');
+        setSavingMethod(false);
+        return;
+      }
+
+      const savedMethod = data.method;
+
+      // Upload QR Code if selected
+      if (methodQrFile && savedMethod?.id) {
+        const formData = new FormData();
+        formData.append('file', methodQrFile);
+        const qrRes = await fetch(`/api/admin/preorder/payment-methods/${savedMethod.id}/qr`, {
+          method: 'POST',
+          body: formData,
+        });
+        const qrData = await qrRes.json();
+        if (qrData.success && qrData.qrCodeImagePath) {
+          savedMethod.qrCodeImagePath = qrData.qrCodeImagePath;
+        }
+      }
+
+      if (editingMethod) {
+        setPaymentMethods((prev) =>
+          prev.map((m) => (m.id === savedMethod.id ? savedMethod : m))
+        );
+      } else {
+        setPaymentMethods((prev) => [...prev, savedMethod]);
+      }
+
+      setMethodModalOpen(false);
+    } catch {
+      setMethodModalError('Network error saving payment method');
+    } finally {
+      setSavingMethod(false);
+    }
+  };
+
+  const handleDeletePaymentMethod = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this payment method?')) return;
+    try {
+      const res = await fetch(`/api/admin/preorder/payment-methods?id=${id}`, {
+        method: 'DELETE',
+      });
+      if (res.ok) {
+        setPaymentMethods((prev) => prev.filter((m) => m.id !== id));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleTogglePaymentMethod = async (method: PreOrderPaymentMethodData) => {
+    try {
+      const res = await fetch('/api/admin/preorder/payment-methods', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: method.id, isActive: !method.isActive }),
+      });
+      if (res.ok) {
+        setPaymentMethods((prev) =>
+          prev.map((m) => (m.id === method.id ? { ...m, isActive: !m.isActive } : m))
+        );
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const handleInitSetup2FA = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1279,6 +1502,210 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
       </div>
 
       {/* ========================================================================= */}
+      {/* SECTION: PRE-ORDER & ADVANCE PAYMENT CONFIGURATION */}
+      {/* ========================================================================= */}
+      <div className="bg-[#141414] border border-[#262626] rounded-xl p-6 space-y-6 mt-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#262626] pb-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-[#D4AF37]/10 text-[#D4AF37] rounded-xl border border-[#D4AF37]/20">
+              <CreditCard className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="font-serif text-lg font-semibold text-[#FAF8F5]">
+                Pre-Order & Advance Payment System
+              </h2>
+              <p className="text-xs text-[#A3A3A3]">
+                Configure advance percentage, manage bank accounts &amp; digital wallets, and customer payment proof guidelines.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={handleSavePreOrderSettings}
+            disabled={savingPreOrder}
+            className="flex items-center justify-center gap-2 bg-[#D4AF37] hover:bg-white text-black px-5 py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all disabled:opacity-50 shrink-0"
+          >
+            {savingPreOrder ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {savingPreOrder ? 'Saving...' : 'Save Pre-Order Settings'}
+          </button>
+        </div>
+
+        {preOrderMessage && (
+          <div className={`p-4 rounded-xl text-xs font-semibold ${
+            preOrderMessage.startsWith('✓')
+              ? 'bg-emerald-950/70 border border-emerald-500/40 text-emerald-300'
+              : 'bg-rose-950/70 border border-rose-500/40 text-rose-300'
+          }`}>
+            {preOrderMessage}
+          </div>
+        )}
+
+        {/* Global Pre-Order Toggles & Fields */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#1A1A1A] p-5 rounded-xl border border-[#262626]">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between bg-[#141414] p-4 rounded-xl border border-[#262626]">
+              <div>
+                <p className="text-sm font-semibold text-[#FAF8F5]">Enable Pre-Orders System</p>
+                <p className="text-xs text-[#737373]">
+                  When disabled, customers cannot place pre-orders even if products are marked as pre-order.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={preOrderEnabled}
+                  onChange={(e) => setPreOrderEnabled(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-[#262626] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#D4AF37]"></div>
+              </label>
+            </div>
+
+            <div>
+              <label className="block text-xs text-[#A3A3A3] uppercase font-bold mb-1.5">
+                Default Required Advance Payment (%) *
+              </label>
+              <div className="relative">
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  required
+                  value={preOrderAdvancePercent}
+                  onChange={(e) => setPreOrderAdvancePercent(parseInt(e.target.value || '50'))}
+                  className="w-full bg-[#141414] border border-[#262626] rounded-xl px-4 py-2.5 text-sm font-mono text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]"
+                />
+                <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-[#737373] font-bold">%</span>
+              </div>
+              <p className="text-[11px] text-[#737373] mt-1">
+                Standard industry rate is 50%. Individual products can override this setting.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-xs text-[#A3A3A3] uppercase font-bold mb-1.5">
+              Customer Payment Instructions
+            </label>
+            <textarea
+              rows={5}
+              value={preOrderInstructions}
+              onChange={(e) => setPreOrderInstructions(e.target.value)}
+              placeholder="Instructions displayed to customer during pre-order checkout..."
+              className="w-full bg-[#141414] border border-[#262626] rounded-xl p-3.5 text-xs text-[#FAF8F5] placeholder-[#737373] focus:outline-none focus:border-[#D4AF37]"
+            />
+            <p className="text-[11px] text-[#737373]">
+              Displayed to customers on the checkout page above the payment method options.
+            </p>
+          </div>
+        </div>
+
+        {/* Payment Methods Table Header */}
+        <div className="space-y-4 pt-2">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h3 className="font-serif text-base font-semibold text-[#FAF8F5]">
+                Official Payment Accounts &amp; Wallets
+              </h3>
+              <p className="text-xs text-[#737373]">
+                Bank accounts, JazzCash, EasyPaisa, SadaPay, or Nayapay accounts where customers can transfer advance payments.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={openCreateMethodModal}
+              className="flex items-center gap-1.5 bg-[#103A3E] hover:bg-[#D4AF37] hover:text-black text-[#D4AF37] border border-[#D4AF37]/30 px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all"
+            >
+              <Plus className="w-4 h-4" /> Add Payment Method
+            </button>
+          </div>
+
+          {/* Payment Methods Table */}
+          <div className="overflow-x-auto rounded-xl border border-[#262626]">
+            <table className="w-full text-left text-xs text-[#A3A3A3]">
+              <thead className="bg-[#1A1A1A] uppercase tracking-wider text-[#737373] border-b border-[#262626]">
+                <tr>
+                  <th className="py-3 px-4">Method Name</th>
+                  <th className="py-3 px-4">Type</th>
+                  <th className="py-3 px-4">Account Title</th>
+                  <th className="py-3 px-4">Account / Wallet No.</th>
+                  <th className="py-3 px-4">QR Code</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#262626]">
+                {paymentMethods.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-[#737373]">
+                      No payment methods configured yet. Click &quot;Add Payment Method&quot; to add a bank or mobile wallet.
+                    </td>
+                  </tr>
+                ) : (
+                  paymentMethods.map((m) => (
+                    <tr key={m.id} className="hover:bg-[#1A1A1A]/50 transition-colors">
+                      <td className="py-3.5 px-4 font-semibold text-[#FAF8F5]">
+                        {m.displayName}
+                        {m.bankName && <span className="block text-[11px] text-[#737373]">{m.bankName}</span>}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-[11px] text-[#D4AF37]">{m.methodType}</td>
+                      <td className="py-3.5 px-4 text-[#FAF8F5]">{m.accountTitle}</td>
+                      <td className="py-3.5 px-4 font-mono text-xs">
+                        {m.accountNumber}
+                        {m.iban && <span className="block text-[10px] text-[#737373] font-mono">{m.iban}</span>}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        {m.qrCodeImagePath ? (
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-950/70 text-emerald-400 border border-emerald-500/40">
+                            <QrCode className="w-3 h-3" /> Configured
+                          </span>
+                        ) : (
+                          <span className="text-[10px] text-[#737373]">None</span>
+                        )}
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <button
+                          type="button"
+                          onClick={() => handleTogglePaymentMethod(m)}
+                          className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase transition-all ${
+                            m.isActive
+                              ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-900/80'
+                              : 'bg-zinc-900 text-zinc-500 border border-zinc-700 hover:bg-zinc-800'
+                          }`}
+                        >
+                          {m.isActive ? 'Active' : 'Disabled'}
+                        </button>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openEditMethodModal(m)}
+                            className="p-1.5 text-[#D4AF37] hover:bg-[#D4AF37]/10 rounded-lg transition-colors"
+                            title="Edit"
+                          >
+                            <Edit className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePaymentMethod(m.id)}
+                            className="p-1.5 text-rose-400 hover:bg-rose-950/50 rounded-lg transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
       {/* 2FA SETUP MODAL */}
       {/* ========================================================================= */}
       {setupModalOpen && (
@@ -1715,6 +2142,193 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
                 </button>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* PRE-ORDER PAYMENT METHOD ADD / EDIT MODAL */}
+      {/* ========================================================================= */}
+      {methodModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-[#0A2528] text-[#FAF8F5] border border-[#D4AF37]/35 rounded-3xl p-6 sm:p-8 max-w-xl w-full shadow-2xl space-y-5 animate-in zoom-in-95 duration-150 my-8">
+            <div className="flex items-center justify-between border-b border-[#D4AF37]/20 pb-3">
+              <div className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-[#D4AF37]" />
+                <h3 className="font-serif text-lg font-bold text-[#FAF8F5]">
+                  {editingMethod ? `Edit: ${editingMethod.displayName}` : 'Add Pre-Order Payment Account'}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setMethodModalOpen(false)}
+                className="p-1.5 text-[#D4AF37] hover:bg-teal-900 rounded-lg transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {methodModalError && (
+              <div className="p-3 bg-red-950/70 border border-red-500/50 text-red-200 rounded-xl text-xs font-semibold">
+                {methodModalError}
+              </div>
+            )}
+
+            <form onSubmit={handleSavePaymentMethod} className="space-y-4 text-xs font-sans">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] text-[#A3A3A3] uppercase font-bold mb-1.5">
+                    Account Display Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Meezan Bank Corporate"
+                    value={formDisplayName}
+                    onChange={(e) => setFormDisplayName(e.target.value)}
+                    className="w-full bg-[#06191B] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 text-xs text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-[#A3A3A3] uppercase font-bold mb-1.5">
+                    Method Type *
+                  </label>
+                  <select
+                    value={formMethodType}
+                    onChange={(e) => setFormMethodType(e.target.value)}
+                    className="w-full bg-[#06191B] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 text-xs text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]"
+                  >
+                    <option value="BANK">Bank Account (IBAN/Wire)</option>
+                    <option value="JAZZCASH">JazzCash Wallet</option>
+                    <option value="EASYPAISA">EasyPaisa Wallet</option>
+                    <option value="NAYAPAY">NayaPay</option>
+                    <option value="SADAPAY">SadaPay</option>
+                    <option value="OTHER">Other Account</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] text-[#A3A3A3] uppercase font-bold mb-1.5">
+                    Account Title (Beneficiary Name) *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. WearOMNIA Luxury Pvt Ltd"
+                    value={formAccountTitle}
+                    onChange={(e) => setFormAccountTitle(e.target.value)}
+                    className="w-full bg-[#06191B] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 text-xs text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-[#A3A3A3] uppercase font-bold mb-1.5">
+                    Account / Wallet Number *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. 01020304050607"
+                    value={formAccountNumber}
+                    onChange={(e) => setFormAccountNumber(e.target.value)}
+                    className="w-full bg-[#06191B] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 text-xs text-[#FAF8F5] font-mono focus:outline-none focus:border-[#D4AF37]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] text-[#A3A3A3] uppercase font-bold mb-1.5">
+                    Bank Name (if applicable)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Meezan Bank / HBL"
+                    value={formBankName}
+                    onChange={(e) => setFormBankName(e.target.value)}
+                    className="w-full bg-[#06191B] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 text-xs text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] text-[#A3A3A3] uppercase font-bold mb-1.5">
+                    IBAN (24 Characters)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. PK00MEZN0001020304050607"
+                    value={formIban}
+                    onChange={(e) => setFormIban(e.target.value)}
+                    className="w-full bg-[#06191B] border border-[#D4AF37]/30 rounded-xl px-3.5 py-2.5 text-xs text-[#FAF8F5] font-mono focus:outline-none focus:border-[#D4AF37]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-[#A3A3A3] uppercase font-bold mb-1.5">
+                  Transfer Instructions / Note (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Mention your order number in the bank transfer remarks"
+                  value={formInstructions}
+                  onChange={(e) => setFormInstructions(e.target.value)}
+                  className="w-full bg-[#06191B] border border-[#D4AF37]/30 rounded-xl p-3 text-xs text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[10px] text-[#D4AF37] uppercase font-bold mb-1.5 flex items-center gap-1.5">
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>Upload Payment QR Code Image (Optional)</span>
+                </label>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={(e) => setMethodQrFile(e.target.files?.[0] || null)}
+                  className="w-full bg-[#06191B] border border-[#D4AF37]/30 rounded-xl p-2 text-xs text-[#FAF8F5] file:mr-3 file:py-1 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-[#103A3E] file:text-[#D4AF37] hover:file:bg-[#D4AF37] hover:file:text-black"
+                />
+                {editingMethod?.qrCodeImagePath && !methodQrFile && (
+                  <p className="text-[10px] text-emerald-400 mt-1">
+                    ✓ A QR code is currently uploaded and active for this method.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex items-center gap-2 pt-2">
+                <input
+                  type="checkbox"
+                  id="methodActiveCheck"
+                  checked={formMethodActive}
+                  onChange={(e) => setFormMethodActive(e.target.checked)}
+                  className="w-4 h-4 accent-[#D4AF37] rounded"
+                />
+                <label htmlFor="methodActiveCheck" className="text-xs text-[#FAF8F5]">
+                  Make this payment method visible and active for pre-order checkout
+                </label>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-3 border-t border-[#D4AF37]/20">
+                <button
+                  type="button"
+                  onClick={() => setMethodModalOpen(false)}
+                  className="px-4 py-2 text-[#FAF8F5]/60 hover:text-white"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingMethod}
+                  className="bg-[#D4AF37] hover:bg-white text-black font-extrabold px-6 py-2.5 rounded-xl uppercase text-xs tracking-wider transition-all disabled:opacity-50 flex items-center gap-1.5 btn-3d"
+                >
+                  {savingMethod ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                  {savingMethod ? 'Saving Account...' : editingMethod ? 'Update Account' : 'Save Account'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

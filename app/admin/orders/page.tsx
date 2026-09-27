@@ -14,7 +14,13 @@ export default async function AdminOrdersPage({ searchParams }: OrdersPageProps)
 
   const orders = await prisma.order.findMany({
     where: {
-      ...(params.status ? { status: params.status } : {}),
+      ...(params.status === 'PRE_ORDER'
+        ? { isPreOrder: true }
+        : params.status === 'PRE_ORDER_PENDING'
+        ? { isPreOrder: true, preOrderPaymentStatus: 'PAYMENT_REVIEW_PENDING' }
+        : params.status && params.status !== 'ALL'
+        ? { status: params.status }
+        : {}),
       ...(params.search
         ? {
             OR: [
@@ -29,6 +35,9 @@ export default async function AdminOrdersPage({ searchParams }: OrdersPageProps)
     include: {
       items: true,
       customer: true,
+      shipments: {
+        orderBy: { createdAt: 'desc' },
+      },
     },
     orderBy: { createdAt: 'desc' },
   });

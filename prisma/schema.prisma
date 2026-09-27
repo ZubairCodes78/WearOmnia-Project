@@ -87,6 +87,11 @@ model Product {
   reviews          Review[]
   orderItems       OrderItem[]
   inventoryLogs    InventoryLog[]
+  // Pre-order Fields
+  isPreOrder                    Boolean  @default(false)
+  preOrderAdvancePercent        Int?     // e.g. 50 (overrides global setting if set)
+  preOrderNote                  String?  // Displayed on product page/checkout
+  preOrderEstimatedAvailability String?  // e.g. "November 2026"
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
@@ -96,6 +101,7 @@ model Product {
   @@index([categoryId])
   @@index([collectionId])
   @@index([createdAt])
+  @@index([isPreOrder])
 }
 
 model ProductImage {
@@ -175,6 +181,34 @@ model Order {
   codCharges       Float               @default(0)
   couponCode       String?
   isReadByAdmin    Boolean             @default(false)
+  amountPaid       Float               @default(0) // 0 until payment approved (for Pre-orders, equals advance amount; for COD, paid at delivery)
+  // Pre-order Payment Fields
+  isPreOrder                        Boolean   @default(false)
+  preOrderPaymentStatus             String?   // PAYMENT_REVIEW_PENDING | PAYMENT_APPROVED | PAYMENT_REJECTED
+  preOrderPaymentMethodName         String?   // e.g. "Easypaisa", "JazzCash", "Bank Transfer"
+  preOrderPaymentScreenshotUrl      String?   // Internal storage path (NOT exposed publicly)
+  preOrderAdvancePercent            Int?      // Snapshot of % at time of order
+  preOrderAdvanceAmount             Float?    // Advance required (server-calculated, stored in paisa-safe integer cents equiv)
+  preOrderRemainingAmount           Float?    // Remaining at delivery
+  preOrderPaymentVerifiedAt         DateTime?
+  preOrderPaymentVerifiedBy         String?   // Admin email/name who approved
+  preOrderPaymentRejectionReason    String?
+  preOrderPaymentRejectedAt         DateTime?
+  preOrderPaymentRejectedBy         String?
+
+  // Order Confirmation & Lifecycle Fields
+  confirmedAt                       DateTime?
+  confirmedBy                       String?   // Admin email/name who confirmed
+
+  // WhatsApp State-Driven Lifecycle Fields
+  confirmationWhatsAppSentAt        DateTime?
+  confirmationWhatsAppMessageId     String?
+  trackingWhatsAppSentAt            DateTime?
+  trackingWhatsAppMessageId         String?
+  deliveredWhatsAppSentAt           DateTime?
+  deliveredWhatsAppMessageId        String?
+  deliveredAt                       DateTime?
+
   items            OrderItem[]
   notifications    AdminNotification[]
   timeline         OrderTimeline[]
@@ -188,6 +222,13 @@ model Order {
   @@index([customerId])
   @@index([trackingNumber])
   @@index([courier])
+  @@index([isPreOrder])
+  @@index([preOrderPaymentStatus])
+  @@index([confirmedAt])
+  @@index([confirmationWhatsAppSentAt])
+  @@index([trackingWhatsAppSentAt])
+  @@index([deliveredWhatsAppSentAt])
+  @@index([deliveredAt])
 }
 
 model Shipment {
@@ -239,6 +280,7 @@ model OrderItem {
   productTitle String
   variantInfo  String?
   unitPrice    Float
+  originalPrice Float?   // Original retail price before discount
   quantity     Int
   subtotal     Float
 }
@@ -406,4 +448,28 @@ model SizeGuideEntry {
   displayOrder Int       @default(0)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+// ─────────────────────────────────────────────────────
+// Pre-order Payment Methods
+// ─────────────────────────────────────────────────────
+
+model PreOrderPaymentMethod {
+  id              String   @id @default(uuid())
+  displayName     String   // e.g. "Easypaisa", "JazzCash", "Bank Transfer"
+  methodType      String   // MOBILE_WALLET | BANK_TRANSFER | OTHER
+  accountTitle    String?
+  accountNumber   String?
+  walletNumber    String?
+  bankName        String?
+  iban            String?
+  qrCodeImagePath String?  // Internal file path — NOT a public URL
+  instructions    String?  // Payment instructions shown to customer
+  isActive        Boolean  @default(false)
+  displayOrder    Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([displayOrder])
 }

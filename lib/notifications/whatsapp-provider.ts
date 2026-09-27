@@ -97,7 +97,7 @@ export class WhatsAppProvider implements INotificationProvider {
     const bodyText =
       `Hello ${order.customerName},\n\n` +
       `Thank you for shopping with WearOMNIA Haute Couture.\n\n` +
-      `Your order #${order.orderNumber} has been received.\n` +
+      `Your order ${order.orderNumber} has been received.\n` +
       `Total Amount: Rs. ${order.totalAmount.toLocaleString()} (Cash On Delivery)\n\n` +
       `Please tap the button below to confirm your order so we can dispatch your parcel immediately.`;
 
@@ -130,7 +130,7 @@ export class WhatsAppProvider implements INotificationProvider {
     const phone = order.customerWhatsapp || order.customerPhone;
     const text =
       `Thank you ${order.customerName}.\n\n` +
-      `Your Order #${order.orderNumber} has been CONFIRMED successfully!\n\n` +
+      `Your Order ${order.orderNumber} has been CONFIRMED successfully!\n\n` +
       `Our atelier team has started preparing your parcel.\n` +
       `Estimated delivery: 2-3 Business Days via Express Courier across Pakistan.`;
 
@@ -153,7 +153,7 @@ export class WhatsAppProvider implements INotificationProvider {
     const text =
       `🔔 [WearOMNIA Admin Alert]\n\n` +
       `${alertMessage}\n\n` +
-      `Order: #${order.orderNumber}\n` +
+      `Order: ${order.orderNumber}\n` +
       `Customer: ${order.customerName} (${order.customerPhone})\n` +
       `Amount: Rs. ${order.totalAmount.toLocaleString()}`;
 
@@ -173,13 +173,13 @@ export class WhatsAppProvider implements INotificationProvider {
 
     let statusText = '';
     if (newStatus === 'PACKING') {
-      statusText = `📦 Order #${order.orderNumber} Update: Your luxury garment is now being packed and hand-checked at our Lahore atelier.`;
+      statusText = `📦 Order ${order.orderNumber} Update: Your luxury garment is now being packed and hand-checked at our Lahore atelier.`;
     } else if (newStatus === 'OUT_FOR_DELIVERY' || newStatus === 'DISPATCHED') {
-      statusText = `🚚 Order #${order.orderNumber} Dispatched! Tracking Number: ${order.trackingNumber || 'Pending Courier Slip'}. Expect delivery in 24-48 hours.`;
+      statusText = `🚚 Order ${order.orderNumber} Dispatched! Tracking Number: ${order.trackingNumber || 'Pending Courier Slip'}. Expect delivery in 24-48 hours.`;
     } else if (newStatus === 'DELIVERED') {
-      statusText = `🎉 Order #${order.orderNumber} Delivered! Thank you for choosing WearOMNIA. Enjoy your luxury outfit!`;
+      statusText = `🎉 Order ${order.orderNumber} Delivered! Thank you for choosing WearOMNIA. Enjoy your luxury outfit!`;
     } else {
-      statusText = `Order #${order.orderNumber} Status Updated: ${newStatus}`;
+      statusText = `Order ${order.orderNumber} Status Updated: ${newStatus}`;
     }
 
     const messagePayload = {
@@ -189,4 +189,94 @@ export class WhatsAppProvider implements INotificationProvider {
 
     return this.sendMetaApiMessage(phone, messagePayload, settings);
   }
+
+  /**
+   * Pre-order: Send Payment Verification Pending Notification to Customer
+   */
+  public async sendPreOrderReceived(order: any, settings: WhatsAppSettings): Promise<NotificationResult> {
+    const phone = order.customerWhatsapp || order.customerPhone;
+    const advance = order.preOrderAdvanceAmount ? Number(order.preOrderAdvanceAmount).toLocaleString() : '50%';
+    const remaining = order.preOrderRemainingAmount ? Number(order.preOrderRemainingAmount).toLocaleString() : 'Remaining';
+
+    const text =
+      `Hello ${order.customerName},\n\n` +
+      `Thank you for placing your Pre-Order ${order.orderNumber} with WearOMNIA.\n\n` +
+      `• Total Amount: Rs. ${Number(order.totalAmount).toLocaleString()}\n` +
+      `• Advance Required (${order.preOrderAdvancePercent || 50}%): Rs. ${advance}\n` +
+      `• Balance on Delivery: Rs. ${remaining}\n` +
+      `• Payment Method: ${order.preOrderPaymentMethodName || 'Bank/Wallet Transfer'}\n\n` +
+      `Our finance team is currently reviewing your payment screenshot. You will receive a confirmation message once verified.`;
+
+    const messagePayload = {
+      type: 'text',
+      text: { body: text },
+    };
+
+    return this.sendMetaApiMessage(phone, messagePayload, settings);
+  }
+
+  /**
+   * Pre-order: Send Payment Approved Notification to Customer
+   */
+  public async sendPreOrderApproved(order: any, settings: WhatsAppSettings): Promise<NotificationResult> {
+    const phone = order.customerWhatsapp || order.customerPhone;
+    const advance = order.preOrderAdvanceAmount ? Number(order.preOrderAdvanceAmount).toLocaleString() : '';
+    const remaining = order.preOrderRemainingAmount ? Number(order.preOrderRemainingAmount).toLocaleString() : '';
+
+    const text =
+      `🎉 Great news ${order.customerName}!\n\n` +
+      `Your advance payment of Rs. ${advance} for Pre-Order ${order.orderNumber} has been VERIFIED & APPROVED.\n\n` +
+      `Your pre-order is now CONFIRMED! Remaining balance: Rs. ${remaining}.\n\n` +
+      `Our atelier team is preparing your order. Thank you for choosing WearOMNIA.`;
+
+    const messagePayload = {
+      type: 'text',
+      text: { body: text },
+    };
+
+    return this.sendMetaApiMessage(phone, messagePayload, settings);
+  }
+
+  /**
+   * Pre-order: Send Payment Rejected Notification to Customer
+   */
+  public async sendPreOrderRejected(order: any, reason: string, settings: WhatsAppSettings): Promise<NotificationResult> {
+    const phone = order.customerWhatsapp || order.customerPhone;
+
+    const text =
+      `Notice regarding Pre-Order ${order.orderNumber}:\n\n` +
+      `Hello ${order.customerName},\n` +
+      `We were unable to verify your payment proof screenshot for Pre-Order ${order.orderNumber}.\n\n` +
+      `Reason: ${reason || 'Screenshot illegible or transaction not found'}\n\n` +
+      `Please reply to this WhatsApp message or re-upload your valid payment screenshot so our team can approve your order.`;
+
+    const messagePayload = {
+      type: 'text',
+      text: { body: text },
+    };
+
+    return this.sendMetaApiMessage(phone, messagePayload, settings);
+  }
+
+  /**
+   * Send Post-Delivery Review Request with real product review link
+   */
+  public async sendReviewRequest(order: any, reviewLink: string, settings: WhatsAppSettings): Promise<NotificationResult> {
+    const phone = order.customerWhatsapp || order.customerPhone;
+
+    const text =
+      `We'd love to hear how you liked your WearOMNIA order ${order.orderNumber}.\n\n` +
+      `Leave your review:\n` +
+      `${reviewLink}\n\n` +
+      `Thank you for shopping with us!`;
+
+    const messagePayload = {
+      type: 'text',
+      text: { body: text },
+    };
+
+    return this.sendMetaApiMessage(phone, messagePayload, settings);
+  }
 }
+
+

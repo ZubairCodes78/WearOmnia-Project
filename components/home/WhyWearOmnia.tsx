@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { Scissors, Banknote, Truck, ShieldCheck, RotateCcw, Clock, Coffee, Heart, CheckCircle2 } from 'lucide-react';
+import { Scissors, Truck, ShieldCheck, RotateCcw, Clock, Coffee, Heart, CheckCircle2 } from 'lucide-react';
 import { ScrollReveal } from '@/components/layout/ScrollReveal';
 
 const FEATURES = [
@@ -45,14 +45,14 @@ const FEATURES = [
 
 export const WhyWearOmnia = () => {
   return (
-    <section className="py-20 bg-sand/40 border-y border-sand">
+    <section className="py-20 sm:py-24 bg-sand/35 border-y border-sand/70">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <ScrollReveal variant="fade-up">
-          <div className="text-center max-w-2xl mx-auto mb-16 space-y-2">
+          <div className="text-center max-w-2xl mx-auto mb-14 sm:mb-16 space-y-2">
             <span className="font-calligraphy text-xs sm:text-sm text-champagne-700 block tracking-[0.2em]">
               The Daily Outfit Solution
             </span>
-            <h2 className="font-serif text-3xl sm:text-5xl font-black text-teal tracking-tight">
+            <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-teal tracking-tight">
               Why WearOMNIA?
             </h2>
             <p className="text-xs sm:text-sm text-charcoal-muted max-w-md mx-auto leading-relaxed">
@@ -61,24 +61,24 @@ export const WhyWearOmnia = () => {
           </div>
         </ScrollReveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
           {FEATURES.map((item, index) => {
             const Icon = item.icon;
             return (
               <ScrollReveal
                 key={item.tag}
                 variant="fade-up"
-                delay={index * 0.08}
+                delay={index * 0.06}
               >
-                <div className="card-3d bg-offwhite p-7 sm:p-8 rounded-2xl border border-sand/80 shadow-sm hover:shadow-2xl hover:border-champagne/60 group flex flex-col justify-between h-full">
+                <div className="bg-offwhite p-6 sm:p-7 rounded-2xl border border-sand/80 shadow-xs hover:border-champagne/60 hover:shadow-md transition-all duration-300 group flex flex-col justify-between h-full">
                   <div>
-                    <div className="w-12 h-12 rounded-2xl bg-teal text-champagne flex items-center justify-center mb-5 group-hover:scale-110 group-hover:bg-teal-900 transition-all duration-500 shadow-md border border-champagne/30">
-                      <Icon className="w-6 h-6" />
+                    <div className="w-11 h-11 rounded-xl bg-teal text-champagne flex items-center justify-center mb-4 transition-colors duration-300 border border-champagne/20">
+                      <Icon className="w-5 h-5" />
                     </div>
-                    <span className="text-[10px] sm:text-[11px] uppercase tracking-[0.2em] font-extrabold text-champagne-700 block mb-1">
+                    <span className="text-[10px] sm:text-[10.5px] uppercase tracking-[0.2em] font-bold text-champagne-700 block mb-1">
                       {item.tag}
                     </span>
-                    <h3 className="font-serif text-lg sm:text-xl font-bold text-teal mb-2 group-hover:text-champagne-700 transition-colors duration-300">
+                    <h3 className="font-serif text-base sm:text-lg font-bold text-teal mb-2 group-hover:text-champagne-700 transition-colors duration-300">
                       {item.title}
                     </h3>
                     <p className="text-xs sm:text-sm text-charcoal-muted leading-relaxed font-sans">
@@ -92,15 +92,14 @@ export const WhyWearOmnia = () => {
         </div>
 
         {/* Real-Life Campus & Modesty Promise Banner */}
-        <ScrollReveal variant="fade-up" delay={0.3}>
-          <div className="mt-14 bg-teal text-offwhite rounded-3xl p-6 sm:p-10 border border-champagne/30 shadow-2xl relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-64 h-64 bg-champagne/10 rounded-full blur-3xl pointer-events-none" />
+        <ScrollReveal variant="fade-up" delay={0.25}>
+          <div className="mt-12 sm:mt-16 bg-teal text-offwhite rounded-2xl sm:rounded-3xl p-6 sm:p-9 border border-champagne/25 shadow-lg relative overflow-hidden">
             <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-8">
               <div className="space-y-2 text-center lg:text-left">
-                <span className="text-[11px] uppercase tracking-[0.22em] font-bold text-champagne block">
+                <span className="text-[11px] uppercase tracking-[0.22em] font-semibold text-champagne block">
                   The Everyday Real-Life Promise
                 </span>
-                <h3 className="font-serif text-2xl sm:text-3xl font-black text-champagne">
+                <h3 className="font-serif text-2xl sm:text-3xl font-bold text-champagne tracking-tight">
                   Designed For Real Days, Not Just Mannequins.
                 </h3>
                 <p className="text-xs sm:text-sm text-offwhite/85 max-w-xl leading-relaxed">
@@ -108,27 +107,27 @@ export const WhyWearOmnia = () => {
                 </p>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 w-full lg:w-auto shrink-0">
-                <div className="bg-teal-950/90 border border-champagne/30 p-4 rounded-2xl text-center space-y-1 shadow-md">
-                  <div className="w-8 h-8 mx-auto rounded-full bg-champagne/15 text-champagne flex items-center justify-center mb-1.5">
-                    <ShieldCheck className="w-4 h-4" />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full lg:w-auto shrink-0">
+                <div className="bg-teal-950/80 border border-champagne/25 p-3.5 sm:p-4 rounded-xl text-center space-y-1">
+                  <div className="w-7 h-7 mx-auto rounded-full bg-champagne/15 text-champagne flex items-center justify-center mb-1">
+                    <ShieldCheck className="w-3.5 h-3.5" />
                   </div>
                   <div className="font-bold text-xs text-champagne">Effortless Modesty</div>
                   <div className="text-[11px] text-offwhite/75 leading-tight">Generous drape &amp; easy dupatta styling</div>
                 </div>
-                <div className="bg-teal-950/90 border border-champagne/30 p-4 rounded-2xl text-center space-y-1 shadow-md">
-                  <div className="w-8 h-8 mx-auto rounded-full bg-champagne/15 text-champagne flex items-center justify-center mb-1.5">
-                    <Truck className="w-4 h-4" />
+                <div className="bg-teal-950/80 border border-champagne/25 p-3.5 sm:p-4 rounded-xl text-center space-y-1">
+                  <div className="w-7 h-7 mx-auto rounded-full bg-champagne/15 text-champagne flex items-center justify-center mb-1">
+                    <Truck className="w-3.5 h-3.5" />
                   </div>
                   <div className="font-bold text-xs text-champagne">Express COD</div>
-                  <div className="text-[11px] text-offwhite/75 leading-tight">Arrives before your next assignment deadline</div>
+                  <div className="text-[11px] text-offwhite/75 leading-tight">Arrives in 2-4 business days</div>
                 </div>
-                <div className="bg-teal-950/90 border border-champagne/30 p-4 rounded-2xl text-center space-y-1 shadow-md">
-                  <div className="w-8 h-8 mx-auto rounded-full bg-champagne/15 text-champagne flex items-center justify-center mb-1.5">
-                    <CheckCircle2 className="w-4 h-4" />
+                <div className="bg-teal-950/80 border border-champagne/25 p-3.5 sm:p-4 rounded-xl text-center space-y-1">
+                  <div className="w-7 h-7 mx-auto rounded-full bg-champagne/15 text-champagne flex items-center justify-center mb-1">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
                   </div>
                   <div className="font-bold text-xs text-champagne">Zero Tailor Hassle</div>
-                  <div className="text-[11px] text-offwhite/75 leading-tight">100% ready-to-wear straight out of the box</div>
+                  <div className="text-[11px] text-offwhite/75 leading-tight">100% ready-to-wear stitched</div>
                 </div>
               </div>
             </div>

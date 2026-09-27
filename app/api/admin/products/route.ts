@@ -115,6 +115,10 @@ export async function POST(req: Request) {
       isNewArrival,
       isBestSeller,
       isSignature,
+      isPreOrder,
+      preOrderAdvancePercent,
+      preOrderNote,
+      preOrderEstimatedAvailability,
       images, // array of URLs or { url, isPrimary }
       variants, // array of { size, color, colorHex, stock, sku }
       sizeGuideId,
@@ -148,6 +152,10 @@ export async function POST(req: Request) {
         isNewArrival: Boolean(isNewArrival),
         isBestSeller: Boolean(isBestSeller),
         isSignature: Boolean(isSignature),
+        isPreOrder: Boolean(isPreOrder),
+        preOrderAdvancePercent: preOrderAdvancePercent ? parseInt(preOrderAdvancePercent) : null,
+        preOrderNote: preOrderNote ? String(preOrderNote).trim() : null,
+        preOrderEstimatedAvailability: preOrderEstimatedAvailability ? String(preOrderEstimatedAvailability).trim() : null,
         images: {
           create: (images || []).map((img: any, i: number) => {
             const url = typeof img === 'string' ? img : img.url;
@@ -209,6 +217,10 @@ export async function PUT(req: Request) {
       isNewArrival,
       isBestSeller,
       isSignature,
+      isPreOrder,
+      preOrderAdvancePercent,
+      preOrderNote,
+      preOrderEstimatedAvailability,
       images,
       variants,
       sizeGuideId,
@@ -248,6 +260,10 @@ export async function PUT(req: Request) {
         ...(isNewArrival !== undefined ? { isNewArrival: Boolean(isNewArrival) } : {}),
         ...(isBestSeller !== undefined ? { isBestSeller: Boolean(isBestSeller) } : {}),
         ...(isSignature !== undefined ? { isSignature: Boolean(isSignature) } : {}),
+        ...(isPreOrder !== undefined ? { isPreOrder: Boolean(isPreOrder) } : {}),
+        ...(preOrderAdvancePercent !== undefined ? { preOrderAdvancePercent: preOrderAdvancePercent ? parseInt(preOrderAdvancePercent) : null } : {}),
+        ...(preOrderNote !== undefined ? { preOrderNote: preOrderNote ? String(preOrderNote).trim() : null } : {}),
+        ...(preOrderEstimatedAvailability !== undefined ? { preOrderEstimatedAvailability: preOrderEstimatedAvailability ? String(preOrderEstimatedAvailability).trim() : null } : {}),
         ...(images
           ? {
               images: {

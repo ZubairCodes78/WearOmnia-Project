@@ -37,7 +37,10 @@ export async function POST(req: Request) {
 
     const { orderNumber, trackingId, phone } = await req.json();
 
-    const searchTerm = (orderNumber || trackingId || '').trim().toUpperCase();
+    const rawSearch = (orderNumber || trackingId || '').trim();
+    const searchTerm = rawSearch.toUpperCase();
+    const cleanNum = rawSearch.replace(/^[#\s]+/, '').trim();
+    const paddedNum = /^\d+$/.test(cleanNum) ? cleanNum.padStart(4, '0') : cleanNum;
 
     if (!searchTerm) {
       return NextResponse.json(
@@ -46,11 +49,13 @@ export async function POST(req: Request) {
       );
     }
 
-    // Find order by orderNumber OR trackingNumber OR Shipment.trackingNumber
+    // Find order by orderNumber (matching exact, clean, or padded) OR trackingNumber OR Shipment.trackingNumber
     const order = await prisma.order.findFirst({
       where: {
         OR: [
           { orderNumber: searchTerm },
+          { orderNumber: cleanNum },
+          { orderNumber: paddedNum },
           { trackingNumber: searchTerm },
           { shipments: { some: { OR: [{ trackingNumber: searchTerm }, { externalShipmentId: searchTerm }] } } },
         ],

@@ -5,7 +5,23 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useCart } from '@/context/CartContext';
-import { Truck, ShieldCheck, Banknote, ArrowRight, Lock, Tag, ChevronRight, Check, AlertCircle } from 'lucide-react';
+import {
+  Truck,
+  ShieldCheck,
+  Banknote,
+  ArrowRight,
+  Lock,
+  Tag,
+  ChevronRight,
+  Check,
+  AlertCircle,
+  CreditCard,
+  QrCode,
+  UploadCloud,
+  FileCheck,
+  Loader2,
+  CheckCircle2,
+} from 'lucide-react';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { normalizePhone, validatePhone } from '@/lib/phone';
 
@@ -30,7 +46,7 @@ const CITIES: Record<string, string[]> = {
 };
 
 export default function CheckoutPage() {
-  const { cart, subtotal, appliedCoupon, applyCoupon, discountAmount, clearCart, updateQuantity, removeFromCart } = useCart();
+  const { cart, subtotal, appliedCoupon, applyCoupon, discountAmount, clearCart, updateQuantity, removeFromCart, setIsCartOpen } = useCart();
 
   const [formData, setFormData] = useState({
     fullName: '',
@@ -56,7 +72,35 @@ export default function CheckoutPage() {
     codCharge: 0,
   });
 
-  // Fetch site settings for live shipping/cod calculation
+  // Pre-Order Detection & State
+  const isPreOrderCart = cart.length > 0 && cart.every((i) => i.isPreOrder);
+  const isMixedCart = cart.some((i) => i.isPreOrder) && cart.some((i) => !i.isPreOrder);
+
+  const [preOrderConfig, setPreOrderConfig] = useState<{
+    enabled: boolean;
+    advancePercent: number;
+    instructions: string;
+    paymentMethods: Array<{
+      id: string;
+      displayName: string;
+      methodType: string;
+      accountTitle: string;
+      accountNumber: string;
+      walletNumber?: string | null;
+      bankName?: string | null;
+      iban?: string | null;
+      instructions?: string | null;
+      hasQrCode: boolean;
+    }>;
+  } | null>(null);
+
+  const [selectedMethodId, setSelectedMethodId] = useState<string>('');
+  const [screenshotKey, setScreenshotKey] = useState<string>('');
+  const [screenshotUploading, setScreenshotUploading] = useState(false);
+  const [screenshotError, setScreenshotError] = useState('');
+  const [copiedAccount, setCopiedAccount] = useState(false);
+
+  // Fetch site settings
   useEffect(() => {
     fetch('/api/site-settings')
       .then(res => res.json())
@@ -72,9 +116,41 @@ export default function CheckoutPage() {
       .catch(console.error);
   }, []);
 
+  // Fetch pre-order configuration if pre-order items present
+  useEffect(() => {
+    if (isPreOrderCart) {
+      fetch('/api/preorder-settings')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            setPreOrderConfig(data);
+            if (data.paymentMethods && data.paymentMethods.length > 0) {
+              setSelectedMethodId(data.paymentMethods[0].id);
+            }
+          }
+        })
+        .catch(console.error);
+    }
+  }, [isPreOrderCart]);
+
   const shippingFee = subtotal >= siteSettings.freeShippingThreshold || cart.length === 0 ? 0 : siteSettings.flatShippingFee;
-  const codFee = siteSettings.codCharge;
-  const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee + codFee);
+  const codFee = isPreOrderCart ? 0 : siteSettings.codCharge;
+  const effectiveAdvancePercent = preOrderConfig?.advancePercent || 50;
+
+  const totalAmount = isPreOrderCart
+    ? Math.max(0, subtotal - discountAmount + shippingFee)
+    : Math.max(0, subtotal - discountAmount + shippingFee + codFee);
+
+  const preOrderAdvanceAmount = isPreOrderCart
+    ? Math.round((totalAmount * effectiveAdvancePercent) / 100)
+    : 0;
+
+  const preOrderRemainingAmount = isPreOrderCart
+    ? Math.max(0, totalAmount - preOrderAdvanceAmount)
+    : 0;
+
+  const totalOriginalPrice = cart.reduce((acc, item) => acc + ((item.basePrice || item.price) * item.quantity), 0);
+  const youSaveDiscount = Math.max(0, totalOriginalPrice - subtotal);
 
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -99,6 +175,42 @@ export default function CheckoutPage() {
       setCouponError('Failed to apply coupon');
     } finally {
       setCouponLoading(false);
+    }
+  };
+
+  const handleScreenshotUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setScreenshotError('Payment screenshot must be smaller than 5MB');
+      return;
+    }
+
+    setScreenshotError('');
+    setScreenshotUploading(true);
+
+    try {
+      const fd = new FormData();
+      fd.append('file', file);
+
+      const res = await fetch('/api/preorder/upload-screenshot', {
+        method: 'POST',
+        body: fd,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.screenshotKey) {
+        setScreenshotError(data.error || 'Failed to upload screenshot. Please try again.');
+        setScreenshotKey('');
+      } else {
+        setScreenshotKey(data.screenshotKey);
+      }
+    } catch {
+      setScreenshotError('Network error uploading screenshot. Please try again.');
+      setScreenshotKey('');
+    } finally {
+      setScreenshotUploading(false);
     }
   };
 
@@ -128,14 +240,23 @@ export default function CheckoutPage() {
       errors.address = 'Complete address is required';
     }
 
+    if (isPreOrderCart) {
+      if (!selectedMethodId) {
+        errors.paymentMethod = 'Please select a payment method for advance transfer';
+      }
+      if (!screenshotKey) {
+        errors.screenshot = 'Please upload your advance payment proof screenshot';
+      }
+    }
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   // Quantity handler with stock validation
   const handleQuantityChange = (itemId: string, newQuantity: number, maxStock: number) => {
-    if (newQuantity < 1) return; // Prevent going below 1
-    if (newQuantity > maxStock) return; // Prevent exceeding stock
+    if (newQuantity < 1) return;
+    if (!isPreOrderCart && newQuantity > maxStock) return;
     updateQuantity(itemId, newQuantity);
   };
 
@@ -149,6 +270,13 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (isMixedCart) {
+      setFormErrors({
+        _form: 'Mixed cart detected. Pre-order and in-stock items cannot be ordered together. Please visit your cart to separate them.',
+      });
+      return;
+    }
+
     if (!validateForm()) {
       return;
     }
@@ -156,30 +284,38 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     try {
-      const res = await fetch('/api/orders', {
+      const endpoint = isPreOrderCart ? '/api/preorder/checkout' : '/api/orders';
+      const payload: any = {
+        fullName: formData.fullName,
+        phone: formData.phone,
+        whatsapp: formData.whatsapp ? formData.whatsapp : formData.phone,
+        email: formData.email,
+        province: formData.province,
+        city: formData.city,
+        address: formData.address,
+        postalCode: formData.postalCode,
+        orderNotes: formData.orderNotes,
+        couponCode: appliedCoupon?.code,
+        items: cart.map((i) => ({
+          productId: i.productId,
+          title: i.title,
+          size: i.size,
+          color: i.color,
+          quantity: i.quantity,
+          price: i.price,
+          sku: i.sku,
+        })),
+      };
+
+      if (isPreOrderCart) {
+        payload.screenshotKey = screenshotKey;
+        payload.selectedPaymentMethodId = selectedMethodId;
+      }
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fullName: formData.fullName,
-          phone: formData.phone,
-          whatsapp: formData.whatsapp ? formData.whatsapp : formData.phone,
-          email: formData.email,
-          province: formData.province,
-          city: formData.city,
-          address: formData.address,
-          postalCode: formData.postalCode,
-          orderNotes: formData.orderNotes,
-          couponCode: appliedCoupon?.code,
-          items: cart.map((i) => ({
-            productId: i.productId,
-            title: i.title,
-            size: i.size,
-            color: i.color,
-            quantity: i.quantity,
-            price: i.price,
-            sku: i.sku,
-          })),
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -197,6 +333,54 @@ export default function CheckoutPage() {
       setIsSubmitting(false);
     }
   };
+
+  if (isMixedCart) {
+    return (
+      <PageTransition>
+        <div className="max-w-2xl mx-auto px-4 py-20 text-center space-y-6">
+          <div className="w-16 h-16 bg-amber-500/10 border border-amber-500/40 rounded-full flex items-center justify-center mx-auto text-2xl">
+            ⚠️
+          </div>
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-teal">
+            Pre-order and regular products need to be ordered separately.
+          </h1>
+          <p className="text-xs text-charcoal-muted max-w-md mx-auto leading-relaxed font-sans">
+            Pre-order pieces require an advance bank/wallet transfer with payment screenshot verification, while regular in-stock pieces are dispatched immediately via Cash On Delivery.
+          </p>
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => {
+                // Keep only pre-order items
+                cart.filter((item) => !item.isPreOrder).forEach((item) => removeFromCart(item.id));
+              }}
+              className="w-full sm:w-auto bg-amber-600 hover:bg-amber-700 text-white px-6 py-3 rounded-xl text-xs uppercase font-extrabold tracking-wider transition-all shadow-md cursor-pointer"
+            >
+              Keep Only Pre-Order Items
+            </button>
+            <button
+              onClick={() => {
+                // Keep only regular items
+                cart.filter((item) => item.isPreOrder).forEach((item) => removeFromCart(item.id));
+              }}
+              className="w-full sm:w-auto bg-teal hover:bg-teal-900 text-champagne px-6 py-3 rounded-xl text-xs uppercase font-extrabold tracking-wider transition-all shadow-md cursor-pointer border border-champagne/30"
+            >
+              Keep Only Regular Products
+            </button>
+          </div>
+
+          <div className="pt-2">
+            <button
+              onClick={() => setIsCartOpen(true)}
+              className="text-xs text-teal underline font-bold uppercase tracking-wider hover:text-champagne-700 cursor-pointer"
+            >
+              View &amp; Edit Shopping Bag
+            </button>
+          </div>
+        </div>
+      </PageTransition>
+    );
+  }
 
   if (cart.length === 0 && !isSubmitting) {
     return (
@@ -228,18 +412,24 @@ export default function CheckoutPage() {
           <div className="border-b border-sand/80 pb-6 mb-8 sm:mb-10 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <span className="font-calligraphy text-xs sm:text-sm text-champagne-700 block tracking-[0.2em]">
-                Fast &amp; Simple
+                {isPreOrderCart ? 'Atelier Pre-Order' : 'Fast & Simple'}
               </span>
               <h1 className="font-serif text-2xl sm:text-4xl lg:text-5xl font-black text-teal tracking-tight">
-                Cash On Delivery Checkout
+                {isPreOrderCart ? 'Pre-Order Advance Checkout' : 'Cash On Delivery Checkout'}
               </h1>
               <p className="text-xs text-charcoal-muted pt-0.5 font-sans">
-                Almost there. Your next favourite outfit is waiting.
+                {isPreOrderCart
+                  ? `Pay ${effectiveAdvancePercent}% advance via bank/wallet transfer. Remaining balance upon delivery.`
+                  : 'Almost there. Your next favourite outfit is waiting.'}
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs text-teal bg-sand/60 px-4 py-2.5 rounded-2xl border border-sand/80 font-medium self-start sm:self-auto">
               <ShieldCheck className="w-4 h-4 text-teal shrink-0" />
-              <span>No Account Required • Pay When You Receive</span>
+              <span>
+                {isPreOrderCart
+                  ? `${effectiveAdvancePercent}% Advance Verification • Remaining COD`
+                  : 'No Account Required • Pay When You Receive'}
+              </span>
             </div>
           </div>
 
@@ -461,27 +651,233 @@ export default function CheckoutPage() {
               </div>
 
               {/* Step 3: Payment Method */}
-              <div className="editorial-surface p-4 sm:p-6 lg:p-8 space-y-4">
+              <div className="editorial-surface p-4 sm:p-6 lg:p-8 space-y-6">
                 <div className="flex items-center gap-3 border-b border-sand/60 pb-4">
                   <span className="w-7 h-7 rounded-full bg-teal text-champagne font-bold text-xs flex items-center justify-center">
                     3
                   </span>
-                  <h3 className="font-serif text-xl font-bold text-teal">Payment Assurance</h3>
+                  <h3 className="font-serif text-xl font-bold text-teal">
+                    {isPreOrderCart ? 'Advance Payment & Verification' : 'Payment Assurance'}
+                  </h3>
                 </div>
 
-                <div className="bg-teal text-offwhite p-6 rounded-2xl border border-champagne/40 flex items-start gap-4 shadow-lg">
-                  <div className="w-10 h-10 rounded-full bg-champagne text-teal-950 flex items-center justify-center shrink-0 mt-0.5">
-                    <Banknote className="w-5 h-5" />
+                {!isPreOrderCart ? (
+                  <div className="bg-teal text-offwhite p-6 rounded-2xl border border-champagne/40 flex items-start gap-4 shadow-lg">
+                    <div className="w-10 h-10 rounded-full bg-champagne text-teal-950 flex items-center justify-center shrink-0 mt-0.5">
+                      <Banknote className="w-5 h-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="font-serif text-lg font-bold text-champagne flex items-center gap-2">
+                        Cash On Delivery (COD) <Check className="w-4 h-4 text-champagne" />
+                      </span>
+                      <p className="text-xs text-offwhite/80 leading-relaxed font-sans">
+                        Zero online advance payment required. Pay in cash directly to our delivery courier upon unboxing your WearOMNIA parcel at your door.
+                      </p>
+                    </div>
                   </div>
-                  <div className="space-y-1">
-                    <span className="font-serif text-lg font-bold text-champagne flex items-center gap-2">
-                      Cash On Delivery (COD) <Check className="w-4 h-4 text-champagne" />
-                    </span>
-                    <p className="text-xs text-offwhite/80 leading-relaxed font-sans">
-                      Zero online advance payment required. Pay in cash directly to our delivery courier upon unboxing your WearOMNIA parcel at your door.
-                    </p>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Section 5: PRE-ORDER PAYMENT NOTICE */}
+                    <div className="bg-amber-500/15 border-2 border-amber-500/40 p-4 rounded-2xl space-y-1.5 font-sans">
+                      <div className="flex items-center gap-2">
+                        <span className="bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full">
+                          PRE-ORDER PAYMENT
+                        </span>
+                      </div>
+                      <p className="text-xs text-amber-950 font-medium leading-relaxed">
+                        This is a pre-order. A {effectiveAdvancePercent}% advance payment is required to confirm your order. Cash on Delivery is not available for pre-orders.
+                      </p>
+                    </div>
+
+                    {/* Advance Breakdown Banner */}
+                    <div className="bg-amber-500/10 border border-amber-500/30 p-5 rounded-2xl space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-500/20 pb-3">
+                        <span className="text-xs uppercase font-extrabold tracking-wider text-amber-900 flex items-center gap-1.5">
+                          <CreditCard className="w-4 h-4 text-amber-700" />
+                          Required Advance Payment: {effectiveAdvancePercent}%
+                        </span>
+                        <span className="text-xs font-mono font-bold text-amber-950">
+                          Rs. {preOrderAdvanceAmount.toLocaleString()} PKR
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 text-xs font-sans">
+                        <div>
+                          <span className="text-charcoal-muted block">Advance Payable Now:</span>
+                          <span className="font-serif font-bold text-amber-900 text-sm">
+                            Rs. {preOrderAdvanceAmount.toLocaleString()}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-charcoal-muted block">Balance on Delivery:</span>
+                          <span className="font-serif font-bold text-teal text-sm">
+                            Rs. {preOrderRemainingAmount.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                      {preOrderConfig?.instructions && (
+                        <p className="text-[11px] text-amber-900/80 pt-2 border-t border-amber-500/15 leading-relaxed font-sans">
+                          {preOrderConfig.instructions}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Payment Methods Selector */}
+                    <div className="space-y-3">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-charcoal">
+                        1. Select Official Payment Account *
+                      </label>
+                      {formErrors.paymentMethod && (
+                        <p className="text-[11px] text-red-600 font-semibold">{formErrors.paymentMethod}</p>
+                      )}
+
+                      <div className="grid grid-cols-1 gap-3">
+                        {preOrderConfig?.paymentMethods?.map((m) => {
+                          const isSelected = selectedMethodId === m.id;
+                          return (
+                            <div
+                              key={m.id}
+                              onClick={() => setSelectedMethodId(m.id)}
+                              className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
+                                isSelected
+                                  ? 'border-teal bg-sand/60 shadow-md'
+                                  : 'border-sand/70 bg-sand/20 hover:border-sand hover:bg-sand/40'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="space-y-1 flex-1">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-serif font-bold text-teal text-sm">
+                                      {m.displayName}
+                                    </span>
+                                    <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-teal text-champagne">
+                                      {m.methodType}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-charcoal">
+                                    Title: <strong className="font-semibold text-teal">{m.accountTitle}</strong>
+                                  </p>
+                                  <div className="flex items-center gap-2 pt-0.5">
+                                    <span className="text-xs font-mono font-bold text-champagne-800 bg-sand/80 px-2 py-0.5 rounded-lg border border-sand">
+                                      {m.accountNumber}
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        navigator.clipboard.writeText(m.accountNumber);
+                                        setCopiedAccount(true);
+                                        setTimeout(() => setCopiedAccount(false), 2000);
+                                      }}
+                                      className="text-[10px] text-teal hover:underline font-bold uppercase"
+                                    >
+                                      {copiedAccount ? 'Copied!' : 'Copy'}
+                                    </button>
+                                  </div>
+                                  {m.bankName && (
+                                    <p className="text-[11px] text-charcoal-muted">Bank: {m.bankName}</p>
+                                  )}
+                                  {m.iban && (
+                                    <p className="text-[10px] font-mono text-charcoal-muted">IBAN: {m.iban}</p>
+                                  )}
+                                </div>
+
+                                <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-1 border-teal">
+                                  {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-teal" />}
+                                </div>
+                              </div>
+
+                              {/* QR Code image if available and selected */}
+                              {isSelected && m.hasQrCode && (
+                                <div className="mt-4 pt-3 border-t border-sand flex items-center gap-4">
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={`/api/preorder/payment-methods/${m.id}/qr`}
+                                    alt="Payment QR Code"
+                                    className="w-28 h-28 object-contain rounded-xl border border-sand bg-white p-2 shadow-sm"
+                                  />
+                                  <div className="space-y-1 text-xs">
+                                    <span className="font-bold text-teal flex items-center gap-1">
+                                      <QrCode className="w-4 h-4 text-champagne-700" /> Scan QR to Pay
+                                    </span>
+                                    <p className="text-[11px] text-charcoal-muted leading-relaxed font-sans">
+                                      Scan this QR in your bank/wallet app and transfer Rs. {preOrderAdvanceAmount.toLocaleString()}.
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Screenshot Upload Section */}
+                    <div className="space-y-3 pt-2">
+                      <label className="block text-xs font-bold uppercase tracking-wider text-charcoal">
+                        2. Upload Payment Proof Screenshot *
+                      </label>
+                      <p className="text-[11px] text-charcoal-muted">
+                        Upload the transaction receipt or screenshot after sending Rs. {preOrderAdvanceAmount.toLocaleString()}.
+                      </p>
+
+                      <div className="border-2 border-dashed border-sand/80 rounded-2xl p-5 bg-sand/30 hover:bg-sand/50 transition-colors text-center space-y-3">
+                        {screenshotUploading ? (
+                          <div className="flex flex-col items-center gap-2 py-4 text-teal">
+                            <Loader2 className="w-6 h-6 animate-spin text-champagne-700" />
+                            <span className="text-xs font-bold">Securing screenshot...</span>
+                          </div>
+                        ) : screenshotKey ? (
+                          <div className="flex flex-col items-center gap-2 py-2 text-emerald-800">
+                            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                              <CheckCircle2 className="w-6 h-6 text-emerald-700" />
+                            </div>
+                            <span className="text-xs font-bold">Screenshot Attached Successfully!</span>
+                            <span className="text-[10px] text-charcoal-muted font-mono">{screenshotKey}</span>
+                            <label className="text-[11px] text-teal underline font-bold cursor-pointer mt-1">
+                              Replace Screenshot
+                              <input
+                                type="file"
+                                accept="image/jpeg,image/png,image/webp"
+                                onChange={handleScreenshotUpload}
+                                className="hidden"
+                              />
+                            </label>
+                          </div>
+                        ) : (
+                          <label className="flex flex-col items-center gap-2 py-3 cursor-pointer">
+                            <UploadCloud className="w-8 h-8 text-champagne-700" />
+                            <span className="text-xs font-bold text-teal">
+                              Click or Drag to Upload Payment Screenshot
+                            </span>
+                            <span className="text-[10px] text-charcoal-muted">
+                              JPEG, PNG, or WebP up to 5MB
+                            </span>
+                            <input
+                              type="file"
+                              accept="image/jpeg,image/png,image/webp"
+                              onChange={handleScreenshotUpload}
+                              className="hidden"
+                            />
+                          </label>
+                        )}
+                      </div>
+
+                      {screenshotError && (
+                        <p className="text-[11px] text-red-600 flex items-center gap-1 font-semibold">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          {screenshotError}
+                        </p>
+                      )}
+
+                      {formErrors.screenshot && (
+                        <p className="text-[11px] text-red-600 flex items-center gap-1 font-semibold">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          {formErrors.screenshot}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
               </div>
             </div>
 
@@ -500,7 +896,14 @@ export default function CheckoutPage() {
                         <Image src={item.image} alt={item.title} fill className="object-cover" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <h4 className="font-serif text-xs font-bold text-teal truncate">{item.title}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-serif text-xs font-bold text-teal truncate">{item.title}</h4>
+                          {item.isPreOrder && (
+                            <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-amber-500/20 text-amber-900 shrink-0">
+                              Pre-Order
+                            </span>
+                          )}
+                        </div>
                         <p className="text-[11px] text-charcoal-muted">
                           Size: {item.size} | Color: {item.color}
                         </p>
@@ -520,7 +923,7 @@ export default function CheckoutPage() {
                             <button
                               type="button"
                               onClick={() => handleQuantityChange(item.id, item.quantity + 1, item.maxStock)}
-                              disabled={item.quantity >= item.maxStock}
+                              disabled={!isPreOrderCart && item.quantity >= item.maxStock}
                               className="px-1.5 py-0.5 text-teal hover:bg-sand-dark rounded-r-lg disabled:opacity-40 disabled:cursor-not-allowed"
                               aria-label="Increase quantity"
                             >
@@ -540,12 +943,6 @@ export default function CheckoutPage() {
                         <p className="text-xs font-bold text-teal">
                           Rs. {(item.price * item.quantity).toLocaleString()}
                         </p>
-                        {item.quantity >= item.maxStock && (
-                          <p className="text-[10px] text-amber-600 mt-1 flex items-center gap-1 justify-end">
-                            <AlertCircle className="w-3 h-3" />
-                            Max stock
-                          </p>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -610,16 +1007,72 @@ export default function CheckoutPage() {
                         : `Rs. ${shippingFee}`}
                     </span>
                   </div>
-                  {codFee > 0 && (
+                  {!isPreOrderCart && codFee > 0 && (
                     <div className="flex justify-between">
                       <span className="text-charcoal-muted">COD Fee:</span>
                       <span className="font-semibold">Rs. {codFee}</span>
                     </div>
                   )}
-                  <div className="flex justify-between text-lg font-bold text-teal pt-3 border-t border-sand/80">
-                    <span>Grand Total (COD):</span>
-                    <span>Rs. {totalAmount.toLocaleString()}</span>
-                  </div>
+
+                  {isPreOrderCart ? (
+                    <div className="space-y-2.5 pt-2 border-t border-sand/80 font-sans">
+                      {totalOriginalPrice > subtotal && (
+                        <div className="flex justify-between text-charcoal-muted">
+                          <span>Original Price:</span>
+                          <span className="line-through font-mono">Rs. {totalOriginalPrice.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-teal font-semibold">
+                        <span>Pre-order Price:</span>
+                        <span className="font-mono">Rs. {subtotal.toLocaleString()}</span>
+                      </div>
+                      {youSaveDiscount > 0 && (
+                        <div className="flex justify-between text-emerald-700 font-semibold">
+                          <span>You Save:</span>
+                          <span className="font-mono">Rs. {youSaveDiscount.toLocaleString()}</span>
+                        </div>
+                      )}
+                      {appliedCoupon && (
+                        <div className="flex justify-between text-teal font-semibold">
+                          <span>Coupon Discount:</span>
+                          <span className="font-mono">- Rs. {discountAmount.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-charcoal-muted text-[11px]">
+                        <span>Nationwide Delivery:</span>
+                        <span className="font-semibold">
+                          {shippingFee === 0 ? 'FREE' : `Rs. ${shippingFee}`}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-base font-bold text-teal pt-2 border-t border-sand/80">
+                        <span>Order Total:</span>
+                        <span className="font-mono font-black text-lg text-teal">Rs. {totalAmount.toLocaleString()}</span>
+                      </div>
+                      <div className="bg-amber-500/10 p-3.5 rounded-2xl border border-amber-500/30 space-y-2 mt-2">
+                        <div className="flex justify-between text-xs text-amber-900 font-bold">
+                          <span>Advance Required:</span>
+                          <span className="font-mono">{effectiveAdvancePercent}%</span>
+                        </div>
+                        <div className="flex justify-between text-sm font-extrabold text-amber-950 pt-1.5 border-t border-amber-500/20">
+                          <span>Pay Now:</span>
+                          <span className="font-mono text-base font-black text-amber-900">
+                            Rs. {preOrderAdvanceAmount.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs font-semibold text-teal-900">
+                          <span>Remaining:</span>
+                          <span className="font-mono font-bold">
+                            Rs. {preOrderRemainingAmount.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex justify-between text-lg font-bold text-teal pt-3 border-t border-sand/80">
+                      <span>Grand Total (COD):</span>
+                      <span>Rs. {totalAmount.toLocaleString()}</span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Submit Order Button */}
@@ -627,7 +1080,7 @@ export default function CheckoutPage() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || (isPreOrderCart && (screenshotUploading || !screenshotKey))}
                   className="w-full btn-premium btn-primary !py-4 rounded-2xl text-xs uppercase font-black tracking-widest transition-all shadow-2xl flex items-center justify-center gap-2.5 disabled:opacity-50 mt-6 border border-champagne/30 cursor-pointer"
                 >
                   {isSubmitting ? (
@@ -636,11 +1089,17 @@ export default function CheckoutPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      Confirming Your Order...
+                      {isPreOrderCart ? 'Placing Pre-Order...' : 'Confirming Your Order...'}
                     </span>
+                  ) : isPreOrderCart ? (
+                    <>
+                      <Lock className="w-4 h-4 text-champagne" /> Place Pre-Order (Rs. {preOrderAdvanceAmount.toLocaleString()} Advance){' '}
+                      <ArrowRight className="w-4 h-4 text-champagne" />
+                    </>
                   ) : (
                     <>
-                      <Lock className="w-4 h-4 text-champagne" /> Confirm Order (Cash On Delivery) <ArrowRight className="w-4 h-4 text-champagne" />
+                      <Lock className="w-4 h-4 text-champagne" /> Confirm Order (Cash On Delivery){' '}
+                      <ArrowRight className="w-4 h-4 text-champagne" />
                     </>
                   )}
                 </motion.button>
@@ -648,9 +1107,17 @@ export default function CheckoutPage() {
                 <div className="text-[11px] text-center text-charcoal-muted space-y-1 pt-2 font-medium">
                   <p className="flex items-center justify-center gap-1.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-teal shrink-0" />
-                    <span>7-day easy exchange guarantee across all cities in Pakistan.</span>
+                    <span>
+                      {isPreOrderCart
+                        ? 'Advance payment verified by finance team within 24 hours.'
+                        : '7-day easy exchange guarantee across all cities in Pakistan.'}
+                    </span>
                   </p>
-                  <p>Express courier dispatch with discreet packaging (no family questions asked).</p>
+                  <p>
+                    {isPreOrderCart
+                      ? 'Live WhatsApp updates sent upon verification & dispatch.'
+                      : 'Express courier dispatch with discreet packaging (no family questions asked).'}
+                  </p>
                 </div>
               </div>
             </div>

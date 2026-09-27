@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, Trash2, Edit3, Copy, Eye, EyeOff, Package, X, Check, Image as ImageIcon, Layers } from 'lucide-react';
+import { ProductImageUploader } from '@/components/admin/ProductImageUploader';
 
 interface ProductImage {
   id?: string;
@@ -48,6 +49,10 @@ interface Product {
   isNewArrival: boolean;
   isBestSeller: boolean;
   isSignature: boolean;
+  isPreOrder?: boolean;
+  preOrderAdvancePercent?: number | null;
+  preOrderNote?: string | null;
+  preOrderEstimatedAvailability?: string | null;
   categoryId?: string | null;
   collectionId?: string | null;
   images: ProductImage[];
@@ -98,6 +103,11 @@ export function ProductsClient({ initialProducts, categories = [], collections =
     { size: 'L', color: 'Black', stock: 5 },
   ]);
   const [formSizeGuide, setFormSizeGuide] = useState('');
+  // Pre-Order Form State
+  const [formIsPreOrder, setFormIsPreOrder] = useState(false);
+  const [formPreOrderAdvancePercent, setFormPreOrderAdvancePercent] = useState('');
+  const [formPreOrderNote, setFormPreOrderNote] = useState('');
+  const [formPreOrderEstimatedAvailability, setFormPreOrderEstimatedAvailability] = useState('');
   const [sizeGuideOptions, setSizeGuideOptions] = useState<{ id: string; name: string }[]>([]);
 
   // Fetch size guides for the dropdown
@@ -133,6 +143,10 @@ export function ProductsClient({ initialProducts, categories = [], collections =
       { size: 'L', color: 'Black', stock: 5 },
     ]);
     setFormSizeGuide('');
+    setFormIsPreOrder(false);
+    setFormPreOrderAdvancePercent('');
+    setFormPreOrderNote('');
+    setFormPreOrderEstimatedAvailability('');
     setErrorMessage('');
     setModalOpen(true);
   };
@@ -156,6 +170,10 @@ export function ProductsClient({ initialProducts, categories = [], collections =
       product.variants.map((v) => ({ size: v.size, color: v.color, stock: v.stock }))
     );
     setFormSizeGuide((product as any).sizeGuideId || '');
+    setFormIsPreOrder(Boolean(product.isPreOrder));
+    setFormPreOrderAdvancePercent(product.preOrderAdvancePercent ? product.preOrderAdvancePercent.toString() : '');
+    setFormPreOrderNote(product.preOrderNote || '');
+    setFormPreOrderEstimatedAvailability(product.preOrderEstimatedAvailability || '');
     setErrorMessage('');
     setModalOpen(true);
   };
@@ -204,6 +222,10 @@ export function ProductsClient({ initialProducts, categories = [], collections =
       categoryId: formCategory || null,
       collectionId: formCollection || null,
       sizeGuideId: formSizeGuide || null,
+      isPreOrder: formIsPreOrder,
+      preOrderAdvancePercent: formPreOrderAdvancePercent ? parseInt(formPreOrderAdvancePercent) : null,
+      preOrderNote: formPreOrderNote || null,
+      preOrderEstimatedAvailability: formPreOrderEstimatedAvailability || null,
       images: formImages.length > 0 ? formImages : [DEFAULT_IMAGE],
       variants: formVariants,
     };
@@ -289,7 +311,12 @@ export function ProductsClient({ initialProducts, categories = [], collections =
     const matchesSearch =
       p.title.toLowerCase().includes(search.toLowerCase()) ||
       p.sku.toLowerCase().includes(search.toLowerCase());
-    const matchesStatus = statusFilter === 'ALL' || p.status === statusFilter;
+    let matchesStatus = true;
+    if (statusFilter === 'PRE_ORDER') {
+      matchesStatus = Boolean(p.isPreOrder);
+    } else if (statusFilter !== 'ALL') {
+      matchesStatus = p.status === statusFilter;
+    }
     return matchesSearch && matchesStatus;
   });
 
@@ -323,18 +350,23 @@ export function ProductsClient({ initialProducts, categories = [], collections =
           />
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          {['ALL', 'PUBLISHED', 'DRAFT'].map((st) => (
+        <div className="flex items-center gap-2 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
+          {[
+            { id: 'ALL', label: 'All Products' },
+            { id: 'PUBLISHED', label: 'Published' },
+            { id: 'DRAFT', label: 'Draft' },
+            { id: 'PRE_ORDER', label: 'Pre-Orders' },
+          ].map((st) => (
             <button
-              key={st}
-              onClick={() => setStatusFilter(st)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all btn-3d ${
-                statusFilter === st
+              key={st.id}
+              onClick={() => setStatusFilter(st.id)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all btn-3d whitespace-nowrap ${
+                statusFilter === st.id
                   ? 'bg-[#D4AF37] text-black border-[#D4AF37] shadow-md'
                   : 'bg-[#06191B] text-[#FAF8F5]/70 border-[#D4AF37]/20 hover:border-[#D4AF37]/50'
               }`}
             >
-              {st === 'ALL' ? 'All Products' : st === 'PUBLISHED' ? 'Published' : 'Draft'}
+              {st.label}
             </button>
           ))}
         </div>
@@ -372,7 +404,14 @@ export function ProductsClient({ initialProducts, categories = [], collections =
                             <Image src={primaryImage} alt={p.title} fill className="object-cover" />
                           </div>
                           <div>
-                            <p className="font-semibold text-[#FAF8F5] line-clamp-1">{p.title}</p>
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-[#FAF8F5] line-clamp-1">{p.title}</p>
+                              {p.isPreOrder && (
+                                <span className="px-2 py-0.5 rounded-full text-[9px] font-extrabold tracking-wider uppercase bg-amber-500/20 text-amber-300 border border-amber-500/40 shrink-0">
+                                  Pre-Order
+                                </span>
+                              )}
+                            </div>
                             <span className="text-xs text-[#D4AF37]/80">{p.category?.name || 'Uncategorized'}</span>
                           </div>
                         </div>
@@ -601,6 +640,125 @@ export function ProductsClient({ initialProducts, categories = [], collections =
                 </div>
               </div>
 
+              {/* Pre-Order Configuration */}
+              <div className="bg-[#06191B] p-5 rounded-2xl border border-[#D4AF37]/30 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-bold text-[#D4AF37] uppercase tracking-wider flex items-center gap-2">
+                      <span>Pre-Order Product</span>
+                      {formIsPreOrder && (
+                        <span className="px-2 py-0.5 rounded-full text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/40">
+                          Active Pre-Order
+                        </span>
+                      )}
+                    </label>
+                    <p className="text-[11px] text-[#FAF8F5]/60 mt-0.5">
+                      Customers must pay an advance payment via bank transfer/wallet with proof upload.
+                    </p>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formIsPreOrder}
+                      onChange={(e) => setFormIsPreOrder(e.target.checked)}
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-[#0A2528] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#D4AF37]"></div>
+                  </label>
+                </div>
+
+                {formIsPreOrder && (
+                  <>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-3 border-t border-[#D4AF37]/15">
+                      <div>
+                        <label className="block text-[11px] text-[#D4AF37] font-semibold uppercase mb-1">
+                          Advance % (Leave blank for default)
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="100"
+                          placeholder="Default (50%)"
+                          value={formPreOrderAdvancePercent}
+                          onChange={(e) => setFormPreOrderAdvancePercent(e.target.value)}
+                          className="w-full bg-[#0A2528] border border-[#D4AF37]/25 rounded-xl px-3 py-2 text-xs text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-[#D4AF37] font-semibold uppercase mb-1">
+                          Estimated Availability
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. 2-3 Weeks / 15 Oct"
+                          value={formPreOrderEstimatedAvailability}
+                          onChange={(e) => setFormPreOrderEstimatedAvailability(e.target.value)}
+                          className="w-full bg-[#0A2528] border border-[#D4AF37]/25 rounded-xl px-3 py-2 text-xs text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] text-[#D4AF37] font-semibold uppercase mb-1">
+                          Pre-Order Note / Tagline
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Made-to-order handcrafted piece"
+                          value={formPreOrderNote}
+                          onChange={(e) => setFormPreOrderNote(e.target.value)}
+                          className="w-full bg-[#0A2528] border border-[#D4AF37]/25 rounded-xl px-3 py-2 text-xs text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Live Pre-Order Pricing & Advance Breakdown Preview */}
+                    {(() => {
+                      const base = parseFloat(formBasePrice) || 0;
+                      const sale = formDiscountPrice ? parseFloat(formDiscountPrice) : null;
+                      const selling = sale !== null && !isNaN(sale) && sale > 0 ? sale : base;
+                      const discount = Math.max(0, base - selling);
+                      const advPercent = parseInt(formPreOrderAdvancePercent) || 50;
+                      const advance = Math.round((selling * advPercent) / 100);
+                      const remaining = Math.max(0, selling - advance);
+
+                      return (
+                        <div className="bg-[#0A2528] border border-[#D4AF37]/25 rounded-xl p-3.5 space-y-2 text-xs">
+                          <span className="text-[10px] uppercase font-bold text-[#D4AF37] block tracking-wider">
+                            Live Pre-Order Pricing Breakdown
+                          </span>
+                          <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-[11px] font-sans">
+                            <div className="bg-[#06191B] p-2 rounded-lg border border-white/5">
+                              <span className="text-[#FAF8F5]/60 block text-[10px]">Original Price</span>
+                              <span className="font-mono font-bold text-[#FAF8F5]">Rs. {base.toLocaleString()}</span>
+                            </div>
+                            <div className="bg-[#06191B] p-2 rounded-lg border border-white/5">
+                              <span className="text-[#FAF8F5]/60 block text-[10px]">Selling Price</span>
+                              <span className="font-mono font-bold text-[#D4AF37]">Rs. {selling.toLocaleString()}</span>
+                            </div>
+                            <div className="bg-[#06191B] p-2 rounded-lg border border-white/5">
+                              <span className="text-[#FAF8F5]/60 block text-[10px]">Discount</span>
+                              <span className="font-mono font-bold text-emerald-400">
+                                {discount > 0 ? `Rs. ${discount.toLocaleString()}` : 'None'}
+                              </span>
+                            </div>
+                            <div className="bg-[#06191B] p-2 rounded-lg border border-amber-500/20">
+                              <span className="text-amber-300/80 block text-[10px]">Advance ({advPercent}%)</span>
+                              <span className="font-mono font-bold text-amber-400">Rs. {advance.toLocaleString()}</span>
+                            </div>
+                            <div className="bg-[#06191B] p-2 rounded-lg border border-teal-500/20">
+                              <span className="text-teal-300/80 block text-[10px]">Remaining (COD)</span>
+                              <span className="font-mono font-bold text-teal-300">Rs. {remaining.toLocaleString()}</span>
+                            </div>
+                          </div>
+                          <p className="text-[10px] text-[#FAF8F5]/50 italic">
+                            * Advance is calculated from final selling price (Rs. {selling.toLocaleString()}). Customer pays Rs. {advance.toLocaleString()} now, and Rs. {remaining.toLocaleString()} on delivery.
+                          </p>
+                        </div>
+                      );
+                    })()}
+                  </>
+                )}
+              </div>
+
               {/* Description & Details */}
               <div className="space-y-4">
                 <div>
@@ -641,44 +799,10 @@ export function ProductsClient({ initialProducts, categories = [], collections =
 
               {/* Product Images Manager */}
               <div className="space-y-3 bg-[#06191B] p-5 rounded-2xl border border-[#D4AF37]/20">
-                <label className="block text-xs font-bold text-[#D4AF37] uppercase tracking-wider">Product Image Gallery</label>
-
-                <div className="flex gap-2">
-                  <input
-                    type="url"
-                    value={newImageUrl}
-                    onChange={(e) => setNewImageUrl(e.target.value)}
-                    placeholder="Paste image URL (https://...)"
-                    className="flex-1 bg-[#0A2528] border border-[#D4AF37]/25 rounded-xl px-4 py-2.5 text-xs text-[#FAF8F5] placeholder-[#FAF8F5]/30 focus:outline-none focus:border-[#D4AF37]"
-                  />
-                  <button
-                    type="button"
-                    onClick={handleAddImage}
-                    className="bg-[#103A3E] hover:bg-[#D4AF37] hover:text-black text-[#D4AF37] border border-[#D4AF37]/30 px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all btn-3d"
-                  >
-                    Add Image
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-4 sm:grid-cols-6 gap-3 pt-2">
-                  {formImages.map((url, idx) => (
-                    <div key={idx} className="relative group rounded-xl overflow-hidden border border-[#D4AF37]/30 bg-black aspect-[3/4] shadow-md">
-                      <Image src={url} alt={`Gallery ${idx}`} fill className="object-cover" />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveImage(idx)}
-                        className="absolute top-1 right-1 p-1 bg-rose-600/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                      {idx === 0 && (
-                        <span className="absolute bottom-1 left-1 right-1 bg-[#D4AF37] text-black text-[9px] font-extrabold text-center py-0.5 rounded uppercase tracking-wider">
-                          Primary
-                        </span>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                <ProductImageUploader
+                  images={formImages}
+                  onChange={(imgs) => setFormImages(imgs)}
+                />
               </div>
 
               {/* Product Variants Manager */}

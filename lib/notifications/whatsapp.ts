@@ -20,7 +20,7 @@ export class WhatsAppNotificationProvider implements NotificationProvider {
           .join('\n');
 
         const text = `🚨 *NEW ORDER ALERT - WearOMNIA*\n\n` +
-          `*Order Number:* #${payload.orderNumber}\n` +
+          `*Order Number:* ${payload.orderNumber}\n` +
           `*Customer Name:* ${payload.customerName}\n` +
           `*Customer Phone:* ${payload.customerPhone}\n` +
           `*City:* ${payload.city || 'N/A'}\n` +
@@ -34,7 +34,7 @@ export class WhatsAppNotificationProvider implements NotificationProvider {
 
       case 'NEW_ORDER_CUSTOMER': {
         const text = `Thank you for shopping with WearOMNIA.\n\n` +
-          `Your order #${payload.orderNumber} has been received successfully.\n\n` +
+          `Your order ${payload.orderNumber} has been received successfully.\n\n` +
           `Our team will review your order shortly.\n\n` +
           `Thank you.`;
 
@@ -42,7 +42,7 @@ export class WhatsAppNotificationProvider implements NotificationProvider {
       }
 
       case 'ORDER_STATUS_CONFIRMED': {
-        const text = `Your order #${payload.orderNumber} has been confirmed.\n\n` +
+        const text = `Your order ${payload.orderNumber} has been confirmed.\n\n` +
           `Our team has started preparing your order.`;
 
         return { text, recipientPhone };
@@ -50,20 +50,20 @@ export class WhatsAppNotificationProvider implements NotificationProvider {
 
       case 'ORDER_STATUS_PACKING': {
         const text = `Great news!\n\n` +
-          `Your order #${payload.orderNumber} is currently being packed carefully.`;
+          `Your order ${payload.orderNumber} is currently being packed carefully.`;
 
         return { text, recipientPhone };
       }
 
       case 'ORDER_STATUS_OUT_FOR_DELIVERY': {
-        const text = `Your order #${payload.orderNumber} is on the way.\n\n` +
+        const text = `Your order ${payload.orderNumber} is on the way.\n\n` +
           `Estimated delivery: 2–3 business days.${payload.trackingNumber ? `\nTracking #: ${payload.trackingNumber}` : ''}`;
 
         return { text, recipientPhone };
       }
 
       case 'ORDER_STATUS_DELIVERED': {
-        const text = `We hope you love your WearOMNIA order #${payload.orderNumber}.\n\n` +
+        const text = `We hope you love your WearOMNIA order ${payload.orderNumber}.\n\n` +
           `Thank you for choosing us.`;
 
         return { text, recipientPhone };
@@ -71,7 +71,7 @@ export class WhatsAppNotificationProvider implements NotificationProvider {
 
       case 'ORDER_STATUS_CANCELLED': {
         const text = `Dear ${payload.customerName || 'Customer'},\n\n` +
-          `Your order #${payload.orderNumber} has been cancelled.\n\n` +
+          `Your order ${payload.orderNumber} has been cancelled.\n\n` +
           `If you have any questions or wish to replace your order, please contact our concierge team.\n\n` +
           `Thank you, WearOMNIA Team.`;
 

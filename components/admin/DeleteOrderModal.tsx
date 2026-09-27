@@ -81,7 +81,7 @@ export function DeleteOrderModal({
           <div className="bg-[#06191B] border border-red-500/20 rounded-2xl p-4 space-y-3">
             <div className="flex items-center justify-between border-b border-[#D4AF37]/10 pb-2.5">
               <span className="text-[11px] text-[#FAF8F5]/60 uppercase font-bold tracking-wider">Order Reference</span>
-              <span className="font-mono font-bold text-sm text-[#D4AF37]">#{order.orderNumber}</span>
+              <span className="font-mono font-bold text-sm text-[#D4AF37]">{order.orderNumber}</span>
             </div>
 
             <div className="flex items-center justify-between border-b border-[#D4AF37]/10 pb-2.5">

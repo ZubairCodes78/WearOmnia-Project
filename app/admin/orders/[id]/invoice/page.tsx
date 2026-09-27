@@ -83,7 +83,7 @@ export default async function PrintInvoicePage({ params }: PrintInvoiceProps) {
         </div>
         <div className="text-right text-xs">
           <span className="font-serif text-xl font-bold block text-teal-900">TAX INVOICE</span>
-          <p className="font-mono font-bold">#{order.orderNumber}</p>
+          <p className="font-mono font-bold">{order.orderNumber}</p>
           <p className="text-gray-600">{new Date(order.createdAt).toLocaleDateString()}</p>
         </div>
       </div>

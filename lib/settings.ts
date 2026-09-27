@@ -118,3 +118,157 @@ export async function updateSiteSettings(data: Partial<SiteSettingsData>): Promi
 
   return updated;
 }
+
+/**
+ * Public Customer-Facing Site Settings (Strict Positive Allow-List)
+ * NEVER includes tokens, secrets, credentials, or internal courier/WhatsApp keys.
+ */
+export interface PublicSiteSettings {
+  businessName: string;
+  whatsappNumber: string;
+  storePhone: string;
+  storeEmail: string;
+  storeAddress: string;
+  logoUrl: string;
+  instagramUrl: string;
+  facebookUrl: string;
+  tiktokUrl: string;
+  youtubeUrl: string;
+  supportHours: string;
+  flatShippingFee: number;
+  freeShippingThreshold: number;
+  codCharge: number;
+  estimatedDeliveryTime: string;
+  deliveryInstructions: string;
+  announcementText: string;
+  announcementEnabled: boolean;
+  announcementLink: string;
+  footerAboutText: string;
+  copyrightText: string;
+  shippingPolicyText?: string;
+  returnsPolicyText?: string;
+  refundPolicyText?: string;
+  heroSlides?: any[];
+}
+
+/**
+ * Sensitive Credential & Internal Keys that MUST NEVER be serialized in public responses
+ */
+export const SENSITIVE_SETTINGS_KEYS = [
+  'whatsapp_access_token',
+  'whatsapp_app_secret',
+  'whatsapp_verify_token',
+  'whatsapp_phone_number_id',
+  'whatsapp_admin_phone',
+  'whatsapp_mode',
+  'whatsapp_auto_confirm_enabled',
+  'whatsapp_customer_notify_enabled',
+  'whatsapp_admin_notify_enabled',
+  'whatsapp_sound_enabled',
+  'postex_api_token',
+  'postex_api_key',
+  'postex_merchant_id',
+  'postex_account_id',
+  'postex_webhook_url',
+  'postex_api_url',
+  'postex_pickup_address_code',
+  'postex_store_address_code',
+  'postex_pickup_address_name',
+  'postex_store_address_name',
+  'postex_environment',
+  'postex_enabled',
+] as const;
+
+/**
+ * Filters any settings object to return ONLY safe public storefront properties.
+ */
+export function getPublicSafeSiteSettings(settings: Partial<SiteSettingsData> | Record<string, any>): PublicSiteSettings {
+  const safe: PublicSiteSettings = {
+    businessName: settings.businessName || DEFAULT_SITE_SETTINGS.businessName,
+    whatsappNumber: settings.whatsappNumber || DEFAULT_SITE_SETTINGS.whatsappNumber,
+    storePhone: settings.storePhone || DEFAULT_SITE_SETTINGS.storePhone,
+    storeEmail: settings.storeEmail || DEFAULT_SITE_SETTINGS.storeEmail,
+    storeAddress: settings.storeAddress || DEFAULT_SITE_SETTINGS.storeAddress,
+    logoUrl: settings.logoUrl || DEFAULT_SITE_SETTINGS.logoUrl,
+    instagramUrl: settings.instagramUrl || DEFAULT_SITE_SETTINGS.instagramUrl,
+    facebookUrl: settings.facebookUrl || DEFAULT_SITE_SETTINGS.facebookUrl,
+    tiktokUrl: settings.tiktokUrl || DEFAULT_SITE_SETTINGS.tiktokUrl,
+    youtubeUrl: settings.youtubeUrl || DEFAULT_SITE_SETTINGS.youtubeUrl,
+    supportHours: settings.supportHours || DEFAULT_SITE_SETTINGS.supportHours,
+    flatShippingFee: typeof settings.flatShippingFee === 'number' ? settings.flatShippingFee : DEFAULT_SITE_SETTINGS.flatShippingFee,
+    freeShippingThreshold: typeof settings.freeShippingThreshold === 'number' ? settings.freeShippingThreshold : DEFAULT_SITE_SETTINGS.freeShippingThreshold,
+    codCharge: typeof settings.codCharge === 'number' ? settings.codCharge : DEFAULT_SITE_SETTINGS.codCharge,
+    estimatedDeliveryTime: settings.estimatedDeliveryTime || DEFAULT_SITE_SETTINGS.estimatedDeliveryTime,
+    deliveryInstructions: settings.deliveryInstructions || DEFAULT_SITE_SETTINGS.deliveryInstructions,
+    announcementText: settings.announcementText || DEFAULT_SITE_SETTINGS.announcementText,
+    announcementEnabled: typeof settings.announcementEnabled === 'boolean' ? settings.announcementEnabled : DEFAULT_SITE_SETTINGS.announcementEnabled,
+    announcementLink: settings.announcementLink || DEFAULT_SITE_SETTINGS.announcementLink,
+    footerAboutText: settings.footerAboutText || DEFAULT_SITE_SETTINGS.footerAboutText,
+    copyrightText: settings.copyrightText || DEFAULT_SITE_SETTINGS.copyrightText,
+  };
+
+  if ((settings as any).shippingPolicyText) {
+    safe.shippingPolicyText = (settings as any).shippingPolicyText;
+  }
+  if ((settings as any).returnsPolicyText) {
+    safe.returnsPolicyText = (settings as any).returnsPolicyText;
+  }
+  if ((settings as any).refundPolicyText) {
+    safe.refundPolicyText = (settings as any).refundPolicyText;
+  }
+  if (Array.isArray((settings as any).heroSlides)) {
+    safe.heroSlides = (settings as any).heroSlides;
+  }
+
+  return safe;
+}
+
+/**
+ * Retrieves only the sanitized public site settings for client consumption.
+ */
+export async function getPublicSiteSettings(): Promise<PublicSiteSettings> {
+  const fullSettings = await getSiteSettings();
+  return getPublicSafeSiteSettings(fullSettings);
+}
+
+/**
+ * Pre-Order Configuration Settings
+ */
+export interface PreOrderSettings {
+  preorder_enabled: boolean;
+  preorder_advance_percent: number; // 1-100, default 50
+  preorder_payment_instructions: string;
+}
+
+export const DEFAULT_PREORDER_SETTINGS: PreOrderSettings = {
+  preorder_enabled: false,
+  preorder_advance_percent: 50,
+  preorder_payment_instructions: 'Please transfer the required 50% advance payment to any of our official payment accounts below and upload the payment proof screenshot. Your pre-order will be verified by our team within 24 hours.',
+};
+
+export async function getPreOrderSettings(): Promise<PreOrderSettings> {
+  try {
+    const record = await prisma.siteSettings.findUnique({
+      where: { key: 'preorder_config' },
+    });
+    if (record) {
+      return { ...DEFAULT_PREORDER_SETTINGS, ...JSON.parse(record.value) };
+    }
+  } catch (e) {
+    console.error('Failed to read pre-order settings:', e);
+  }
+  return DEFAULT_PREORDER_SETTINGS;
+}
+
+export async function updatePreOrderSettings(data: Partial<PreOrderSettings>): Promise<PreOrderSettings> {
+  const current = await getPreOrderSettings();
+  const updated = { ...current, ...data };
+
+  await prisma.siteSettings.upsert({
+    where: { key: 'preorder_config' },
+    update: { value: JSON.stringify(updated) },
+    create: { key: 'preorder_config', value: JSON.stringify(updated) },
+  });
+
+  return updated;
+}

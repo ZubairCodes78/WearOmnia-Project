@@ -18,6 +18,7 @@ export interface ProductCardProps {
   sku: string;
   isNewArrival?: boolean;
   isBestSeller?: boolean;
+  isPreOrder?: boolean;
   inStock: boolean;
   stockQuantity: number;
   images: { url: string; altText?: string | null }[];
@@ -35,6 +36,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   sku,
   isNewArrival,
   isBestSeller,
+  isPreOrder,
   inStock,
   stockQuantity,
   images,
@@ -85,7 +87,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         color: firstVariant.color,
         sku,
         quantity: 1,
-        maxStock: stockQuantity,
+        maxStock: isPreOrder ? 999 : stockQuantity,
+        isPreOrder: Boolean(isPreOrder),
       });
       setAddState('added');
       setTimeout(() => setAddState('idle'), 800);
@@ -135,7 +138,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* 3D Minimal Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
-            {!inStock || stockQuantity <= 0 ? (
+            {isPreOrder ? (
+              <span className="badge-3d bg-amber-600/90 text-white text-[9px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full border border-amber-300/40 shadow-sm">
+                Pre-Order
+              </span>
+            ) : !inStock || stockQuantity <= 0 ? (
               <span className="badge-3d bg-charcoal/90 backdrop-blur-md text-offwhite text-[9px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-full border border-white/20">
                 Out of Stock
               </span>
@@ -205,14 +212,14 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
       {/* Primary Action & Humor Micro-copy */}
       <div className="pt-2.5 mt-1 space-y-1.5 border-t border-sand/30">
-        {/* Single Primary Action: + Add to Bag */}
+        {/* Single Primary Action: + Add to Bag / Pre-Order */}
         <motion.button
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.96 }}
           onClick={handleQuickAdd}
-          disabled={!inStock || stockQuantity <= 0 || addState !== 'idle'}
+          disabled={(!isPreOrder && (!inStock || stockQuantity <= 0)) || addState !== 'idle'}
           className="w-full min-h-[44px] h-11 bg-teal text-champagne rounded-xl text-xs uppercase font-extrabold tracking-wider hover:bg-teal-900 transition-all duration-300 flex items-center justify-center gap-1.5 shadow-md disabled:opacity-50 cursor-pointer border border-champagne/20 select-none"
-          aria-label={inStock ? `Add ${title} to bag` : `${title} is out of stock`}
+          aria-label={isPreOrder ? `Pre-order ${title}` : inStock ? `Add ${title} to bag` : `${title} is out of stock`}
         >
           <AnimatePresence mode="wait">
             {addState === 'loading' ? (
@@ -223,8 +230,12 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               <motion.span key="added" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 text-xs text-champagne font-black">
                 <Check className="w-3.5 h-3.5 text-champagne" /> Added to Bag!
               </motion.span>
-            ) : !inStock || stockQuantity <= 0 ? (
+            ) : !isPreOrder && (!inStock || stockQuantity <= 0) ? (
               <span key="out">Out of Stock</span>
+            ) : isPreOrder ? (
+              <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 font-black tracking-widest">
+                <ShoppingBag className="w-3.5 h-3.5" /> Pre-Order
+              </motion.span>
             ) : (
               <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5">
                 <ShoppingBag className="w-3.5 h-3.5" /> + Add to Bag

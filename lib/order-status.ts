@@ -78,15 +78,15 @@ export const TIMELINE_STEPS: { status: OrderStatus; label: string; icon: string 
 
 // Notification message templates
 export const STATUS_NOTIFICATION_MESSAGES: Record<OrderStatus, (orderNumber: string, courier?: string, trackingNumber?: string) => string> = {
-  PENDING: (orderNumber) => `Your WearOMNIA order #${orderNumber} has been received and is awaiting confirmation.`,
-  CONFIRMED: (orderNumber) => `Your WearOMNIA order #${orderNumber} has been confirmed. We're preparing it with care.`,
-  PACKING: (orderNumber) => `Your WearOMNIA order #${orderNumber} is now being carefully packed at our Lahore Atelier.`,
+  PENDING: (orderNumber) => `Your WearOMNIA order ${orderNumber} has been received and is awaiting confirmation.`,
+  CONFIRMED: (orderNumber) => `Your WearOMNIA order ${orderNumber} has been confirmed. We're preparing it with care.`,
+  PACKING: (orderNumber) => `Your WearOMNIA order ${orderNumber} is now being carefully packed at our Lahore Atelier.`,
   DISPATCHED: (orderNumber, courier, trackingNumber) =>
-    `Your WearOMNIA order #${orderNumber} has been dispatched${courier ? ` via ${courier}` : ''}.${trackingNumber ? ` Tracking: ${trackingNumber}` : ''}`,
-  OUT_FOR_DELIVERY: (orderNumber) => `Your WearOMNIA order #${orderNumber} is out for delivery. Please keep your COD amount ready.`,
-  DELIVERED: (orderNumber) => `Your WearOMNIA order #${orderNumber} has been delivered successfully. Thank you for choosing WearOMNIA!`,
-  CANCELLED: (orderNumber) => `Your WearOMNIA order #${orderNumber} has been cancelled. If you have any questions, please contact our concierge.`,
-  RETURNED: (orderNumber) => `Your WearOMNIA order #${orderNumber} return has been processed.`,
+    `Your WearOMNIA order ${orderNumber} has been dispatched${courier ? ` via ${courier}` : ''}.${trackingNumber ? ` Tracking: ${trackingNumber}` : ''}`,
+  OUT_FOR_DELIVERY: (orderNumber) => `Your WearOMNIA order ${orderNumber} is out for delivery. Please keep your COD amount ready.`,
+  DELIVERED: (orderNumber) => `Your WearOMNIA order ${orderNumber} has been delivered successfully. Thank you for choosing WearOMNIA!`,
+  CANCELLED: (orderNumber) => `Your WearOMNIA order ${orderNumber} has been cancelled. If you have any questions, please contact our concierge.`,
+  RETURNED: (orderNumber) => `Your WearOMNIA order ${orderNumber} return has been processed.`,
 };
 
 // Get the step index for a status in the timeline (for progress display)

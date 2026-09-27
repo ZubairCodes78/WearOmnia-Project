@@ -16,6 +16,7 @@ export interface CartItem {
   sku: string;
   quantity: number;
   maxStock: number;
+  isPreOrder?: boolean;
 }
 
 export interface Coupon {

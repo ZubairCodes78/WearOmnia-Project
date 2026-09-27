@@ -55,24 +55,15 @@ export default function OurStoryPage() {
         {/* Chapter 1: The Beginning */}
         <section className="py-20 sm:py-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-            {/* Overlapping 3D Imagery */}
-            <div className="lg:col-span-6 relative">
-              <div className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-2xl border-2 border-sand card-3d">
+            {/* Elegant Single Atelier Imagery */}
+            <div className="lg:col-span-6">
+              <div className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-xl border border-sand">
                 <Image
                   src="/images/kaftan-1.jpg"
                   alt="WearOMNIA Artisan Workshop"
                   fill
                   priority
                   sizes="(max-width: 1024px) 100vw, 50vw"
-                  className="object-cover object-center"
-                />
-              </div>
-              <div className="absolute -bottom-8 -right-6 w-1/2 aspect-square rounded-2xl overflow-hidden shadow-2xl border-4 border-offwhite hidden sm:block card-3d">
-                <Image
-                  src="/images/kaftan-2.jpg"
-                  alt="Delicate Embroidery Detail"
-                  fill
-                  sizes="25vw"
                   className="object-cover object-center"
                 />
               </div>

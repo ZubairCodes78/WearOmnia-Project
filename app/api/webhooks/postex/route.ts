@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSiteSettings } from '@/lib/settings';
+import { NotificationService } from '@/lib/notifications/notification-service';
 
 export async function POST(req: Request) {
   try {
@@ -41,7 +42,7 @@ export async function POST(req: Request) {
       mappedOrderStatus = 'DISPATCHED';
     }
 
-    // Find Order
+    // Find Order with items & products
     const order = await prisma.order.findFirst({
       where: {
         OR: [
@@ -49,14 +50,43 @@ export async function POST(req: Request) {
           ...(trackingNumber ? [{ trackingNumber }] : []),
         ],
       },
+      include: {
+        items: {
+          include: {
+            product: { select: { slug: true } },
+          },
+        },
+      },
     });
 
     if (order) {
-      await prisma.order.update({
+      const isStatusAdvancing = order.status !== mappedOrderStatus;
+      const wasDelivered = order.status === 'DELIVERED';
+      const isNowDelivered = mappedOrderStatus === 'DELIVERED';
+
+      const updateData: any = {
+        status: mappedOrderStatus,
+        trackingNumber: trackingNumber || order.trackingNumber,
+      };
+
+      // When order is delivered, full payment has been collected at doorstep
+      if (isNowDelivered) {
+        updateData.amountPaid = order.totalAmount;
+        updateData.deliveredAt = new Date();
+        if (order.isPreOrder) {
+          updateData.preOrderRemainingAmount = 0;
+        }
+      }
+
+      const updatedOrder = await prisma.order.update({
         where: { id: order.id },
-        data: {
-          status: mappedOrderStatus,
-          trackingNumber: trackingNumber || order.trackingNumber,
+        data: updateData,
+        include: {
+          items: {
+            include: {
+              product: { select: { slug: true } },
+            },
+          },
         },
       });
 
@@ -69,7 +99,7 @@ export async function POST(req: Request) {
           transactionFee: payload.transactionFee ? parseFloat(payload.transactionFee) : undefined,
           taxAmount: payload.taxAmount ? parseFloat(payload.taxAmount) : undefined,
           fuelSurcharge: payload.fuelSurcharge ? parseFloat(payload.fuelSurcharge) : undefined,
-          deliveryDate: payload.deliveryDate ? new Date(payload.deliveryDate) : undefined,
+          deliveryDate: payload.deliveryDate ? new Date(payload.deliveryDate) : (isNowDelivered ? new Date() : undefined),
           pickupDate: payload.pickupDate ? new Date(payload.pickupDate) : undefined,
           returnDate: payload.returnDate ? new Date(payload.returnDate) : undefined,
           returnReason: payload.returnReason || undefined,
@@ -77,16 +107,49 @@ export async function POST(req: Request) {
         },
       });
 
-      // Add timeline entry
-      await prisma.orderTimeline.create({
-        data: {
-          orderId: order.id,
-          status: mappedOrderStatus,
-          previousStatus: order.status,
-          note: `Status updated via PostEx Webhook (${rawStatus || mappedOrderStatus})`,
-          updatedBy: 'PostEx Webhook',
-        },
-      });
+      // Add timeline entry if status changed
+      if (isStatusAdvancing) {
+        await prisma.orderTimeline.create({
+          data: {
+            orderId: order.id,
+            status: mappedOrderStatus,
+            previousStatus: order.status,
+            note: `Status updated via PostEx Webhook (${rawStatus || mappedOrderStatus})`,
+            updatedBy: 'PostEx Webhook',
+          },
+        });
+
+        // Trigger WhatsApp Notification for Status Update
+        try {
+          const waRes = await NotificationService.sendStatusUpdate(updatedOrder, mappedOrderStatus);
+          if (waRes?.success && isNowDelivered) {
+            await prisma.order.update({
+              where: { id: order.id },
+              data: {
+                deliveredWhatsAppSentAt: new Date(),
+                deliveredWhatsAppMessageId: waRes.messageId || 'sent',
+              },
+            });
+          }
+        } catch (e) {
+          console.error('[WhatsApp Status Update Error from Webhook]', e);
+        }
+
+        // Trigger Review Request only on DELIVERED and only once
+        if (isNowDelivered && !wasDelivered) {
+          try {
+            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://wearomnia.com';
+            const firstProductSlug = updatedOrder.items?.[0]?.product?.slug;
+            const reviewUrl = firstProductSlug
+              ? `${siteUrl}/product/${firstProductSlug}#reviews`
+              : `${siteUrl}/order-success/${updatedOrder.orderNumber}`;
+
+            await NotificationService.sendReviewRequest(updatedOrder, reviewUrl);
+          } catch (e) {
+            console.error('[WhatsApp Review Request Error from Webhook]', e);
+          }
+        }
+      }
     }
 
     return NextResponse.json({

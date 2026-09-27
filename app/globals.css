@@ -327,46 +327,51 @@ h6,
   backface-visibility: hidden;
 }
 
-/* 3D Floating & Interactive Cards */
+/* Refined & Interactive Luxury Cards */
 .card-3d {
-  transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.45s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
-  transform: translateZ(0);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.25s ease;
 }
 
 .card-3d:hover {
-  transform: translateY(-6px) translateZ(10px);
-  box-shadow: 0 20px 40px -10px rgba(16, 61, 66, 0.12), 0 0 20px -5px rgba(223, 195, 160, 0.25);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px -8px rgba(16, 61, 66, 0.08);
 }
 
 .card-3d-subtle {
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1);
-  transform: translateZ(0);
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s ease;
 }
 
 .card-3d-subtle:hover {
-  transform: translateY(-3px) translateZ(5px);
-  box-shadow: 0 14px 28px -6px rgba(16, 61, 66, 0.08);
+  transform: translateY(-1.5px);
+  box-shadow: 0 8px 20px -6px rgba(16, 61, 66, 0.06);
 }
 
-/* Admin Luxury 3D Card */
+/* Admin Luxury Card */
 .admin-card-3d {
-  background: linear-gradient(145deg, rgba(13, 51, 55, 0.7) 0%, rgba(10, 37, 40, 0.95) 100%);
-  border: 1px solid rgba(212, 175, 55, 0.22);
-  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(212, 175, 55, 0.15);
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s ease;
-  transform: translateZ(0);
+  background: #0A2528;
+  border: 1px solid rgba(212, 175, 55, 0.18);
+  box-shadow: 0 6px 20px -4px rgba(0, 0, 0, 0.35);
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.2s ease;
 }
 
 .admin-card-3d:hover {
-  transform: translateY(-4px) translateZ(8px);
-  border-color: rgba(212, 175, 55, 0.45);
-  box-shadow: 0 20px 45px -10px rgba(0, 0, 0, 0.7), 0 0 24px -6px rgba(212, 175, 55, 0.25), inset 0 1px 0 rgba(212, 175, 55, 0.35);
+  transform: translateY(-1.5px);
+  border-color: rgba(212, 175, 55, 0.32);
+  box-shadow: 0 10px 28px -6px rgba(0, 0, 0, 0.45);
 }
 
-/* 3D Embossed Badges */
+/* Embossed Badges */
 .badge-3d {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1), inset 0 1px 1px rgba(255, 255, 255, 0.3);
-  transform: translateZ(4px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card-3d, .card-3d:hover,
+  .card-3d-subtle, .card-3d-subtle:hover,
+  .admin-card-3d, .admin-card-3d:hover {
+    transform: none !important;
+    transition: none !important;
+  }
 }
 
 /* Light glass — for cards, headers on light backgrounds */

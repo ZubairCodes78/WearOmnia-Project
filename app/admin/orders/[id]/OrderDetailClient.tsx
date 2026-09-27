@@ -27,6 +27,10 @@ import {
   ShieldCheck,
   RefreshCw,
   Trash2,
+  XCircle,
+  Maximize2,
+  Eye,
+  AlertTriangle,
 } from 'lucide-react';
 import { getValidNextStatuses, STATUS_LABELS } from '@/lib/order-status';
 import { normalizePhone } from '@/lib/phone';
@@ -56,6 +60,13 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   const [settlementDetails, setSettlementDetails] = useState<any>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
+  // Pre-Order Payment Review State
+  const [approvingPayment, setApprovingPayment] = useState(false);
+  const [rejectingPayment, setRejectingPayment] = useState(false);
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [rejectReason, setRejectReason] = useState('');
+  const [screenshotZoomModal, setScreenshotZoomModal] = useState(false);
+
   // Customer notification state
   const [notifyingCustomer, setNotifyingCustomer] = useState(false);
   const [notificationFeedback, setNotificationFeedback] = useState<{
@@ -64,6 +75,129 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
     isError?: boolean;
     whatsappUrl?: string;
   } | null>(null);
+
+  const [confirmingOrder, setConfirmingOrder] = useState(false);
+  const [sendingLifecycleWa, setSendingLifecycleWa] = useState(false);
+
+  const handleConfirmOrder = async () => {
+    setConfirmingOrder(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/orders/${order.id}/confirm`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to confirm order');
+      } else {
+        setOrder((prev: any) => ({
+          ...prev,
+          status: 'CONFIRMED',
+          confirmedAt: new Date().toISOString(),
+          confirmedBy: 'Admin Operations',
+        }));
+        setShipmentMessage(`Order #${order.orderNumber} confirmed successfully.`);
+        router.refresh();
+      }
+    } catch {
+      setError('Network error confirming order');
+    } finally {
+      setConfirmingOrder(false);
+    }
+  };
+
+  const handleSendLifecycleWhatsApp = async () => {
+    setSendingLifecycleWa(true);
+    setError('');
+    try {
+      const res = await fetch('/api/admin/orders/send-lifecycle-whatsapp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderIds: [order.id] }),
+      });
+      const data = await res.json();
+      if (!res.ok || data.failed > 0) {
+        setError(data.results?.[0]?.error || data.error || 'Failed to send WhatsApp message');
+      } else {
+        const action = data.results?.[0]?.action;
+        const now = new Date().toISOString();
+        setOrder((prev: any) => {
+          if (action === 'CONFIRMATION') return { ...prev, confirmationWhatsAppSentAt: now };
+          if (action === 'TRACKING') return { ...prev, trackingWhatsAppSentAt: now };
+          if (action === 'DELIVERED') return { ...prev, deliveredWhatsAppSentAt: now };
+          return prev;
+        });
+        setShipmentMessage(`WhatsApp ${action} message dispatched successfully.`);
+        router.refresh();
+      }
+    } catch {
+      setError('Network error sending WhatsApp message');
+    } finally {
+      setSendingLifecycleWa(false);
+    }
+  };
+
+  const handleApprovePayment = async () => {
+    setApprovingPayment(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/orders/${order.id}/approve-payment`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to approve payment');
+      } else {
+        setOrder((prev: any) => ({
+          ...prev,
+          preOrderPaymentStatus: 'PAYMENT_APPROVED',
+          status: 'CONFIRMED',
+          preOrderPaymentVerifiedAt: new Date().toISOString(),
+          preOrderPaymentVerifiedBy: data.order?.preOrderPaymentVerifiedBy || 'Admin Finance Team',
+        }));
+        setShipmentMessage('Advance payment approved successfully. Order is now CONFIRMED.');
+        router.refresh();
+      }
+    } catch {
+      setError('Network error approving payment');
+    } finally {
+      setApprovingPayment(false);
+    }
+  };
+
+  const handleRejectPayment = async () => {
+    if (!rejectReason.trim()) {
+      setError('Please provide a reason for rejecting the payment proof.');
+      return;
+    }
+    setRejectingPayment(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/orders/${order.id}/reject-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reason: rejectReason.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to reject payment');
+      } else {
+        setOrder((prev: any) => ({
+          ...prev,
+          preOrderPaymentStatus: 'PAYMENT_REJECTED',
+          preOrderPaymentRejectionReason: rejectReason.trim(),
+        }));
+        setShowRejectModal(false);
+        setRejectReason('');
+        setError('Payment proof marked as rejected. Customer notified to resubmit.');
+        router.refresh();
+      }
+    } catch {
+      setError('Network error rejecting payment');
+    } finally {
+      setRejectingPayment(false);
+    }
+  };
 
   const handleDeleteOrder = async (reason: string) => {
     const res = await fetch('/api/admin/orders/delete', {
@@ -374,6 +508,48 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
+          {/* Manual Order Confirmation Button */}
+          {order.status === 'PENDING' && (
+            <button
+              onClick={handleConfirmOrder}
+              disabled={confirmingOrder || (order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED')}
+              className="bg-[#D4AF37] hover:bg-white text-black px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-1.5 shadow disabled:opacity-40 cursor-pointer"
+              title={
+                order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED'
+                  ? 'Verify and approve advance payment proof first'
+                  : 'Manually confirm this order'
+              }
+            >
+              {confirmingOrder ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ShieldCheck className="w-3.5 h-3.5" />}
+              Confirm Order
+            </button>
+          )}
+
+          {/* State-Driven Lifecycle WhatsApp Action Button */}
+          {(() => {
+            let label: string | null = null;
+            if (order.status === 'CONFIRMED' && !order.confirmationWhatsAppSentAt) {
+              label = 'Send WhatsApp Confirmation';
+            } else if (Boolean(currentTracking) && !order.trackingWhatsAppSentAt) {
+              label = 'Send WhatsApp Tracking';
+            } else if ((order.status === 'DELIVERED' || activeShipment?.status === 'DELIVERED') && !order.deliveredWhatsAppSentAt) {
+              label = 'Send WhatsApp Delivered';
+            }
+
+            if (!label) return null;
+
+            return (
+              <button
+                onClick={handleSendLifecycleWhatsApp}
+                disabled={sendingLifecycleWa}
+                className="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 shadow cursor-pointer disabled:opacity-50"
+              >
+                {sendingLifecycleWa ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Send className="w-3.5 h-3.5" />}
+                {label}
+              </button>
+            );
+          })()}
+
           {isPostExActive ? (
             <Link
               href={`/admin/orders/${order.id}/label`}
@@ -385,9 +561,20 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
           ) : (
             <button
               onClick={() => handleCreateShipment('POSTEX')}
-              disabled={creatingShipment || order.status === 'PENDING' || order.status === 'PLACED'}
+              disabled={
+                creatingShipment ||
+                order.status === 'PENDING' ||
+                order.status === 'PLACED' ||
+                (order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED')
+              }
               className="bg-[#D4AF37] hover:bg-[#FAF8F5] text-black px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 shadow disabled:opacity-40"
-              title={order.status === 'PENDING' ? 'Confirm order first' : 'Book on PostEx'}
+              title={
+                order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED'
+                  ? 'Approve 50% advance payment proof first'
+                  : order.status === 'PENDING'
+                  ? 'Confirm order first'
+                  : 'Book on PostEx'
+              }
             >
               {creatingShipment ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Truck className="w-3.5 h-3.5" />}
               Send to PostEx
@@ -405,7 +592,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
           <button
             onClick={() => {
               const cleanPhone = normalizePhone(order.customerPhone);
-              const msg = encodeURIComponent(`Hi ${order.customerName},\nRegarding your WearOMNIA order #${order.orderNumber}.`);
+              const msg = encodeURIComponent(`Hi ${order.customerName},\nRegarding your WearOMNIA order ${order.orderNumber}.`);
               window.open(`https://wa.me/${cleanPhone}?text=${msg}`, '_blank');
             }}
             className="bg-[#0A2528] hover:bg-emerald-950 text-emerald-400 border border-emerald-500/30 px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5"
@@ -497,6 +684,199 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
               Open in WhatsApp Web →
             </a>
           )}
+        </div>
+      )}
+
+      {/* Pre-Order Advance Payment Review Panel (Prominent Full-Width) */}
+      {order.isPreOrder && (
+        <div className={`border rounded-2xl p-6 shadow-xl transition-all ${
+          order.preOrderPaymentStatus === 'PAYMENT_APPROVED'
+            ? 'bg-emerald-950/30 border-emerald-500/40'
+            : order.preOrderPaymentStatus === 'PAYMENT_REJECTED'
+            ? 'bg-red-950/30 border-red-500/40'
+            : 'bg-amber-950/30 border-amber-500/40'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#D4AF37]/15 pb-4">
+            <div className="flex items-center gap-3">
+              <span className="bg-amber-400 text-teal-950 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
+                Pre-Order
+              </span>
+              <h2 className="font-serif text-lg font-bold text-[#FAF8F5]">
+                50% Advance Payment Verification
+              </h2>
+            </div>
+            <div>
+              {order.preOrderPaymentStatus === 'PAYMENT_APPROVED' ? (
+                <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Advance Approved
+                </span>
+              ) : order.preOrderPaymentStatus === 'PAYMENT_REJECTED' ? (
+                <span className="bg-red-500/20 text-red-300 border border-red-500/40 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                  <XCircle className="w-3.5 h-3.5 text-red-400" /> Payment Rejected
+                </span>
+              ) : (
+                <span className="bg-amber-500/20 text-amber-300 border border-amber-500/40 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 animate-pulse">
+                  <Clock className="w-3.5 h-3.5 text-amber-400" /> Proof Verification Required
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-5">
+            {/* Payment Financials */}
+            <div className="space-y-3 text-xs">
+              <div className="bg-[#06191B] p-4 rounded-xl border border-[#D4AF37]/10 space-y-2">
+                <span className="text-[10px] uppercase font-bold text-[#D4AF37]/80 block tracking-wider">Financial Breakdown</span>
+                
+                {(() => {
+                  const originalSum = order.items?.reduce((sum: number, item: any) => sum + ((item.originalPrice || item.unitPrice) * item.quantity), 0) || order.subtotal;
+                  const discountSum = Math.max(0, originalSum - order.subtotal) + (order.discountAmount || 0);
+                  const isApproved = order.preOrderPaymentStatus === 'PAYMENT_APPROVED';
+                  const advanceReq = order.preOrderAdvanceAmount || 0;
+                  const paid = order.amountPaid != null ? order.amountPaid : (isApproved ? advanceReq : 0);
+                  const remaining = Math.max(0, order.totalAmount - paid);
+
+                  return (
+                    <>
+                      {originalSum > order.subtotal && (
+                        <div className="flex justify-between text-[#FAF8F5]/60">
+                          <span>Original Price:</span>
+                          <span className="font-mono line-through">Rs. {originalSum.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-[#FAF8F5]/80">
+                        <span>Selling Price:</span>
+                        <span className="font-mono font-medium">Rs. {order.subtotal.toLocaleString()}</span>
+                      </div>
+                      {discountSum > 0 && (
+                        <div className="flex justify-between text-emerald-400">
+                          <span>Discount:</span>
+                          <span className="font-mono font-semibold">- Rs. {discountSum.toLocaleString()}</span>
+                        </div>
+                      )}
+                      <div className="flex justify-between text-base font-bold text-[#FAF8F5] pt-1 border-t border-white/5">
+                        <span>Order Total:</span>
+                        <span className="font-mono text-[#D4AF37]">Rs. {order.totalAmount.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-amber-400 font-semibold pt-1 border-t border-white/5">
+                        <span>Advance Required ({order.preOrderAdvancePercent || 50}%):</span>
+                        <span className="font-mono">Rs. {advanceReq.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between font-bold text-emerald-400">
+                        <span>Amount Paid:</span>
+                        <span className="font-mono">Rs. {paid.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-[#FAF8F5]/80">
+                        <span>Remaining Due (COD):</span>
+                        <span className="font-bold text-[#D4AF37] font-mono">Rs. {remaining.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between text-[#FAF8F5]/60 text-[11px] pt-1 border-t border-white/5">
+                        <span>Payment Method:</span>
+                        <span className="font-medium text-[#D4AF37]">{order.preOrderPaymentMethodName || 'Manual Transfer'}</span>
+                      </div>
+                      <div className="flex justify-between text-[#FAF8F5]/50 text-[10px]">
+                        <span>Submitted At:</span>
+                        <span>{new Date(order.createdAt).toLocaleString()}</span>
+                      </div>
+                    </>
+                  );
+                })()}
+              </div>
+
+              {order.preOrderPaymentVerifiedBy && (
+                <div className="bg-[#06191B] p-3 rounded-xl border border-emerald-500/20 text-[11px] text-emerald-300/80">
+                  <span>Verified by: <strong>{order.preOrderPaymentVerifiedBy}</strong></span>
+                  {order.preOrderPaymentVerifiedAt && (
+                    <span className="block text-[10px] text-[#FAF8F5]/40 mt-0.5">
+                      on {new Date(order.preOrderPaymentVerifiedAt).toLocaleString()}
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {order.preOrderPaymentRejectionReason && (
+                <div className="bg-red-950/40 p-3 rounded-xl border border-red-500/30 text-[11px] text-red-200">
+                  <span className="font-bold block text-red-400">Rejection Reason:</span>
+                  &ldquo;{order.preOrderPaymentRejectionReason}&rdquo;
+                </div>
+              )}
+            </div>
+
+            {/* Proof Screenshot Viewer */}
+            <div className="md:col-span-2 flex flex-col sm:flex-row items-center gap-4 bg-[#06191B] p-4 rounded-xl border border-[#D4AF37]/15">
+              <div
+                className="relative w-full sm:w-48 h-48 bg-black/60 rounded-xl overflow-hidden border border-[#D4AF37]/20 flex items-center justify-center shrink-0 group cursor-pointer"
+                onClick={() => {
+                  if (order.preOrderPaymentScreenshotUrl) setScreenshotZoomModal(true);
+                }}
+              >
+                {order.preOrderPaymentScreenshotUrl ? (
+                  <>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`/api/admin/orders/${order.id}/screenshot`}
+                      alt="Payment proof screenshot"
+                      className="w-full h-full object-contain group-hover:scale-105 transition-transform"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1.5 text-xs text-[#FAF8F5] font-bold transition-opacity">
+                      <Maximize2 className="w-4 h-4 text-[#D4AF37]" /> Click to Zoom
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center p-3 text-[#FAF8F5]/40 text-xs">
+                    No screenshot uploaded yet
+                  </div>
+                )}
+              </div>
+
+              <div className="flex-1 space-y-4 w-full text-xs">
+                <div>
+                  <h4 className="font-serif font-bold text-sm text-[#FAF8F5]">Payment Receipt Screenshot</h4>
+                  <p className="text-[11px] text-[#FAF8F5]/60 mt-1 leading-relaxed">
+                    Verify that the 50% advance (Rs. {(order.preOrderAdvanceAmount || 0).toLocaleString()}) was successfully credited to your bank/account before confirming the order.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2.5 pt-2">
+                  {order.preOrderPaymentScreenshotUrl && (
+                    <button
+                      onClick={() => setScreenshotZoomModal(true)}
+                      className="bg-[#103A3E] hover:bg-[#D4AF37] hover:text-black text-[#D4AF37] border border-[#D4AF37]/30 px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5"
+                    >
+                      <Eye className="w-3.5 h-3.5" /> View Fullscreen
+                    </button>
+                  )}
+
+                  {order.preOrderPaymentStatus !== 'PAYMENT_APPROVED' && (
+                    <>
+                      <button
+                        onClick={handleApprovePayment}
+                        disabled={approvingPayment}
+                        className="bg-emerald-600 hover:bg-emerald-500 text-white font-bold px-4 py-2 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-1.5 shadow disabled:opacity-50"
+                      >
+                        {approvingPayment ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                        Approve Payment & Confirm Order
+                      </button>
+
+                      <button
+                        onClick={() => setShowRejectModal(true)}
+                        disabled={rejectingPayment}
+                        className="bg-red-950/60 hover:bg-red-900/90 text-red-300 border border-red-800/50 px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 disabled:opacity-50"
+                      >
+                        <XCircle className="w-3.5 h-3.5" /> Reject Proof
+                      </button>
+                    </>
+                  )}
+
+                  {order.preOrderPaymentStatus === 'PAYMENT_APPROVED' && (
+                    <div className="text-emerald-400 font-bold text-xs flex items-center gap-1.5 bg-emerald-950/40 border border-emerald-500/30 px-3.5 py-2 rounded-xl">
+                      <ShieldCheck className="w-4 h-4" /> Ready for fulfillment & production
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -626,7 +1006,12 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                   <div className="grid grid-cols-2 gap-2 pt-2 border-t border-[#D4AF37]/10 text-xs">
                     <div>
                       <span className="text-[10px] text-[#FAF8F5]/50 block">COD Collectable:</span>
-                      <span className="font-mono font-bold text-emerald-400">Rs. {order.totalAmount.toLocaleString()}</span>
+                      <span className="font-mono font-bold text-emerald-400">
+                        Rs. {(order.isPreOrder && (order.preOrderRemainingAmount != null || order.preOrderBalanceAmount != null)
+                          ? (order.preOrderRemainingAmount ?? order.preOrderBalanceAmount)
+                          : order.totalAmount).toLocaleString()}
+                        {order.isPreOrder && ' (Bal)'}
+                      </span>
                     </div>
                     <div>
                       <span className="text-[10px] text-[#FAF8F5]/50 block">Settlement Status:</span>
@@ -699,12 +1084,23 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             ) : (
               <div className="space-y-3 bg-[#06191B] p-4 rounded-xl border border-[#D4AF37]/15">
                 <p className="text-xs text-[#FAF8F5]/70 leading-relaxed">
-                  {order.status === 'PENDING' || order.status === 'PLACED'
+                  {order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED'
+                    ? 'Review and approve 50% advance payment proof first to unlock PostEx booking.'
+                    : order.status === 'PENDING' || order.status === 'PLACED'
                     ? 'Confirm order first to unlock 1-click PostEx dispatch.'
                     : 'Order confirmed and ready for courier booking.'}
                 </p>
 
-                {(order.status === 'PENDING' || order.status === 'PLACED') ? (
+                {order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED' ? (
+                  <div className="p-3 bg-amber-950/40 border border-amber-500/30 rounded-xl text-xs text-amber-300 space-y-1">
+                    <span className="font-bold flex items-center gap-1.5 text-amber-200">
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Advance Approval Required
+                    </span>
+                    <p className="text-[11px] text-amber-200/80">
+                      Verify the customer&apos;s 50% payment proof in the banner above before booking with PostEx.
+                    </p>
+                  </div>
+                ) : (order.status === 'PENDING' || order.status === 'PLACED') ? (
                   <button
                     onClick={() => handleStatusChange('CONFIRMED')}
                     disabled={statusSaving}
@@ -747,10 +1143,32 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 <span>Shipping Fee:</span>
                 <span>{order.shippingFee === 0 ? 'FREE' : `Rs. ${order.shippingFee}`}</span>
               </div>
-              <div className="flex justify-between text-base font-bold text-[#D4AF37] pt-2 border-t border-[#D4AF37]/20 font-mono">
-                <span>COD Total:</span>
+              <div className="flex justify-between font-bold text-[#FAF8F5] pt-1">
+                <span>Total Order Value:</span>
                 <span>Rs. {order.totalAmount.toLocaleString()}</span>
               </div>
+
+              {order.isPreOrder ? (
+                <div className="pt-2 mt-2 border-t border-dashed border-[#D4AF37]/20 space-y-1.5 bg-[#06191B] p-3 rounded-xl">
+                  <div className="flex justify-between text-emerald-400 font-bold">
+                    <span>50% Advance {order.preOrderPaymentStatus === 'PAYMENT_APPROVED' ? '(Received)' : '(Payable)'}:</span>
+                    <span>Rs. {(order.preOrderAdvanceAmount || 0).toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-[#FAF8F5]/50 text-[11px]">
+                    <span>Method:</span>
+                    <span className="text-[#D4AF37] font-medium">{order.preOrderPaymentMethodName || 'Manual Transfer'}</span>
+                  </div>
+                  <div className="flex justify-between text-[#D4AF37] font-extrabold text-sm pt-1 border-t border-[#D4AF37]/15 font-mono">
+                    <span>Balance on Delivery (COD):</span>
+                    <span>Rs. {(order.preOrderRemainingAmount ?? order.preOrderBalanceAmount ?? 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-between text-base font-bold text-[#D4AF37] pt-2 border-t border-[#D4AF37]/20 font-mono">
+                  <span>COD Total:</span>
+                  <span>Rs. {order.totalAmount.toLocaleString()}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -778,6 +1196,72 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
         onConfirm={handleDeleteOrder}
         order={order}
       />
+
+      {/* Zoom Modal for Payment Proof Screenshot */}
+      {screenshotZoomModal && order.preOrderPaymentScreenshotUrl && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col bg-[#0A2528] rounded-2xl border border-[#D4AF37]/30 overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-[#D4AF37]/20 bg-[#06191B]">
+              <span className="font-serif font-bold text-sm text-[#FAF8F5]">
+                Payment Proof Screenshot – Order {order.orderNumber}
+              </span>
+              <button
+                onClick={() => setScreenshotZoomModal(false)}
+                className="text-[#FAF8F5]/60 hover:text-white p-1 rounded-lg hover:bg-white/10"
+              >
+                ✕ Close
+              </button>
+            </div>
+            <div className="p-4 flex-1 overflow-auto flex items-center justify-center bg-black/40">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={`/api/admin/orders/${order.id}/screenshot`}
+                alt="Payment proof full preview"
+                className="max-w-full max-h-[75vh] object-contain rounded-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reject Payment Reason Modal */}
+      {showRejectModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0A2528] border border-red-500/40 rounded-2xl p-6 max-w-md w-full shadow-2xl space-y-4">
+            <div className="flex items-center gap-3 text-red-400">
+              <AlertTriangle className="w-6 h-6 shrink-0" />
+              <h3 className="font-serif font-bold text-base text-[#FAF8F5]">Reject Payment Proof</h3>
+            </div>
+            <p className="text-xs text-[#FAF8F5]/70 leading-relaxed">
+              Please enter the specific reason why this payment screenshot could not be verified. This explanation will be displayed to the customer and sent via WhatsApp so they can resubmit the correct proof.
+            </p>
+            <textarea
+              rows={3}
+              value={rejectReason}
+              onChange={(e) => setRejectReason(e.target.value)}
+              placeholder="e.g. Transaction ID was blurred; Amount transferred does not match Rs. 4,500; Sender name could not be identified..."
+              className="w-full bg-[#06191B] border border-red-500/30 rounded-xl p-3 text-xs text-[#FAF8F5] focus:outline-none focus:border-red-500"
+            />
+            <div className="flex items-center justify-end gap-2.5 pt-2">
+              <button
+                onClick={() => setShowRejectModal(false)}
+                disabled={rejectingPayment}
+                className="px-4 py-2 bg-[#06191B] hover:bg-white/5 text-[#FAF8F5]/70 rounded-xl text-xs font-bold"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRejectPayment}
+                disabled={rejectingPayment || !rejectReason.trim()}
+                className="px-4 py-2 bg-red-600 hover:bg-red-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow disabled:opacity-50"
+              >
+                {rejectingPayment ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
+                Confirm Rejection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

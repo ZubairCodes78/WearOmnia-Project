@@ -20,8 +20,11 @@ export async function generateMetadata({ params }: ProductPageProps) {
 
 export const dynamic = 'force-dynamic';
 
+import { getPreOrderSettings } from '@/lib/settings';
+
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
+  const preOrderSettings = await getPreOrderSettings();
 
   const product = await prisma.product.findUnique({
     where: { slug },
@@ -63,7 +66,11 @@ export default async function ProductPage({ params }: ProductPageProps) {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <ProductClient product={product} relatedProducts={relatedProducts} />
+      <ProductClient
+        product={product}
+        relatedProducts={relatedProducts}
+        defaultAdvancePercent={preOrderSettings.preorder_advance_percent || 50}
+      />
     </>
   );
 }

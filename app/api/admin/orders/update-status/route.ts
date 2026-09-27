@@ -87,7 +87,7 @@ export async function POST(req: Request) {
         'ORDER_STATUS_UPDATED',
         'Order',
         orderId,
-        `Order #${previousOrder.orderNumber}: ${changeDetails.join(', ')}`
+        `Order ${previousOrder.orderNumber}: ${changeDetails.join(', ')}`
       );
     }
 

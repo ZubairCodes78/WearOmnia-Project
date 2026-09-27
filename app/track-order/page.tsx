@@ -202,7 +202,7 @@ export default function TrackOrderPage() {
                       WearOMNIA
                     </span>
                     <h2 className="font-serif text-2xl sm:text-3xl font-bold text-offwhite mt-1">
-                      Order #{order.orderNumber}
+                      Order {order.orderNumber}
                     </h2>
                     <div className="flex items-center justify-center gap-2 mt-3">
                       <span className="bg-champagne/20 text-champagne px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider border border-champagne/30">
@@ -375,7 +375,7 @@ export default function TrackOrderPage() {
                 <div className="text-center text-xs text-charcoal-muted space-y-2 pt-4">
                   <p>Need help? Contact our WhatsApp concierge for live assistance.</p>
                   <a
-                    href={`https://wa.me/923180633323?text=${encodeURIComponent(`Hi! I need help with my order #${order.orderNumber}`)}`}
+                    href={`https://wa.me/923180633323?text=${encodeURIComponent(`Hi! I need help with my order ${order.orderNumber}`)}`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-2 bg-green-700 text-white px-5 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider hover:bg-green-800 transition-all duration-300"
