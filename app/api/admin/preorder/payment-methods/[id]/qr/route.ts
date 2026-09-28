@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminSession } from '@/lib/auth';
-import { saveQrCode } from '@/lib/storage';
+import { saveQrCode, deleteFile } from '@/lib/storage';
 import { recordAuditLog } from '@/lib/audit';
 
 export const runtime = 'nodejs';
@@ -39,10 +39,25 @@ export async function POST(
       return NextResponse.json({ error: saveResult.error || 'Failed to save QR code image' }, { status: 400 });
     }
 
+    const oldQr = method.qrCodeImagePath;
+
     const updated = await prisma.preOrderPaymentMethod.update({
       where: { id },
       data: { qrCodeImagePath: saveResult.filename },
     });
+
+    if (oldQr && oldQr !== saveResult.filename) {
+      try {
+        const refCount = await prisma.preOrderPaymentMethod.count({
+          where: { qrCodeImagePath: oldQr, id: { not: id } },
+        });
+        if (refCount === 0) {
+          await deleteFile(oldQr);
+        }
+      } catch (cleanupErr) {
+        console.warn('[R2 Cleanup] Failed to delete old QR code:', cleanupErr);
+      }
+    }
 
     await recordAuditLog(
       'UPDATE_PAYMENT_METHOD_QR',
@@ -69,10 +84,28 @@ export async function DELETE(
     }
 
     const { id } = await params;
+    const oldMethod = await prisma.preOrderPaymentMethod.findUnique({
+      where: { id },
+      select: { qrCodeImagePath: true },
+    });
+
     await prisma.preOrderPaymentMethod.update({
       where: { id },
       data: { qrCodeImagePath: null },
     });
+
+    if (oldMethod?.qrCodeImagePath) {
+      try {
+        const refCount = await prisma.preOrderPaymentMethod.count({
+          where: { qrCodeImagePath: oldMethod.qrCodeImagePath },
+        });
+        if (refCount === 0) {
+          await deleteFile(oldMethod.qrCodeImagePath);
+        }
+      } catch (cleanupErr) {
+        console.warn('[R2 Cleanup] Failed to delete QR code from R2:', cleanupErr);
+      }
+    }
 
     await recordAuditLog(
       'DELETE_PAYMENT_METHOD_QR',

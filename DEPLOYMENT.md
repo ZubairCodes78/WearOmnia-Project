@@ -24,11 +24,13 @@ NEXT_PUBLIC_CURRENCY="PKR"
 # Remove or set to "false" when ready to launch the full website
 NEXT_PUBLIC_COMING_SOON="true"
 
-# Cloudinary Media Storage (REQUIRED for Vercel)
+# Cloudflare R2 Object Storage (REQUIRED for Vercel)
 # Local files cannot be saved in Vercel's read-only serverless environment.
-CLOUDINARY_CLOUD_NAME="your_cloud_name"
-CLOUDINARY_API_KEY="your_api_key"
-CLOUDINARY_API_SECRET="your_api_secret"
+R2_ACCOUNT_ID="your_cloudflare_account_id"
+R2_ACCESS_KEY_ID="your_r2_access_key_id"
+R2_SECRET_ACCESS_KEY="your_r2_secret_access_key"
+R2_BUCKET_NAME="wearomnia"
+R2_PUBLIC_URL="https://your-r2-public-url.r2.dev"
 ```
 
 ### 2. Database Setup

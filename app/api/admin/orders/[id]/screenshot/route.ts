@@ -3,7 +3,8 @@ import fs from 'fs/promises';
 import path from 'path';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminSession } from '@/lib/auth';
-import { getPaymentProofPath, paymentProofExists } from '@/lib/storage';
+import { getPaymentProofPath, paymentProofExists, isR2Configured, getR2Client } from '@/lib/storage';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
 
 export const runtime = 'nodejs';
 
@@ -36,6 +37,53 @@ export async function GET(
     }
 
     const filename = order.preOrderPaymentScreenshotUrl;
+
+    // 1. If stored in Cloudflare R2, stream securely via authenticated admin session
+    if (isR2Configured()) {
+      try {
+        const publicBase = process.env.R2_PUBLIC_URL?.trim();
+        let key = '';
+        if (publicBase && filename.startsWith(publicBase)) {
+          key = filename.slice(publicBase.length).replace(/^\/+/, '');
+        } else if (filename.startsWith('http://') || filename.startsWith('https://')) {
+          const urlObj = new URL(filename);
+          if (
+            urlObj.hostname.includes('r2.dev') ||
+            (publicBase && urlObj.hostname === new URL(publicBase).hostname)
+          ) {
+            key = urlObj.pathname.replace(/^\/+/, '');
+          }
+        } else if (filename.startsWith('payment-proofs/')) {
+          key = filename;
+        }
+
+        if (key) {
+          const s3 = getR2Client();
+          const s3Res = await s3.send(
+            new GetObjectCommand({
+              Bucket: process.env.R2_BUCKET_NAME!.trim(),
+              Key: key,
+            })
+          );
+          const bytes = await s3Res.Body?.transformToByteArray();
+          if (bytes) {
+            const ext = path.extname(key).toLowerCase() || '.jpg';
+            return new NextResponse(Buffer.from(bytes), {
+              status: 200,
+              headers: {
+                'Content-Type': s3Res.ContentType || 'image/jpeg',
+                'Content-Disposition': `inline; filename="payment-proof-${order.orderNumber}${ext}"`,
+                'Cache-Control': 'private, no-cache, no-store, must-revalidate',
+              },
+            });
+          }
+        }
+      } catch (err: any) {
+        console.warn('R2 GetObject failed for screenshot, trying fallback redirect:', err?.message);
+      }
+    }
+
+    // 2. If external HTTP/HTTPS URL (e.g. legacy Cloudinary URL or public URL)
     if (filename.startsWith('http://') || filename.startsWith('https://')) {
       return NextResponse.redirect(filename);
     }

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminSession } from '@/lib/auth';
+import { deleteFile } from '@/lib/storage';
 
 export async function GET() {
   try {
@@ -233,7 +234,19 @@ export async function PUT(req: Request) {
     const parsedStock = stockQuantity !== undefined ? parseInt(stockQuantity) : undefined;
 
     // Delete existing images & variants if new lists are provided
+    let oldImagesToRemove: string[] = [];
     if (images) {
+      const existingImages = await prisma.productImage.findMany({
+        where: { productId: id },
+        select: { url: true },
+      });
+      const newUrls = (images || []).map((img: any) =>
+        typeof img === 'string' ? img : img?.url
+      );
+      oldImagesToRemove = existingImages
+        .map((img) => img.url)
+        .filter((url) => url && !newUrls.includes(url));
+
       await prisma.productImage.deleteMany({ where: { productId: id } });
     }
     if (variants) {
@@ -301,6 +314,22 @@ export async function PUT(req: Request) {
       },
     });
 
+    // Safely clean up orphaned R2 images that are no longer referenced anywhere in DB
+    if (oldImagesToRemove.length > 0) {
+      for (const oldUrl of oldImagesToRemove) {
+        try {
+          const refCount = await prisma.productImage.count({
+            where: { url: oldUrl },
+          });
+          if (refCount === 0) {
+            await deleteFile(oldUrl);
+          }
+        } catch (cleanupErr) {
+          console.warn('[R2 Cleanup] Failed to delete orphaned image:', cleanupErr);
+        }
+      }
+    }
+
     return NextResponse.json({ success: true, product: updated });
   } catch (error: any) {
     console.error('Product update error:', error);
@@ -321,7 +350,29 @@ export async function DELETE(req: Request) {
 
     if (!id) return NextResponse.json({ error: 'Product ID required' }, { status: 400 });
 
+    const existingImages = await prisma.productImage.findMany({
+      where: { productId: id },
+      select: { url: true },
+    });
+
     await prisma.product.delete({ where: { id } });
+
+    // Safely delete R2 images if not referenced by any other product
+    for (const img of existingImages) {
+      if (img.url) {
+        try {
+          const refCount = await prisma.productImage.count({
+            where: { url: img.url },
+          });
+          if (refCount === 0) {
+            await deleteFile(img.url);
+          }
+        } catch (cleanupErr) {
+          console.warn('[R2 Cleanup] Failed to delete product image from R2:', cleanupErr);
+        }
+      }
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Product delete error:', error);

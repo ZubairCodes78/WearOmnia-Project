@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { recordAuditLog } from '@/lib/audit';
 import { normalizePhone } from '@/lib/phone';
-import { paymentProofExists } from '@/lib/storage';
+import { paymentProofExists, deleteFile } from '@/lib/storage';
 import { broadcastAdminEvent } from '@/lib/events/event-emitter';
 
 export const runtime = 'nodejs';
@@ -65,6 +65,8 @@ export async function POST(req: NextRequest) {
       if (method) methodName = method.displayName;
     }
 
+    const oldScreenshot = order.preOrderPaymentScreenshotUrl;
+
     const updatedOrder = await prisma.order.update({
       where: { id: order.id },
       data: {
@@ -81,6 +83,20 @@ export async function POST(req: NextRequest) {
         },
       },
     });
+
+    // Safely remove replaced screenshot from R2 if no longer referenced
+    if (oldScreenshot && oldScreenshot !== screenshotKey) {
+      try {
+        const refCount = await prisma.order.count({
+          where: { preOrderPaymentScreenshotUrl: oldScreenshot, id: { not: order.id } },
+        });
+        if (refCount === 0) {
+          await deleteFile(oldScreenshot);
+        }
+      } catch (cleanupErr) {
+        console.warn('[R2 Cleanup] Failed to delete replaced payment screenshot:', cleanupErr);
+      }
+    }
 
     // Notify Admin Console
     const adminNotif = await prisma.adminNotification.create({
