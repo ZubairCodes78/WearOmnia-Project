@@ -16,6 +16,7 @@ interface ProductItem {
   sku: string;
   isNewArrival: boolean;
   isBestSeller: boolean;
+  isPreOrder?: boolean;
   inStock: boolean;
   stockQuantity: number;
   categoryId?: string | null;
@@ -339,6 +340,7 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
               sku={product.sku}
               isNewArrival={product.isNewArrival}
               isBestSeller={product.isBestSeller}
+              isPreOrder={product.isPreOrder}
               inStock={product.inStock}
               stockQuantity={product.stockQuantity}
               images={product.images}

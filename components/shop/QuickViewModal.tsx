@@ -18,6 +18,7 @@ interface QuickViewModalProps {
     basePrice: number;
     discountPrice?: number | null;
     sku: string;
+    isPreOrder?: boolean;
     inStock: boolean;
     stockQuantity: number;
     images: { url: string }[];
@@ -63,7 +64,8 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
         color: currentColor,
         sku: product.sku,
         quantity,
-        maxStock: product.stockQuantity,
+        maxStock: product.isPreOrder ? 999 : product.stockQuantity,
+        isPreOrder: Boolean(product.isPreOrder),
       });
       setAdded(true);
       setTimeout(() => setAdded(false), 800);
@@ -149,6 +151,14 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
                         )}
                       </div>
 
+                      {product.isPreOrder && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className="bg-amber-600 text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md">
+                            PRE-ORDER
+                          </span>
+                        </div>
+                      )}
+
                       <p className="text-xs text-charcoal-muted mt-3 line-clamp-3 leading-relaxed">
                         {product.description}
                       </p>
@@ -213,11 +223,16 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
                       <div className="flex gap-3">
                         <button
                           onClick={handleAddToCart}
-                          className="flex-1 bg-teal text-champagne py-3.5 rounded-xl text-xs uppercase font-bold tracking-widest hover:bg-teal-900 transition-all flex items-center justify-center gap-2 shadow-md"
+                          disabled={!product.isPreOrder && (!product.inStock || product.stockQuantity <= 0)}
+                          className="flex-1 bg-teal text-champagne py-3.5 rounded-xl text-xs uppercase font-bold tracking-widest hover:bg-teal-900 transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
                         >
                           {added ? (
                             <>
                               <Check className="w-4 h-4 text-champagne" /> Added To Bag
+                            </>
+                          ) : product.isPreOrder ? (
+                            <>
+                              <ShoppingBag className="w-4 h-4" /> Pre-Order
                             </>
                           ) : (
                             <>
@@ -234,7 +249,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
                       </div>
                       <div className="flex items-center justify-between text-[11px] text-charcoal-muted pt-2">
                         <span className="flex items-center gap-1.5">
-                          <Truck className="w-3.5 h-3.5 text-teal" /> Nationwide COD Delivery
+                          <Truck className="w-3.5 h-3.5 text-teal" /> {product.isPreOrder ? 'Pre-Order Advance Required' : 'Nationwide COD Delivery'}
                         </span>
                         <Link
                           href={`/product/${product.slug}`}

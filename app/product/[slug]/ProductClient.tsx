@@ -634,6 +634,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                   sku={p.sku}
                   isNewArrival={p.isNewArrival}
                   isBestSeller={p.isBestSeller}
+                  isPreOrder={p.isPreOrder}
                   inStock={p.inStock}
                   stockQuantity={p.stockQuantity}
                   images={p.images}
@@ -667,18 +668,34 @@ export const ProductClient: React.FC<ProductClientProps> = ({
       )}
 
       {/* Sticky Add to Cart Mobile Bottom Bar */}
-      <div className="sm:hidden fixed bottom-0 inset-x-0 z-30 bg-offwhite/95 backdrop-blur-xl border-t border-sand px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-3 shadow-2xl">
-        <div className="min-w-0 flex-1">
-          <span className="font-serif text-sm font-bold text-teal block truncate">{product.title}</span>
-          <span className="font-serif text-xs font-bold text-champagne-700">Rs. {activePrice.toLocaleString()}</span>
+      <div className="sm:hidden fixed bottom-0 inset-x-0 z-30 bg-offwhite/95 backdrop-blur-xl border-t border-sand px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-2xl">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <span className="font-serif text-sm font-bold text-teal block truncate">{product.title}</span>
+            <div className="flex items-baseline gap-2 flex-wrap">
+              <span className="font-serif text-xs font-bold text-champagne-700">Rs. {activePrice.toLocaleString()}</span>
+              {product.discountPrice && (
+                <span className="text-[10px] text-charcoal-muted line-through">Rs. {product.basePrice.toLocaleString()}</span>
+              )}
+              {product.isPreOrder && (
+                <span className="bg-amber-600 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded">PRE-ORDER</span>
+              )}
+            </div>
+            {product.isPreOrder && (
+              <span className="text-[10px] text-amber-900 font-semibold">
+                {advancePercent}% Advance: Rs. {advanceAmount.toLocaleString()}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={handleBuyNow}
+            disabled={!product.isPreOrder && currentStock <= 0}
+            className="bg-teal text-champagne px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow shrink-0 active:scale-95 transition-transform"
+          >
+            <ShoppingBag className="w-4 h-4" />
+            {product.isPreOrder ? 'Pre-Order' : 'Add to Bag'}
+          </button>
         </div>
-        <button
-          onClick={handleAddToCart}
-          disabled={!product.isPreOrder && currentStock <= 0}
-          className="bg-teal text-champagne px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow shrink-0 active:scale-95 transition-transform"
-        >
-          <ShoppingBag className="w-4 h-4" /> {product.isPreOrder ? 'Pre-Order' : 'Add to Bag'}
-        </button>
       </div>
       {/* Size Guide Modal */}
       <SizeGuideModal

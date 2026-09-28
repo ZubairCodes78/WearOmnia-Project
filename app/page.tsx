@@ -90,6 +90,7 @@ export default async function HomePage() {
                 sku={product.sku}
                 isNewArrival={product.isNewArrival}
                 isBestSeller={product.isBestSeller}
+                isPreOrder={product.isPreOrder}
                 inStock={product.inStock}
                 stockQuantity={product.stockQuantity}
                 images={product.images}
