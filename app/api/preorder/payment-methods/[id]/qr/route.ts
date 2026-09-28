@@ -21,6 +21,10 @@ export async function GET(
       return NextResponse.json({ error: 'QR Code not found' }, { status: 404 });
     }
 
+    if (method.qrCodeImagePath.startsWith('http://') || method.qrCodeImagePath.startsWith('https://')) {
+      return NextResponse.redirect(method.qrCodeImagePath);
+    }
+
     const filePath = getQrCodePath(method.qrCodeImagePath);
     const fileBuffer = await fs.readFile(filePath);
 

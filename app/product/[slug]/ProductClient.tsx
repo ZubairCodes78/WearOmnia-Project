@@ -24,6 +24,7 @@ import { useWishlist } from '@/context/WishlistContext';
 import { useFlyToCart } from '@/components/cart/FlyToCartProvider';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { SizeGuideModal } from '@/components/shop/SizeGuideModal';
+import { ProductImageZoom } from '@/components/shop/ProductImageZoom';
 
 interface ProductClientProps {
   product: any;
@@ -195,24 +196,13 @@ export const ProductClient: React.FC<ProductClientProps> = ({
             )}
 
             {/* Main Image with Zoom & Lightbox Trigger */}
-            <div ref={mainImageRef} className="relative flex-1 aspect-[3/4] rounded-lg overflow-hidden bg-sand border border-sand shadow-lg group">
-              <Image
+            <div ref={mainImageRef} className="flex-1">
+              <ProductImageZoom
                 src={images[selectedImageIndex]?.url}
                 alt={product.title}
-                fill
                 priority
-                sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 40vw"
-                quality={85}
-                className="object-cover transition-transform duration-300 group-hover:scale-105 cursor-zoom-in"
-                onClick={() => setLightboxOpen(true)}
+                onOpenLightbox={() => setLightboxOpen(true)}
               />
-              <button
-                onClick={() => setLightboxOpen(true)}
-                className="absolute top-4 right-4 bg-offwhite/90 p-2.5 rounded-full text-teal hover:bg-champagne transition-all shadow"
-                title="Fullscreen Lightbox View"
-              >
-                <Maximize2 className="w-5 h-5" />
-              </button>
             </div>
           </div>
 

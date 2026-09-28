@@ -36,6 +36,70 @@ export function ProductImageUploader({ images, onChange }: ProductImageUploaderP
   const [manualUrl, setManualUrl] = useState('');
   const [generalError, setGeneralError] = useState('');
 
+  /**
+   * High-performance client-side image compression.
+   * Resizes oversized camera photos (e.g. 5-15MB) down to max 2000px and under 1.5MB.
+   * Completely prevents Vercel 4.5MB request payload limit errors (413 Request Entity Too Large).
+   */
+  const compressImage = async (file: File): Promise<File> => {
+    // If image is already smaller than 1.5MB, no compression needed
+    if (file.size <= 1.5 * 1024 * 1024) {
+      return file;
+    }
+
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new window.Image();
+        img.src = event.target?.result as string;
+        img.onload = () => {
+          const MAX_DIM = 2048;
+          let { width, height } = img;
+
+          if (width > MAX_DIM || height > MAX_DIM) {
+            if (width > height) {
+              height = Math.round((height * MAX_DIM) / width);
+              width = MAX_DIM;
+            } else {
+              width = Math.round((width * MAX_DIM) / height);
+              height = MAX_DIM;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) {
+            return resolve(file);
+          }
+
+          ctx.drawImage(img, 0, 0, width, height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (!blob || blob.size >= file.size) {
+                return resolve(file);
+              }
+              const outputName = file.name.replace(/\.[^/.]+$/, '') + '.jpg';
+              const compressedFile = new File([blob], outputName, {
+                type: 'image/jpeg',
+                lastModified: Date.now(),
+              });
+              resolve(compressedFile);
+            },
+            'image/jpeg',
+            0.85
+          );
+        };
+        img.onerror = () => resolve(file);
+      };
+      reader.onerror = () => resolve(file);
+    });
+  };
+
   const processFile = async (file: File) => {
     // 1. Validate file type
     const validMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -44,9 +108,9 @@ export function ProductImageUploader({ images, onChange }: ProductImageUploaderP
       return;
     }
 
-    // 2. Validate size (10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setGeneralError(`"${file.name}" exceeds the 10MB maximum file size limit.`);
+    // 2. Validate initial size (up to 20MB allowed because client compression will optimize it)
+    if (file.size > 20 * 1024 * 1024) {
+      setGeneralError(`"${file.name}" exceeds 20MB limit. Please select an image under 20MB.`);
       return;
     }
 
@@ -59,24 +123,51 @@ export function ProductImageUploader({ images, onChange }: ProductImageUploaderP
         id: tempId,
         previewUrl: localPreview,
         fileName: file.name,
-        progress: 30,
+        progress: 20,
       },
     ]);
 
     try {
+      // Step A: Client-side optimization if large
+      let fileToUpload = file;
+      try {
+        fileToUpload = await compressImage(file);
+      } catch (compErr) {
+        console.warn('Client compression skipped:', compErr);
+      }
+
+      setUploadingList((prev) =>
+        prev.map((item) => (item.id === tempId ? { ...item, progress: 50 } : item))
+      );
+
+      // Step B: Upload to Next.js API
       const formData = new FormData();
-      formData.append('file', file);
+      formData.append('file', fileToUpload);
 
       const res = await fetch('/api/admin/products/upload-image', {
         method: 'POST',
         body: formData,
       });
 
-      const data = await res.json();
+      // Safely parse response (avoiding "Unexpected token 'R' in JSON" on 413 or HTML errors)
+      const responseText = await res.text();
+      let data: any = {};
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        if (res.status === 413 || responseText.toLowerCase().includes('request entity')) {
+          throw new Error('Image size is too large for serverless upload (Vercel payload limit exceeded).');
+        }
+        throw new Error(responseText.slice(0, 180) || `Server error (${res.status})`);
+      }
 
       if (!res.ok || !data.success || !data.url) {
         throw new Error(data.error || 'Failed to upload image.');
       }
+
+      setUploadingList((prev) =>
+        prev.map((item) => (item.id === tempId ? { ...item, progress: 100 } : item))
+      );
 
       // Add permanent URL to list
       onChange([...images, data.url]);
@@ -220,9 +311,22 @@ export function ProductImageUploader({ images, onChange }: ProductImageUploaderP
               />
               <div className="relative z-10 space-y-1">
                 {item.error ? (
-                  <div className="bg-rose-900/90 text-rose-200 text-[10px] p-1.5 rounded-lg flex items-center gap-1 font-bold">
-                    <AlertCircle className="w-3 h-3 text-rose-300 shrink-0" />
-                    <span className="truncate">{item.error}</span>
+                  <div className="bg-rose-950/95 border border-rose-600/70 text-rose-200 text-[10px] p-2 rounded-lg flex items-start justify-between gap-1.5 font-sans leading-tight">
+                    <div className="flex items-start gap-1 min-w-0">
+                      <AlertCircle className="w-3.5 h-3.5 text-rose-400 shrink-0 mt-0.5" />
+                      <span className="line-clamp-4 select-text">{item.error}</span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setUploadingList((prev) => prev.filter((i) => i.id !== item.id));
+                      }}
+                      className="text-rose-400 hover:text-white p-0.5 shrink-0"
+                      title="Dismiss"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
                   </div>
                 ) : (
                   <div className="bg-black/80 backdrop-blur-xs p-2 rounded-lg space-y-1 border border-white/10">

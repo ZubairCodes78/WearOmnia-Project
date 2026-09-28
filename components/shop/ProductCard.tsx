@@ -48,11 +48,16 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { triggerFlyToCart } = useFlyToCart();
   const cardRef = useRef<HTMLDivElement>(null);
-  const [isHovered, setIsHovered] = useState(false);
   const [addState, setAddState] = useState<'idle' | 'loading' | 'added'>('idle');
 
-  const primaryImage = images[0]?.url || '/images/kaftan-1.jpg';
-  const secondaryImage = images[1]?.url || primaryImage;
+  const hasSecondaryImage = Boolean(
+    images &&
+    images.length >= 2 &&
+    images[1]?.url &&
+    images[1].url !== images[0]?.url
+  );
+  const primaryImage = images?.[0]?.url || '/images/kaftan-1.jpg';
+  const secondaryImage = hasSecondaryImage ? images[1].url : null;
 
   const inWishlist = isInWishlist(id);
   const activePrice = discountPrice || basePrice;
@@ -95,8 +100,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     });
   };
 
-
-
   return (
     <motion.div
       ref={cardRef}
@@ -105,13 +108,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       viewport={{ once: true }}
       transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
       className="group relative bg-offwhite flex flex-col justify-between card-3d-subtle rounded-2xl p-2 sm:p-2.5 border border-sand/40 hover:border-champagne/40 hover:bg-white transition-all duration-400"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
     >
       <div>
         {/* Image Container with Smooth Crossfade Hover and 3D Depth */}
         <div className="relative aspect-[3/4] w-full bg-sand/40 overflow-hidden rounded-xl border border-sand/60 transition-all duration-500 group-hover:border-champagne/50 group-hover:shadow-lg group-hover:shadow-champagne/10">
-          <Link href={`/product/${slug}`} className="block w-full h-full">
+          <Link href={`/product/${slug}`} className="block w-full h-full relative" aria-label={`View ${title}`}>
             {/* Primary Image */}
             <Image
               src={primaryImage}
@@ -120,20 +121,22 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
               loading="lazy"
               quality={85}
-              className={`object-cover object-center transition-all duration-700 ease-premium ${isHovered ? 'opacity-0 scale-105' : 'opacity-100 scale-100'
-                }`}
+              className={`object-cover object-center card-image-primary-swap transition-opacity duration-500 ease-out will-change-[opacity] ${
+                hasSecondaryImage ? 'card-has-swap' : ''
+              }`}
             />
-            {/* Secondary Image (crossfade) */}
-            <Image
-              src={secondaryImage}
-              alt={images[1]?.altText || `${title} alternate product view`}
-              fill
-              sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-              loading="lazy"
-              quality={85}
-              className={`object-cover object-center transition-all duration-700 ease-premium absolute inset-0 ${isHovered ? 'opacity-100 scale-100' : 'opacity-0 scale-105'
-                }`}
-            />
+            {/* Secondary Image (only rendered if product has >= 2 images) */}
+            {hasSecondaryImage && secondaryImage && (
+              <Image
+                src={secondaryImage}
+                alt={images[1]?.altText || `${title} alternate product view`}
+                fill
+                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
+                loading="lazy"
+                quality={85}
+                className="object-cover object-center card-image-secondary-swap transition-opacity duration-500 ease-out absolute inset-0 opacity-0 pointer-events-none will-change-[opacity]"
+              />
+            )}
           </Link>
 
           {/* 3D Minimal Badges */}

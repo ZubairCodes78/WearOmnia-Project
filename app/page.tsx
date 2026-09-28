@@ -31,7 +31,11 @@ async function getLaunchProducts() {
   try {
     return await prisma.product.findMany({
       where: { status: 'PUBLISHED' },
-      include: { images: true, variants: true, category: true },
+      include: {
+        images: { orderBy: { displayOrder: 'asc' } },
+        variants: true,
+        category: true,
+      },
       take: 4,
     });
   } catch (error) {

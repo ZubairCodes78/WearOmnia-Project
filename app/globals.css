@@ -943,3 +943,33 @@ img {
   max-width: 100vw;
 }
 
+/* ======================================================
+   PRODUCT IMAGE INTERACTIONS (Card Swap & Detail Zoom)
+   ====================================================== */
+
+/* Product Card Desktop Hover Image Swap (Only on hover-capable pointer devices) */
+@media (hover: hover) and (pointer: fine) {
+  .group:hover .card-has-swap {
+    opacity: 0 !important;
+  }
+  .group:hover .card-image-secondary-swap {
+    opacity: 1 !important;
+  }
+}
+
+/* Detail page zoom smoothness */
+.product-zoom-image {
+  transform-origin: center center;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+
+/* Respect user's motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .card-image-primary-swap,
+  .card-image-secondary-swap,
+  .product-zoom-image {
+    transition: none !important;
+  }
+}
+

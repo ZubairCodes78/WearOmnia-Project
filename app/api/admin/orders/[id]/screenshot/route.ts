@@ -36,6 +36,10 @@ export async function GET(
     }
 
     const filename = order.preOrderPaymentScreenshotUrl;
+    if (filename.startsWith('http://') || filename.startsWith('https://')) {
+      return NextResponse.redirect(filename);
+    }
+
     const exists = await paymentProofExists(filename);
     if (!exists) {
       return NextResponse.json(
