@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, ShieldCheck, Tag, ArrowLeft, CheckCircle2, Heart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { useSettings } from '@/context/SettingsContext';
 
 export default function CartPage() {
   const {
@@ -17,13 +18,16 @@ export default function CartPage() {
     discountAmount,
   } = useCart();
 
+  const { settings } = useSettings();
+
   const [couponInput, setCouponInput] = useState('');
   const [couponError, setCouponError] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
 
-  const freeShippingThreshold = 10000;
+  const freeShippingThreshold = typeof settings.freeShippingThreshold === 'number' ? settings.freeShippingThreshold : 10000;
+  const flatShippingFee = typeof settings.flatShippingFee === 'number' ? settings.flatShippingFee : 250;
   const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
-  const estimatedShipping = subtotal >= freeShippingThreshold || cart.length === 0 ? 0 : 250;
+  const estimatedShipping = subtotal >= freeShippingThreshold || cart.length === 0 ? 0 : flatShippingFee;
   const grandTotal = Math.max(0, subtotal - discountAmount + estimatedShipping);
 
   const hasPreOrderItems = cart.some((i) => i.isPreOrder);

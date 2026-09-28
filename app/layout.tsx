@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { CartProvider } from '@/context/CartContext';
 import { WishlistProvider } from '@/context/WishlistContext';
+import { SettingsProvider } from '@/context/SettingsContext';
 import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
@@ -9,6 +10,7 @@ import { WhatsAppFloat } from '@/components/layout/WhatsAppFloat';
 import { SupportAssistant } from '@/components/layout/SupportAssistant';
 import { ToastProvider } from '@/components/layout/ToastProvider';
 import { FlyToCartProvider } from '@/components/cart/FlyToCartProvider';
+import { getPublicSiteSettings } from '@/lib/settings';
 
 import { getCampaignPhase } from '@/lib/preorder';
 
@@ -96,11 +98,13 @@ const orgSchema = {
 };
 
 // ─── Root Layout ─────────────────────────────────────────────────────────────
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const initialSettings = await getPublicSiteSettings();
+
   // ── Coming Soon: stripped layout — no Header / Footer / Cart ──────────────
   if (isComingSoonMode()) {
     return (
@@ -119,15 +123,17 @@ export default function RootLayout({
           />
         </head>
         <body className="bg-offwhite text-charcoal antialiased" suppressHydrationWarning>
-          <CartProvider>
-            <WishlistProvider>
-              <ToastProvider>
-                <FlyToCartProvider>
-                  {children}
-                </FlyToCartProvider>
-              </ToastProvider>
-            </WishlistProvider>
-          </CartProvider>
+          <SettingsProvider initialSettings={initialSettings}>
+            <CartProvider>
+              <WishlistProvider>
+                <ToastProvider>
+                  <FlyToCartProvider>
+                    {children}
+                  </FlyToCartProvider>
+                </ToastProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </SettingsProvider>
         </body>
       </html>
     );
@@ -146,20 +152,22 @@ export default function RootLayout({
         className="bg-offwhite text-charcoal flex flex-col min-h-screen antialiased"
         suppressHydrationWarning
       >
-        <CartProvider>
-          <WishlistProvider>
-            <ToastProvider>
-              <FlyToCartProvider>
-                <Header />
-                <main className="flex-1">{children}</main>
-                <CartDrawer />
-                <WhatsAppFloat />
-                <SupportAssistant />
-                <Footer />
-              </FlyToCartProvider>
-            </ToastProvider>
-          </WishlistProvider>
-        </CartProvider>
+        <SettingsProvider initialSettings={initialSettings}>
+          <CartProvider>
+            <WishlistProvider>
+              <ToastProvider>
+                <FlyToCartProvider>
+                  <Header />
+                  <main className="flex-1">{children}</main>
+                  <CartDrawer />
+                  <WhatsAppFloat />
+                  <SupportAssistant />
+                  <Footer />
+                </FlyToCartProvider>
+              </ToastProvider>
+            </WishlistProvider>
+          </CartProvider>
+        </SettingsProvider>
       </body>
     </html>
   );

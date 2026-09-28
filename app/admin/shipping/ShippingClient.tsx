@@ -42,6 +42,10 @@ import {
   isSettlementEligible,
   CanonicalCourierStatus,
 } from '@/lib/courier/canonical-status';
+import { useDebounce } from '@/hooks/useDebounce';
+import { AdminPagination } from '@/components/admin/AdminPagination';
+import { AdminEmptyState } from '@/components/admin/AdminEmptyState';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 
 interface ShipmentItem {
   id: string;
@@ -93,10 +97,15 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
   const router = useRouter();
   const [shipments, setShipments] = useState<ShipmentItem[]>(initialShipments);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [statusTab, setStatusTab] = useState<
     'ALL' | 'READY_FOR_POSTEX' | 'IN_TRANSIT' | 'DELIVERED' | 'RETURNS' | 'CANCELLED_ARCHIVED'
   >('ALL');
   const [providerFilter, setProviderFilter] = useState('ALL');
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   // Copy tracking feedback
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -345,10 +354,16 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
     }
   };
 
+  // Reset page when filters change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, statusTab, providerFilter]);
+
   // Filter Shipments
   const filteredShipments = shipments.filter((s) => {
-    const term = search.toLowerCase();
+    const term = debouncedSearch.trim().toLowerCase();
     const matchesSearch =
+      !term ||
       (s.trackingNumber && s.trackingNumber.toLowerCase().includes(term)) ||
       (s.orderRefNumber && s.orderRefNumber.toLowerCase().includes(term)) ||
       (s.order?.customerName && s.order.customerName.toLowerCase().includes(term)) ||
@@ -357,7 +372,6 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
       (s.order?.orderNumber && s.order.orderNumber.toLowerCase().includes(term));
 
     const matchesProvider = providerFilter === 'ALL' || s.provider === providerFilter;
-
     const canonical = getCanonicalCourierStatus(s.status);
 
     let matchesTab = true;
@@ -374,6 +388,11 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
     return matchesSearch && matchesProvider && matchesTab;
   });
 
+  const paginatedShipments = filteredShipments.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
+
   // Calculate Canonical Metrics
   const activeShipmentsList = shipments.filter((s) => isValidActiveShipment(s.status));
   const activeShipmentCount = activeShipmentsList.length;
@@ -385,57 +404,45 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
   const totalPendingSettlementValue = deliveredPendingSettlement.reduce((sum, s) => sum + (s.codAmount || 0), 0);
 
   return (
-    <div className="admin-page text-[#FAF8F5]">
-      {/* Header Banner */}
-      <div className="admin-page-header">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] font-bold text-[#D4AF37] bg-teal-950/80 px-3 py-0.5 rounded-md border border-[#D4AF37]/30">
-              <Truck className="w-3 h-3 text-[#D4AF37]" /> Courier Control Tower
-            </span>
-            <span className="text-[10px] text-emerald-400 font-mono font-bold bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-500/30">
-              POSTEX M-V4.1.9 READY
-            </span>
+    <div className="admin-page text-[#FAF8F5] space-y-8">
+      {/* Standardized Header */}
+      <AdminPageHeader
+        badge="Courier Control Tower • POSTEX M-V4.1.9"
+        title="Shipping & PostEx Command Hub"
+        description="Dispatch orders, print official PDF airway bills, track live parcels, and reconcile COD settlement payments."
+        actions={
+          <div className="flex flex-wrap items-center gap-2.5">
+            <button
+              onClick={handleTestDiagnostics}
+              disabled={testingConnection}
+              className="px-3.5 py-2.5 bg-[#0D3337] hover:bg-[#103A3E] text-[#D4AF37] border border-[#D4AF37]/30 rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+            >
+              {testingConnection ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Activity className="w-3.5 h-3.5" />
+              )}
+              <span>Courier Health Check</span>
+            </button>
+
+            <Link
+              href="/admin/shipping/returns"
+              className="px-3.5 py-2.5 bg-[#0A2528] hover:bg-[#103A3E] text-[#D4AF37] border border-[#D4AF37]/30 rounded-xl text-xs font-bold transition-colors shadow-sm flex items-center gap-1.5"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              <span>Returns &amp; Issues</span>
+            </Link>
+
+            <Link
+              href="/admin/shipping/cod"
+              className="px-4 py-2.5 bg-[#D4AF37] hover:bg-[#FAF8F5] text-black rounded-xl text-xs uppercase font-black tracking-wider transition-colors shadow-sm flex items-center gap-1.5"
+            >
+              <Banknote className="w-3.5 h-3.5" />
+              <span>COD Settlements</span>
+            </Link>
           </div>
-          <h1 className="font-serif text-2xl md:text-3xl font-bold text-[#FAF8F5]">
-            Shipping & PostEx Command Hub
-          </h1>
-          <p className="text-xs text-[#FAF8F5]/60 mt-1 font-sans">
-            Dispatch orders, print official PDF airway bills, track live parcels, and reconcile COD settlement payments.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0">
-          <button
-            onClick={handleTestDiagnostics}
-            disabled={testingConnection}
-            className="px-3 py-2 bg-[#0D3337] hover:bg-[#103A3E] text-[#D4AF37] border border-[#D4AF37]/30 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5 disabled:opacity-50"
-          >
-            {testingConnection ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <Activity className="w-3.5 h-3.5" />
-            )}
-            <span>Courier Health Check</span>
-          </button>
-
-          <Link
-            href="/admin/shipping/returns"
-            className="px-3 py-2 bg-[#1A1505] hover:bg-[#2A2005] text-[#D4AF37] border border-[#D4AF37]/30 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-1.5"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            <span>Returns &amp; Issues</span>
-          </Link>
-
-          <Link
-            href="/admin/shipping/cod"
-            className="px-3.5 py-2 bg-[#D4AF37] hover:bg-white text-black rounded-xl text-xs uppercase font-extrabold tracking-wider transition-all shadow-lg flex items-center gap-1.5"
-          >
-            <Banknote className="w-3.5 h-3.5" />
-            <span>COD Settlements</span>
-          </Link>
-        </div>
-      </div>
+        }
+      />
 
       {/* Diagnostics Alert */}
       {diagnosticResult && (
@@ -666,31 +673,47 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
         </div>
       ) : (
         /* Redesigned Enterprise Shipments Table */
-        <div className="admin-table-wrapper">
+        <div className="bg-[#0A2528] rounded-2xl border border-[#D4AF37]/20 overflow-hidden shadow-xl">
           <div className="overflow-x-auto">
-            <table className="admin-table">
-              <thead className="bg-[#06191B] text-[#D4AF37] uppercase tracking-wider font-semibold border-b border-[#D4AF37]/15">
+            <table className="w-full text-left text-xs font-sans">
+              <thead className="bg-[#06191B]/80 text-[#D4AF37] font-mono text-[10px] uppercase tracking-wider border-b border-[#D4AF37]/20">
                 <tr>
                   <th className="p-3.5">Tracking #</th>
                   <th className="p-3.5">Order</th>
-                  <th className="p-3.5">Customer & City</th>
+                  <th className="p-3.5">Customer &amp; City</th>
                   <th className="p-3.5">Courier Status</th>
                   <th className="p-3.5">COD Amount</th>
                   <th className="p-3.5">Settlement / CPR</th>
                   <th className="p-3.5 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody className="divide-y divide-[#D4AF37]/10">
                 {filteredShipments.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="p-12 text-center text-[#FAF8F5]/50">
-                      <Truck className="w-8 h-8 mx-auto text-[#D4AF37]/40 mb-2" />
-                      <p className="font-semibold text-sm text-[#FAF8F5]/70">No shipments found in this filter</p>
-                      <p className="text-xs text-[#FAF8F5]/40 mt-0.5">Adjust your filter tab or search keywords to view parcels.</p>
+                    <td colSpan={7} className="p-12 text-center">
+                      <AdminEmptyState
+                        title="No Shipments Found"
+                        description="Adjust your filter tab or search keywords to view parcels."
+                        icon={Truck}
+                        action={
+                          search || statusTab !== 'ALL' || providerFilter !== 'ALL' ? (
+                            <button
+                              onClick={() => {
+                                setSearch('');
+                                setStatusTab('ALL');
+                                setProviderFilter('ALL');
+                              }}
+                              className="px-4 py-2 bg-[#0D3337] hover:bg-[#103A3E] text-[#D4AF37] border border-[#D4AF37]/30 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                            >
+                              Reset Filters
+                            </button>
+                          ) : undefined
+                        }
+                      />
                     </td>
                   </tr>
                 ) : (
-                  filteredShipments.map((shipment) => {
+                  paginatedShipments.map((shipment) => {
                     const tracking = shipment.trackingNumber;
                     const statusBadge = getCourierStatusBadgeInfo(shipment.status);
                     const settlementBadge = getSettlementStatusBadgeInfo(shipment.settlementStatus, shipment.status);
@@ -894,6 +917,19 @@ export function ShippingClient({ initialShipments, siteSettings, confirmedOrders
               </tbody>
             </table>
           </div>
+
+          {filteredShipments.length > 0 && (
+            <AdminPagination
+              currentPage={currentPage}
+              totalItems={filteredShipments.length}
+              itemsPerPage={pageSize}
+              onPageChange={(page: number) => setCurrentPage(page)}
+              onItemsPerPageChange={(newSize: number) => {
+                setPageSize(newSize);
+                setCurrentPage(1);
+              }}
+            />
+          )}
         </div>
       )}
 

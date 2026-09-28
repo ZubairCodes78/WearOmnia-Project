@@ -128,6 +128,7 @@ export interface PublicSiteSettings {
   whatsappNumber: string;
   storePhone: string;
   storeEmail: string;
+  supportEmail?: string;
   storeAddress: string;
   logoUrl: string;
   instagramUrl: string;
@@ -188,6 +189,7 @@ export function getPublicSafeSiteSettings(settings: Partial<SiteSettingsData> | 
     whatsappNumber: settings.whatsappNumber || DEFAULT_SITE_SETTINGS.whatsappNumber,
     storePhone: settings.storePhone || DEFAULT_SITE_SETTINGS.storePhone,
     storeEmail: settings.storeEmail || DEFAULT_SITE_SETTINGS.storeEmail,
+    supportEmail: settings.storeEmail || DEFAULT_SITE_SETTINGS.storeEmail,
     storeAddress: settings.storeAddress || DEFAULT_SITE_SETTINGS.storeAddress,
     logoUrl: settings.logoUrl || DEFAULT_SITE_SETTINGS.logoUrl,
     instagramUrl: settings.instagramUrl || DEFAULT_SITE_SETTINGS.instagramUrl,
@@ -224,11 +226,30 @@ export function getPublicSafeSiteSettings(settings: Partial<SiteSettingsData> | 
 }
 
 /**
+ * Public Customer-Facing Site Settings (Strict Positive Allow-List)
+ * NEVER includes tokens, secrets, credentials, or internal courier/WhatsApp keys.
+ */
+export interface PublicStoreSettings extends PublicSiteSettings {
+  preorder_enabled: boolean;
+  preorder_advance_percent: number;
+  preorder_payment_instructions: string;
+}
+
+/**
  * Retrieves only the sanitized public site settings for client consumption.
  */
-export async function getPublicSiteSettings(): Promise<PublicSiteSettings> {
-  const fullSettings = await getSiteSettings();
-  return getPublicSafeSiteSettings(fullSettings);
+export async function getPublicSiteSettings(): Promise<PublicStoreSettings> {
+  const [fullSettings, preOrderSettings] = await Promise.all([
+    getSiteSettings(),
+    getPreOrderSettings(),
+  ]);
+  const safe = getPublicSafeSiteSettings(fullSettings);
+  return {
+    ...safe,
+    preorder_enabled: Boolean(preOrderSettings.preorder_enabled),
+    preorder_advance_percent: typeof preOrderSettings.preorder_advance_percent === 'number' ? preOrderSettings.preorder_advance_percent : 50,
+    preorder_payment_instructions: preOrderSettings.preorder_payment_instructions || DEFAULT_PREORDER_SETTINGS.preorder_payment_instructions,
+  };
 }
 
 /**

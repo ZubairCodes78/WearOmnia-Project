@@ -2,33 +2,7 @@
 
 import React, { useState } from 'react';
 import { ChevronDown, Search, HelpCircle, Heart, Clock, Truck, Scissors, ShieldCheck } from 'lucide-react';
-
-const FAQS = [
-  {
-    q: 'Do I need an account to place an order?',
-    a: 'No! WearOMNIA enforces a strict Guest Checkout model. You never need to register or create an account. Simply add items to your bag, enter your shipping details, and place your order in seconds.',
-  },
-  {
-    q: 'What payment methods do you accept?',
-    a: 'We strictly offer Cash On Delivery (COD) across 200+ cities in Pakistan. You pay in cash to the courier representative when your parcel is handed over.',
-  },
-  {
-    q: 'How long does delivery take?',
-    a: 'Major cities (Lahore, Karachi, Islamabad, Rawalpindi, Faisalabad) receive deliveries within 2-3 business days. Other cities and interior regions take 3-5 business days.',
-  },
-  {
-    q: 'Is shipping free?',
-    a: 'Yes, nationwide shipping is completely FREE on all orders of Rs. 10,000 or above. For orders under Rs. 10,000, a flat delivery fee of Rs. 250 is added.',
-  },
-  {
-    q: 'What is the unstitched suit fabric composition?',
-    a: 'Our unstitched lawn collections feature high-count 80/80 printed lawn shirts, schiffli embroidered neck patches, and 100% Bamber chiffon or pure silk dupattas.',
-  },
-  {
-    q: 'Can I exchange an item if it doesn’t fit?',
-    a: 'Yes, we provide a 7-day hassle-free exchange window. Simply contact our WhatsApp concierge (03180633323) or email us at wearomniaa@gmail.com with your order number.',
-  },
-];
+import { useSettings } from '@/context/SettingsContext';
 
 const FUNNY_FAQS = [
   {
@@ -59,11 +33,45 @@ const FUNNY_FAQS = [
 ];
 
 export default function FAQPage() {
+  const { settings } = useSettings();
   const [openIdx, setOpenIdx] = useState<number | null>(0);
   const [openFunnyIdx, setOpenFunnyIdx] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredFaqs = FAQS.filter(
+  const freeThresholdStr = settings.freeShippingThreshold > 0
+    ? `Rs. ${settings.freeShippingThreshold.toLocaleString()} or above`
+    : 'all orders';
+
+  const faqs = [
+    {
+      q: 'Do I need an account to place an order?',
+      a: 'No! WearOMNIA enforces a strict Guest Checkout model. You never need to register or create an account. Simply add items to your bag, enter your shipping details, and place your order in seconds.',
+    },
+    {
+      q: 'What payment methods do you accept?',
+      a: 'We strictly offer Cash On Delivery (COD) across 200+ cities in Pakistan. You pay in cash to the courier representative when your parcel is handed over.',
+    },
+    {
+      q: 'How long does delivery take?',
+      a: `Nationwide delivery takes ${settings.estimatedDeliveryTime || '2-4 business days'}. Major cities receive deliveries within 2-3 business days.`,
+    },
+    {
+      q: 'Is shipping free?',
+      a: settings.freeShippingThreshold > 0
+        ? `Yes, nationwide shipping is completely FREE on all orders of ${freeThresholdStr}. For orders under Rs. ${settings.freeShippingThreshold.toLocaleString()}, a flat delivery fee of Rs. ${settings.flatShippingFee} is added.`
+        : 'Yes, nationwide shipping is completely FREE on all orders with no minimum purchase required.',
+    },
+    {
+      q: 'What is the unstitched suit fabric composition?',
+      a: 'Our unstitched lawn collections feature high-count 80/80 printed lawn shirts, schiffli embroidered neck patches, and 100% Bamber chiffon or pure silk dupattas.',
+    },
+    {
+      q: 'Can I exchange an item if it doesn’t fit?',
+      a: `Yes, we provide a 7-day hassle-free exchange window. Simply contact our WhatsApp concierge (${settings.whatsappNumber || '03180633323'}) or email us at ${settings.supportEmail || 'wearomniaa@gmail.com'} with your order number.`,
+    },
+  ];
+
+  const filteredFaqs = faqs.filter(
     (f) =>
       f.q.toLowerCase().includes(searchQuery.toLowerCase()) ||
       f.a.toLowerCase().includes(searchQuery.toLowerCase())

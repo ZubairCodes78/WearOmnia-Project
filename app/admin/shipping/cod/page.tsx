@@ -41,22 +41,7 @@ export default async function CodSettlementPage() {
   }));
 
   return (
-    <div className="space-y-8">
-      <div className="border-b border-[#D4AF37]/15 pb-6">
-        <div className="flex items-center gap-2.5 mb-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse" />
-          <span className="text-xs uppercase font-extrabold tracking-[0.2em] text-[#D4AF37]">
-            Financial Operations
-          </span>
-        </div>
-        <h1 className="font-serif text-3xl font-bold tracking-tight text-[#FAF8F5]">
-          PostEx COD Settlement Reconciliation
-        </h1>
-        <p className="text-xs text-[#FAF8F5]/60 mt-1 max-w-2xl">
-          Live tracking of cash collected, upfront payments, CPR (Cheque Payment Reference) numbers, and bank disbursement status.
-        </p>
-      </div>
-
+    <div className="space-y-6">
       <CodSettlementClient initialShipments={sanitized as any} />
     </div>
   );

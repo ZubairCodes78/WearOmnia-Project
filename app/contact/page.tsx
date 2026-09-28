@@ -1,39 +1,21 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Mail, Phone, Clock, MessageSquare, Send, CheckCircle2, MapPin } from 'lucide-react';
+import { useSettings } from '@/context/SettingsContext';
 
 export default function ContactPage() {
+  const { settings } = useSettings();
   const [submitted, setSubmitted] = useState(false);
   const [formData, setFormData] = useState({ name: '', phone: '', email: '', message: '' });
-  const [settings, setSettings] = useState({
-    whatsappNumber: '03180633323',
-    storeEmail: 'wearomniaa@gmail.com',
-    supportHours: 'Monday – Saturday: 10:00 AM – 8:00 PM',
-    instagramUrl: 'https://www.instagram.com/wearomnia_/',
-    facebookUrl: 'https://www.facebook.com/profile.php?id=61579169068040',
-    tiktokUrl: 'https://www.tiktok.com/@wearomnia_'
-  });
 
-  useEffect(() => {
-    fetch('/api/site-settings')
-      .then(res => res.json())
-      .then(data => {
-        if (data.settings) {
-          setSettings({
-            whatsappNumber: data.settings.whatsappNumber || '03180633323',
-            storeEmail: data.settings.storeEmail || 'wearomniaa@gmail.com',
-            supportHours: data.settings.supportHours || 'Monday – Saturday: 10:00 AM – 8:00 PM',
-            instagramUrl: data.settings.instagramUrl || 'https://www.instagram.com/wearomnia_/',
-            facebookUrl: data.settings.facebookUrl || 'https://www.facebook.com/profile.php?id=61579169068040',
-            tiktokUrl: data.settings.tiktokUrl || 'https://www.tiktok.com/@wearomnia_'
-          });
-        }
-      })
-      .catch(() => { });
-  }, []);
-
-  const whatsappInternational = settings.whatsappNumber.replace(/^0/, '92').replace(/\s/g, '');
+  const rawPhone = settings.storePhone || settings.whatsappNumber || '03180633323';
+  const phoneTel = rawPhone.replace(/^0/, '+92').replace(/\s/g, '');
+  const rawWhatsApp = settings.whatsappNumber || '03180633323';
+  const whatsappInternational = rawWhatsApp.replace(/^0/, '92').replace(/\s/g, '');
+  const storeEmail = settings.supportEmail || 'wearomniaa@gmail.com';
+  const supportHours = settings.supportHours || 'Monday – Saturday: 10:00 AM – 8:00 PM';
+  const storeAddress = settings.storeAddress || 'Lahore, Pakistan';
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,8 +53,8 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-teal">Phone & WhatsApp Support</h4>
-                    <a href="tel:+923180633323" className="text-charcoal-muted hover:text-teal transition-colors">
-                      {settings.whatsappNumber} ({settings.supportHours})
+                    <a href={`tel:${phoneTel}`} className="text-charcoal-muted hover:text-teal transition-colors">
+                      {rawPhone} ({supportHours})
                     </a>
                   </div>
                 </div>
@@ -83,8 +65,8 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-teal">Email Inquiries</h4>
-                    <a href={`mailto:${settings.storeEmail}`} className="text-charcoal-muted hover:text-teal transition-colors">
-                      {settings.storeEmail}
+                    <a href={`mailto:${storeEmail}`} className="text-charcoal-muted hover:text-teal transition-colors">
+                      {storeEmail}
                     </a>
                   </div>
                 </div>
@@ -95,7 +77,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-teal">Business Hours</h4>
-                    <p className="text-charcoal-muted">{settings.supportHours}</p>
+                    <p className="text-charcoal-muted">{supportHours}</p>
                   </div>
                 </div>
 
@@ -105,7 +87,7 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <h4 className="font-bold text-teal">Location</h4>
-                    <p className="text-charcoal-muted">Lahore, Pakistan</p>
+                    <p className="text-charcoal-muted">{storeAddress}</p>
                   </div>
                 </div>
               </div>

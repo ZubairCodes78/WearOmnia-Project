@@ -14,6 +14,8 @@ import {
   AlertCircle,
   Check,
 } from 'lucide-react';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { AdminEmptyState } from '@/components/admin/AdminEmptyState';
 
 interface SizeEntry {
   sizeName: string;
@@ -288,58 +290,58 @@ export default function AdminSizeGuidesPage() {
 
   if (loading) {
     return (
-      <div className="p-8 text-center">
-        <div className="w-8 h-8 border-2 border-teal border-t-transparent rounded-full animate-spin mx-auto" />
-        <p className="text-xs text-gray-500 mt-3">Loading size guides...</p>
+      <div className="p-12 text-center">
+        <div className="w-8 h-8 border-2 border-[#D4AF37] border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-xs text-[#FAF8F5]/60 mt-3 font-sans">Loading size guides...</p>
       </div>
     );
   }
 
   return (
-    <div className="admin-workspace admin-size-guides p-4 sm:p-8 max-w-5xl mx-auto">
+    <div className="space-y-6">
       {/* Page Header */}
-      <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-teal text-champagne rounded-xl flex items-center justify-center">
-            <Ruler className="w-5 h-5" />
-          </div>
-          <div>
-            <h1 className="font-serif text-2xl font-bold text-teal">Size Guides</h1>
-            <p className="text-xs text-gray-500">Manage sizing charts for your products</p>
-          </div>
-        </div>
-        {!isCreating && (
-          <button
-            onClick={startCreate}
-            className="bg-teal text-champagne px-5 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider hover:bg-teal-900 transition-all shadow flex items-center gap-2"
-          >
-            <Plus className="w-4 h-4" /> New Size Guide
-          </button>
-        )}
-      </div>
+      <AdminPageHeader
+        title="Size Guides"
+        description="Manage sizing charts, measurements, and fit specifications for your products."
+        badge={
+          <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] font-semibold text-[#D4AF37] bg-[#D4AF37]/10 px-2.5 py-1 rounded-md border border-[#D4AF37]/20">
+            <Ruler className="w-3.5 h-3.5 text-[#D4AF37]" /> Sizing Architecture
+          </span>
+        }
+        actions={
+          !isCreating ? (
+            <button
+              onClick={startCreate}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#D4AF37] text-black font-semibold text-xs uppercase tracking-wider hover:bg-[#c49f2f] transition-colors"
+            >
+              <Plus className="w-4 h-4" /> New Size Guide
+            </button>
+          ) : undefined
+        }
+      />
 
       {/* Status Messages */}
       {error && (
-        <div className="bg-red-50 text-red-700 border border-red-200 p-3 rounded-xl mb-6 text-xs flex items-center gap-2">
+        <div className="bg-rose-500/10 text-rose-300 border border-rose-500/20 p-3 rounded-lg text-xs flex items-center gap-2">
           <AlertCircle className="w-4 h-4 shrink-0" /> {error}
         </div>
       )}
       {success && (
-        <div className="bg-green-50 text-green-700 border border-green-200 p-3 rounded-xl mb-6 text-xs flex items-center gap-2">
+        <div className="bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 p-3 rounded-lg text-xs flex items-center gap-2">
           <Check className="w-4 h-4 shrink-0" /> {success}
         </div>
       )}
 
       {/* Create/Edit Form */}
       {isCreating && (
-        <div className="bg-white border border-gray-200 rounded-2xl shadow-lg p-6 mb-8 space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="font-serif text-lg font-bold text-teal">
+        <div className="bg-[#0A2528] border border-white/5 rounded-xl shadow-sm p-6 space-y-5">
+          <div className="flex items-center justify-between pb-3 border-b border-white/5">
+            <h2 className="font-semibold text-base text-[#FAF8F5]">
               {editingGuide ? 'Edit Size Guide' : 'Create New Size Guide'}
             </h2>
             <button
               onClick={resetForm}
-              className="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center"
+              className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-[#FAF8F5]/70 hover:text-white transition-colors"
             >
               <X className="w-4 h-4" />
             </button>
@@ -348,7 +350,7 @@ export default function AdminSizeGuidesPage() {
           {/* Basic Info */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="text-[10px] uppercase font-semibold text-gray-600 block mb-1">Name *</label>
+              <label className="text-[11px] uppercase font-semibold text-[#FAF8F5]/60 block mb-1">Name *</label>
               <input
                 type="text"
                 value={formName}
@@ -357,39 +359,39 @@ export default function AdminSizeGuidesPage() {
                   if (!editingGuide) setFormSlug(generateSlug(e.target.value));
                 }}
                 placeholder="e.g. Pret Collection"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal/20"
+                className="w-full px-3 py-2 bg-[#06191B] border border-white/10 rounded-lg text-xs text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]/50"
               />
             </div>
             <div>
-              <label className="text-[10px] uppercase font-semibold text-gray-600 block mb-1">Slug *</label>
+              <label className="text-[11px] uppercase font-semibold text-[#FAF8F5]/60 block mb-1">Slug *</label>
               <input
                 type="text"
                 value={formSlug}
                 onChange={(e) => setFormSlug(e.target.value)}
                 placeholder="e.g. pret-collection"
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal/20 font-mono"
+                className="w-full px-3 py-2 bg-[#06191B] border border-white/10 rounded-lg text-xs text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]/50 font-mono"
               />
             </div>
           </div>
 
           <div>
-            <label className="text-[10px] uppercase font-semibold text-gray-600 block mb-1">Description</label>
+            <label className="text-[11px] uppercase font-semibold text-[#FAF8F5]/60 block mb-1">Description</label>
             <textarea
               value={formDescription}
               onChange={(e) => setFormDescription(e.target.value)}
               rows={2}
               placeholder="Optional intro text shown to customers..."
-              className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal/20 resize-none"
+              className="w-full px-3 py-2 bg-[#06191B] border border-white/10 rounded-lg text-xs text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]/50 resize-none"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="text-[10px] uppercase font-semibold text-gray-600 block mb-1">Product Type</label>
+              <label className="text-[11px] uppercase font-semibold text-[#FAF8F5]/60 block mb-1">Product Type</label>
               <select
                 value={formProductType}
                 onChange={(e) => handleProductTypeChange(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal/20"
+                className="w-full px-3 py-2 bg-[#06191B] border border-white/10 rounded-lg text-xs text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]/50"
               >
                 {PRODUCT_TYPES.map((t) => (
                   <option key={t} value={t}>
@@ -399,11 +401,11 @@ export default function AdminSizeGuidesPage() {
               </select>
             </div>
             <div>
-              <label className="text-[10px] uppercase font-semibold text-gray-600 block mb-1">Unit</label>
+              <label className="text-[11px] uppercase font-semibold text-[#FAF8F5]/60 block mb-1">Unit</label>
               <select
                 value={formUnit}
                 onChange={(e) => setFormUnit(e.target.value)}
-                className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal/20"
+                className="w-full px-3 py-2 bg-[#06191B] border border-white/10 rounded-lg text-xs text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]/50"
               >
                 {MEASUREMENT_UNITS.map((u) => (
                   <option key={u} value={u}>
@@ -413,33 +415,33 @@ export default function AdminSizeGuidesPage() {
               </select>
             </div>
             <div className="flex items-end">
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer pb-2">
                 <input
                   type="checkbox"
                   checked={formIsDefault}
                   onChange={(e) => setFormIsDefault(e.target.checked)}
-                  className="accent-teal rounded"
+                  className="accent-[#D4AF37] rounded"
                 />
-                <span className="text-xs font-semibold text-gray-700">Set as Default</span>
+                <span className="text-xs font-semibold text-[#FAF8F5]/80">Set as Default</span>
               </label>
             </div>
           </div>
 
           {/* Column Management */}
           <div>
-            <label className="text-[10px] uppercase font-semibold text-gray-600 block mb-2">
+            <label className="text-[11px] uppercase font-semibold text-[#FAF8F5]/60 block mb-2">
               Measurement Columns
             </label>
             <div className="flex flex-wrap gap-2 mb-3">
               {formColumns.map((col) => (
                 <span
                   key={col}
-                  className="bg-teal/10 text-teal px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5"
+                  className="bg-[#D4AF37]/10 text-[#D4AF37] border border-[#D4AF37]/20 px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5"
                 >
                   {col}
                   <button
                     onClick={() => removeColumn(col)}
-                    className="text-red-500 hover:text-red-700"
+                    className="text-rose-400 hover:text-rose-300"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -453,11 +455,11 @@ export default function AdminSizeGuidesPage() {
                 onChange={(e) => setNewColumnName(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && addColumn()}
                 placeholder="Add column name..."
-                className="flex-1 px-3 py-2 border border-gray-200 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-teal/20"
+                className="flex-1 px-3 py-1.5 bg-[#06191B] border border-white/10 rounded-lg text-xs text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]/50"
               />
               <button
                 onClick={addColumn}
-                className="bg-gray-100 hover:bg-gray-200 px-3 py-2 rounded-lg text-xs font-semibold transition-colors"
+                className="bg-white/5 hover:bg-white/10 text-[#FAF8F5] border border-white/10 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
               >
                 <Plus className="w-4 h-4" />
               </button>
@@ -467,19 +469,19 @@ export default function AdminSizeGuidesPage() {
           {/* Size Entries */}
           <div>
             <div className="flex items-center justify-between mb-3">
-              <label className="text-[10px] uppercase font-semibold text-gray-600">Size Entries</label>
-              <div className="flex gap-2">
+              <label className="text-[11px] uppercase font-semibold text-[#FAF8F5]/60">Size Entries</label>
+              <div className="flex gap-3">
                 {formEntries.length === 0 && (
                   <button
                     onClick={addDefaultSizes}
-                    className="text-xs text-teal font-semibold hover:underline"
+                    className="text-xs text-[#D4AF37] font-semibold hover:underline"
                   >
                     + Add Default Sizes (XS–XL)
                   </button>
                 )}
                 <button
                   onClick={addSizeEntry}
-                  className="text-xs text-teal font-semibold hover:underline flex items-center gap-1"
+                  className="text-xs text-[#D4AF37] font-semibold hover:underline flex items-center gap-1"
                 >
                   <Plus className="w-3 h-3" /> Add Size
                 </button>
@@ -487,9 +489,9 @@ export default function AdminSizeGuidesPage() {
             </div>
 
             {formEntries.length > 0 && (
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {/* Table header */}
-                <div className="hidden sm:grid gap-2 text-[10px] uppercase font-bold text-gray-500 tracking-wider" style={{ gridTemplateColumns: `40px 80px ${formColumns.map(() => '1fr').join(' ')} 120px 60px` }}>
+                <div className="hidden sm:grid gap-2 text-[10px] uppercase font-semibold text-[#FAF8F5]/50 tracking-wider px-2" style={{ gridTemplateColumns: `40px 80px ${formColumns.map(() => '1fr').join(' ')} 120px 40px` }}>
                   <span></span>
                   <span>Size</span>
                   {formColumns.map((col) => (
@@ -502,22 +504,22 @@ export default function AdminSizeGuidesPage() {
                 {formEntries.map((entry, idx) => (
                   <div
                     key={idx}
-                    className="grid gap-2 items-center bg-gray-50 p-2 rounded-xl border border-gray-100"
-                    style={{ gridTemplateColumns: `40px 80px ${formColumns.map(() => '1fr').join(' ')} 120px 60px` }}
+                    className="grid gap-2 items-center bg-[#06191B] p-2 rounded-lg border border-white/5"
+                    style={{ gridTemplateColumns: `40px 80px ${formColumns.map(() => '1fr').join(' ')} 120px 40px` }}
                   >
                     {/* Reorder */}
                     <div className="flex flex-col gap-0.5">
                       <button
                         onClick={() => moveSizeEntry(idx, 'up')}
                         disabled={idx === 0}
-                        className="text-gray-400 hover:text-teal disabled:opacity-30"
+                        className="text-[#FAF8F5]/40 hover:text-[#D4AF37] disabled:opacity-20"
                       >
                         <ChevronUp className="w-3 h-3" />
                       </button>
                       <button
                         onClick={() => moveSizeEntry(idx, 'down')}
                         disabled={idx === formEntries.length - 1}
-                        className="text-gray-400 hover:text-teal disabled:opacity-30"
+                        className="text-[#FAF8F5]/40 hover:text-[#D4AF37] disabled:opacity-20"
                       >
                         <ChevronDown className="w-3 h-3" />
                       </button>
@@ -529,7 +531,7 @@ export default function AdminSizeGuidesPage() {
                       value={entry.sizeName}
                       onChange={(e) => updateEntry(idx, 'sizeName', e.target.value)}
                       placeholder="e.g. M"
-                      className="px-2 py-1.5 border border-gray-200 rounded text-xs font-bold focus:outline-none focus:ring-1 focus:ring-teal/20"
+                      className="px-2 py-1 bg-black/40 border border-white/10 rounded text-xs font-semibold text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]/50"
                     />
 
                     {/* Measurements */}
@@ -540,7 +542,7 @@ export default function AdminSizeGuidesPage() {
                         value={entry.measurements[col] || ''}
                         onChange={(e) => updateMeasurement(idx, col, e.target.value)}
                         placeholder={col}
-                        className="px-2 py-1.5 border border-gray-200 rounded text-xs font-mono focus:outline-none focus:ring-1 focus:ring-teal/20"
+                        className="px-2 py-1 bg-black/40 border border-white/10 rounded text-xs font-mono text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]/50"
                       />
                     ))}
 
@@ -550,13 +552,13 @@ export default function AdminSizeGuidesPage() {
                       value={entry.notes}
                       onChange={(e) => updateEntry(idx, 'notes', e.target.value)}
                       placeholder="Note"
-                      className="px-2 py-1.5 border border-gray-200 rounded text-xs focus:outline-none focus:ring-1 focus:ring-teal/20"
+                      className="px-2 py-1 bg-black/40 border border-white/10 rounded text-xs text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]/50"
                     />
 
                     {/* Delete */}
                     <button
                       onClick={() => removeSizeEntry(idx)}
-                      className="text-red-400 hover:text-red-600 mx-auto"
+                      className="text-rose-400 hover:text-rose-300 mx-auto"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -567,17 +569,17 @@ export default function AdminSizeGuidesPage() {
           </div>
 
           {/* Save */}
-          <div className="flex gap-3 pt-4 border-t border-gray-200">
+          <div className="flex gap-2 pt-4 border-t border-white/5">
             <button
               onClick={handleSave}
               disabled={saving}
-              className="bg-teal text-champagne px-6 py-3 rounded-xl text-xs uppercase font-bold tracking-wider hover:bg-teal-900 transition-all shadow flex items-center gap-2 disabled:opacity-60"
+              className="bg-[#D4AF37] hover:bg-[#c49f2f] text-black px-4 py-2 rounded-lg text-xs uppercase font-semibold tracking-wider transition-colors shadow flex items-center gap-2 disabled:opacity-50"
             >
               <Save className="w-4 h-4" /> {saving ? 'Saving...' : editingGuide ? 'Update Guide' : 'Create Guide'}
             </button>
             <button
               onClick={resetForm}
-              className="bg-gray-100 text-gray-700 px-6 py-3 rounded-xl text-xs uppercase font-bold tracking-wider hover:bg-gray-200 transition-all"
+              className="bg-white/5 hover:bg-white/10 text-[#FAF8F5]/80 px-4 py-2 rounded-lg text-xs uppercase font-semibold tracking-wider transition-colors"
             >
               Cancel
             </button>
@@ -587,43 +589,47 @@ export default function AdminSizeGuidesPage() {
 
       {/* Existing Guides List */}
       {!isCreating && guides.length === 0 && (
-        <div className="text-center py-16 bg-gray-50 rounded-2xl border border-gray-200">
-          <Ruler className="w-10 h-10 text-gray-300 mx-auto mb-3" />
-          <h3 className="font-serif text-lg text-gray-600">No Size Guides Yet</h3>
-          <p className="text-xs text-gray-400 mt-1">Create your first size guide to help customers find their perfect fit.</p>
-        </div>
+        <AdminEmptyState
+          icon={Ruler}
+          title="No Size Guides Yet"
+          description="Create your first size guide to help customers find their perfect fit."
+          action={{
+            label: 'New Size Guide',
+            onClick: startCreate,
+          }}
+        />
       )}
 
       {!isCreating && guides.length > 0 && (
-        <div className="space-y-4">
+        <div className="space-y-3">
           {guides.map((guide) => {
             const cols = JSON.parse(guide.columns) as string[];
             const isExpanded = expandedGuide === guide.id;
 
             return (
-              <div key={guide.id} className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
+              <div key={guide.id} className="bg-[#0A2528] border border-white/5 rounded-xl shadow-sm overflow-hidden">
                 {/* Guide Header */}
                 <div
-                  className="p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-gray-50 transition-colors"
+                  className="p-4 flex items-center justify-between cursor-pointer hover:bg-white/[0.02] transition-colors"
                   onClick={() => setExpandedGuide(isExpanded ? null : guide.id)}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-teal/10 text-teal rounded-lg flex items-center justify-center shrink-0">
+                    <div className="w-8 h-8 bg-[#D4AF37]/10 text-[#D4AF37] rounded-lg flex items-center justify-center shrink-0">
                       <Ruler className="w-4 h-4" />
                     </div>
                     <div>
-                      <h3 className="font-serif font-bold text-teal text-sm">{guide.name}</h3>
+                      <h3 className="font-medium text-[#FAF8F5] text-sm">{guide.name}</h3>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[9px] uppercase tracking-wider bg-gray-100 px-2 py-0.5 rounded font-semibold text-gray-600">
+                        <span className="text-[10px] uppercase tracking-wider bg-white/5 px-2 py-0.5 rounded font-semibold text-[#FAF8F5]/70">
                           {guide.productType}
                         </span>
-                        <span className="text-[9px] text-gray-400">{guide.measurementUnit}</span>
-                        <span className="text-[9px] text-gray-400">• {guide.entries.length} sizes</span>
+                        <span className="text-[11px] text-[#FAF8F5]/50">{guide.measurementUnit}</span>
+                        <span className="text-[11px] text-[#FAF8F5]/50">• {guide.entries.length} sizes</span>
                         {guide._count && (
-                          <span className="text-[9px] text-gray-400">• {guide._count.products} products</span>
+                          <span className="text-[11px] text-[#FAF8F5]/50">• {guide._count.products} products</span>
                         )}
                         {guide.isDefault && (
-                          <span className="text-[9px] uppercase bg-teal text-champagne px-2 py-0.5 rounded font-bold">
+                          <span className="text-[10px] uppercase bg-[#D4AF37]/20 text-[#D4AF37] border border-[#D4AF37]/30 px-2 py-0.5 rounded font-semibold">
                             Default
                           </span>
                         )}
@@ -636,7 +642,7 @@ export default function AdminSizeGuidesPage() {
                         e.stopPropagation();
                         startEdit(guide);
                       }}
-                      className="p-2 text-gray-400 hover:text-teal rounded-lg hover:bg-gray-100 transition-colors"
+                      className="p-1.5 text-[#FAF8F5]/60 hover:text-[#D4AF37] rounded-lg hover:bg-white/5 transition-colors"
                       title="Edit"
                     >
                       <Pencil className="w-4 h-4" />
@@ -646,44 +652,44 @@ export default function AdminSizeGuidesPage() {
                         e.stopPropagation();
                         handleDelete(guide.id);
                       }}
-                      className="p-2 text-gray-400 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors"
+                      className="p-1.5 text-[#FAF8F5]/60 hover:text-rose-400 rounded-lg hover:bg-rose-500/10 transition-colors"
                       title="Delete"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
                     <ChevronDown
-                      className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
+                      className={`w-4 h-4 text-[#FAF8F5]/40 transition-transform ${isExpanded ? 'rotate-180' : ''}`}
                     />
                   </div>
                 </div>
 
                 {/* Expanded Table Preview */}
                 {isExpanded && guide.entries.length > 0 && (
-                  <div className="border-t border-gray-100 p-4 overflow-x-auto">
+                  <div className="border-t border-white/5 p-4 overflow-x-auto bg-[#06191B]/50">
                     <table className="w-full text-xs min-w-[400px]">
                       <thead>
-                        <tr className="border-b border-gray-200">
-                          <th className="text-left py-2 px-2 font-bold text-gray-600 uppercase text-[10px]">Size</th>
+                        <tr className="border-b border-white/5 text-[#FAF8F5]/60">
+                          <th className="text-left py-2 px-3 font-semibold uppercase text-[10px]">Size</th>
                           {cols.map((col) => (
-                            <th key={col} className="text-center py-2 px-2 font-bold text-gray-600 uppercase text-[10px]">
+                            <th key={col} className="text-center py-2 px-3 font-semibold uppercase text-[10px]">
                               {col}
                             </th>
                           ))}
-                          <th className="text-left py-2 px-2 font-bold text-gray-600 uppercase text-[10px]">Notes</th>
+                          <th className="text-left py-2 px-3 font-semibold uppercase text-[10px]">Notes</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-100">
+                      <tbody className="divide-y divide-white/5 text-[#FAF8F5]">
                         {guide.entries.map((entry) => {
                           const m = JSON.parse(entry.measurements);
                           return (
-                            <tr key={entry.id}>
-                              <td className="py-2 px-2 font-bold text-teal">{entry.sizeName}</td>
+                            <tr key={entry.id} className="hover:bg-white/[0.02]">
+                              <td className="py-2.5 px-3 font-semibold text-[#D4AF37]">{entry.sizeName}</td>
                               {cols.map((col) => (
-                                <td key={col} className="text-center py-2 px-2 font-mono text-gray-700">
+                                <td key={col} className="text-center py-2.5 px-3 font-mono text-[#FAF8F5]/80">
                                   {m[col] || '—'}
                                 </td>
                               ))}
-                              <td className="py-2 px-2 text-gray-500">{entry.notes || '—'}</td>
+                              <td className="py-2.5 px-3 text-[#FAF8F5]/50">{entry.notes || '—'}</td>
                             </tr>
                           );
                         })}

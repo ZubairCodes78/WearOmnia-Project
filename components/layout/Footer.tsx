@@ -6,44 +6,19 @@ import { usePathname } from 'next/navigation';
 import { Mail, Phone, Instagram, Facebook, ShieldCheck, Truck, RotateCcw, Clock, Package, MessageCircle } from 'lucide-react';
 import { ScrollReveal } from '@/components/layout/ScrollReveal';
 
-interface SiteSettings {
-  whatsappNumber: string;
-  storeEmail: string;
-  storeAddress: string;
-  instagramUrl: string;
-  facebookUrl: string;
-  tiktokUrl: string;
-  supportHours: string;
-  copyrightText: string;
-}
+import { useSettings } from '@/context/SettingsContext';
 
 export const Footer = () => {
   const pathname = usePathname();
-  const [settings, setSettings] = useState<SiteSettings>({
-    whatsappNumber: '03180633323',
-    storeEmail: 'wearomniaa@gmail.com',
-    storeAddress: 'Lahore, Pakistan',
-    instagramUrl: 'https://www.instagram.com/wearomnia_/',
-    facebookUrl: 'https://www.facebook.com/profile.php?id=61579169068040',
-    tiktokUrl: 'https://www.tiktok.com/@wearomnia_',
-    supportHours: 'Monday – Saturday: 10:00 AM – 8:00 PM',
-    copyrightText: '© 2026 WearOMNIA. All rights reserved.'
-  });
-
-  useEffect(() => {
-    fetch('/api/site-settings')
-      .then(res => res.json())
-      .then(data => {
-        if (data.settings) {
-          setSettings(data.settings);
-        }
-      })
-      .catch(() => { });
-  }, []);
+  const { settings } = useSettings();
 
   if (pathname?.startsWith('/admin')) return null;
 
-  const whatsappInternational = settings.whatsappNumber.replace(/^0/, '92').replace(/\s/g, '');
+  const rawWhatsApp = settings.whatsappNumber || '03180633323';
+  const whatsappInternational = rawWhatsApp.replace(/^0/, '92').replace(/\s/g, '');
+  const storeEmail = settings.supportEmail || 'wearomniaa@gmail.com';
+  const supportHours = settings.supportHours || 'Monday – Saturday: 10:00 AM – 8:00 PM';
+  const copyrightText = settings.copyrightText || '© 2026 WearOMNIA. All rights reserved.';
 
   return (
     <footer className="bg-teal text-offwhite border-t border-teal-800/80 pt-16 pb-10">

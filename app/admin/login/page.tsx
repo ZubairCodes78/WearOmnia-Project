@@ -88,24 +88,24 @@ export default function AdminLoginPage() {
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-96 h-96 bg-[#D4AF37]/5 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-10 right-10 w-72 h-72 bg-teal-900/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="bg-[#0A2528] text-[#FAF8F5] w-full max-w-md p-8 sm:p-10 rounded-3xl shadow-2xl border border-[#D4AF37]/35 space-y-6 text-center relative z-10 admin-card-3d">
+      <div className="bg-[#0A2528] text-[#FAF8F5] w-full max-w-md p-8 sm:p-10 rounded-2xl shadow-xl border border-white/10 space-y-6 text-center relative z-10">
         {/* Header Icon */}
-        <div className="w-16 h-16 bg-[#06191B] text-[#D4AF37] border border-[#D4AF37]/30 rounded-2xl flex items-center justify-center mx-auto shadow-xl badge-3d">
-          {requires2FA ? <KeyRound className="w-8 h-8 text-[#D4AF37] animate-pulse" /> : <Lock className="w-8 h-8 text-[#D4AF37]" />}
+        <div className="w-14 h-14 bg-[#06191B] text-[#D4AF37] border border-white/10 rounded-xl flex items-center justify-center mx-auto shadow-sm">
+          {requires2FA ? <KeyRound className="w-7 h-7 text-[#D4AF37] animate-pulse" /> : <Lock className="w-7 h-7 text-[#D4AF37]" />}
         </div>
 
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#D4AF37] font-bold mb-1">Private Portal</p>
+          <p className="text-[11px] uppercase tracking-[0.2em] text-[#D4AF37] font-semibold mb-1">Private Commerce Console</p>
           <span className="font-serif text-3xl font-bold uppercase tracking-wider text-[#FAF8F5]">
             Wear<span className="text-[#D4AF37]">OMNIA</span>
           </span>
-          <p className="text-xs uppercase tracking-[0.25em] text-[#D4AF37] mt-1.5 font-sans font-bold">
+          <p className="text-xs uppercase tracking-[0.2em] text-[#FAF8F5]/60 mt-1.5 font-sans font-medium">
             {requires2FA ? 'Two-Factor Verification' : 'Store Control Center'}
           </p>
         </div>
 
         {error && (
-          <div className="bg-rose-950/80 text-rose-200 border border-rose-500/50 p-3.5 rounded-xl text-xs font-semibold animate-in fade-in duration-150 text-left">
+          <div className="bg-rose-500/10 text-rose-200 border border-rose-500/20 p-3 rounded-lg text-xs font-medium animate-in fade-in duration-150 text-left">
             {error}
           </div>
         )}
@@ -114,35 +114,35 @@ export default function AdminLoginPage() {
           /* STEP 1: PASSWORD LOGIN FORM */
           <form onSubmit={handlePasswordLogin} className="space-y-4 text-left">
             <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-[#D4AF37] block mb-1.5">
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-[#FAF8F5]/70 block mb-1">
                 Admin Email Address
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-[#D4AF37]/60 absolute left-3.5 top-3.5" />
+                <Mail className="w-4 h-4 text-[#FAF8F5]/40 absolute left-3 top-2.5" />
                 <input
                   type="email"
                   required
                   placeholder="admin@wearomnia.com"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-[#06191B] rounded-xl text-xs text-[#FAF8F5] border border-[#D4AF37]/20 focus:outline-none focus:ring-1 focus:ring-[#D4AF37] font-sans"
+                  className="w-full pl-9 pr-3 py-2 bg-[#06191B] rounded-lg text-xs text-[#FAF8F5] border border-white/10 focus:outline-none focus:border-[#D4AF37]/50 font-sans placeholder:text-[#FAF8F5]/30 transition-colors"
                 />
               </div>
             </div>
 
             <div>
-              <label className="text-[11px] font-bold uppercase tracking-wider text-[#D4AF37] block mb-1.5">
-                Secret Password
+              <label className="text-[11px] font-semibold uppercase tracking-wider text-[#FAF8F5]/70 block mb-1">
+                Password
               </label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-[#D4AF37]/60 absolute left-3.5 top-3.5" />
+                <Lock className="w-4 h-4 text-[#FAF8F5]/40 absolute left-3 top-2.5" />
                 <input
                   type="password"
                   required
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 bg-[#06191B] rounded-xl text-xs text-[#FAF8F5] border border-[#D4AF37]/20 focus:outline-none focus:ring-1 focus:ring-[#D4AF37] font-sans"
+                  className="w-full pl-9 pr-3 py-2 bg-[#06191B] rounded-lg text-xs text-[#FAF8F5] border border-white/10 focus:outline-none focus:border-[#D4AF37]/50 font-sans placeholder:text-[#FAF8F5]/30 transition-colors"
                 />
               </div>
             </div>
@@ -150,7 +150,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-[#D4AF37] hover:bg-white text-black py-3.5 rounded-xl text-xs uppercase font-extrabold tracking-widest transition-all shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 mt-2 btn-3d"
+              className="w-full bg-[#D4AF37] hover:bg-[#c49f2f] text-black py-2.5 rounded-lg text-xs uppercase font-semibold tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
             >
               {loading ? 'Authenticating...' : 'Sign In'} <ArrowRight className="w-4 h-4" />
             </button>
@@ -158,8 +158,8 @@ export default function AdminLoginPage() {
         ) : (
           /* STEP 2: 2FA TOTP / RECOVERY CODE FORM */
           <form onSubmit={handle2FAVerify} className="space-y-4 text-left">
-            <div className="bg-[#06191B] border border-[#D4AF37]/25 rounded-xl p-4 text-xs space-y-1">
-              <p className="text-[#FAF8F5]/80 font-sans leading-relaxed">
+            <div className="bg-[#06191B] border border-white/10 rounded-lg p-3 text-xs space-y-1">
+              <p className="text-[#FAF8F5]/70 font-sans leading-relaxed">
                 {isRecoveryMode
                   ? 'Enter an 8-character single-use recovery code generated during 2FA setup.'
                   : 'Enter the 6-digit verification code from your authenticator app (Google Authenticator, Microsoft Authenticator, or 1Password).'}
@@ -202,7 +202,7 @@ export default function AdminLoginPage() {
             <button
               type="submit"
               disabled={loading || (!isRecoveryMode ? totpCode.length !== 6 : !recoveryCode.trim())}
-              className="w-full bg-[#D4AF37] hover:bg-white text-black py-3.5 rounded-xl text-xs uppercase font-extrabold tracking-widest transition-all shadow-xl flex items-center justify-center gap-2 disabled:opacity-40 btn-3d"
+              className="w-full bg-[#D4AF37] hover:bg-[#c49f2f] text-black py-2.5 rounded-lg text-xs uppercase font-semibold tracking-wider transition-colors shadow-sm flex items-center justify-center gap-2 disabled:opacity-40"
             >
               {loading ? 'Verifying 2FA...' : 'Verify & Enter'} <ArrowRight className="w-4 h-4" />
             </button>

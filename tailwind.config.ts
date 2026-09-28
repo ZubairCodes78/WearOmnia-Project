@@ -60,8 +60,13 @@ const config: Config = {
         'badge-pop': 'badgePop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards',
         'float-3d': 'float3d 4s ease-in-out infinite',
         'glow-pulse': 'glowPulse 2.5s ease-in-out infinite',
+        'ticker': 'tickerSlide 30s linear infinite',
       },
       keyframes: {
+        tickerSlide: {
+          '0%': { transform: 'translate3d(0, 0, 0)' },
+          '100%': { transform: 'translate3d(-50%, 0, 0)' },
+        },
         fadeIn: {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },

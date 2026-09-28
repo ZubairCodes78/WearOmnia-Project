@@ -169,11 +169,11 @@ export async function POST(req: Request) {
 
     // 9. Shipping Fee
     const siteSettings = await getSiteSettings();
-    let shippingFee = siteSettings.flatShippingFee || 250;
+    let shippingFee = typeof siteSettings.flatShippingFee === 'number' ? siteSettings.flatShippingFee : 250;
     const rule = await prisma.shippingRule.findUnique({ where: { city } });
     if (rule) {
       shippingFee = subtotal >= rule.freeShippingMinAmount ? 0 : rule.charge;
-    } else if (subtotal >= (siteSettings.freeShippingThreshold || 10000)) {
+    } else if (subtotal >= (typeof siteSettings.freeShippingThreshold === 'number' ? siteSettings.freeShippingThreshold : 10000)) {
       shippingFee = 0;
     }
 

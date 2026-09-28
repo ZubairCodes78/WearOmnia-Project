@@ -5,6 +5,10 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Plus, Search, Trash2, Edit3, Copy, Eye, EyeOff, Package, X, Check, Image as ImageIcon, Layers } from 'lucide-react';
 import { ProductImageUploader } from '@/components/admin/ProductImageUploader';
+import { useDebounce } from '@/hooks/useDebounce';
+import { AdminPagination } from '@/components/admin/AdminPagination';
+import { AdminEmptyState } from '@/components/admin/AdminEmptyState';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 
 interface ProductImage {
   id?: string;
@@ -74,7 +78,12 @@ export function ProductsClient({ initialProducts, categories = [], collections =
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>(initialProducts);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   // Add / Edit Modal State
   const [modalOpen, setModalOpen] = useState(false);
@@ -307,10 +316,18 @@ export function ProductsClient({ initialProducts, categories = [], collections =
     }
   };
 
+  // Reset page on filter changes
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, statusFilter]);
+
   const filteredProducts = products.filter((p) => {
+    const query = debouncedSearch.trim().toLowerCase();
     const matchesSearch =
-      p.title.toLowerCase().includes(search.toLowerCase()) ||
-      p.sku.toLowerCase().includes(search.toLowerCase());
+      !query ||
+      p.title.toLowerCase().includes(query) ||
+      p.sku.toLowerCase().includes(query) ||
+      (p.category?.name?.toLowerCase() || '').includes(query);
     let matchesStatus = true;
     if (statusFilter === 'PRE_ORDER') {
       matchesStatus = Boolean(p.isPreOrder);
@@ -320,25 +337,30 @@ export function ProductsClient({ initialProducts, categories = [], collections =
     return matchesSearch && matchesStatus;
   });
 
-  return (
-    <div className="admin-page text-[#FAF8F5] font-sans">
-      {/* Header Bar */}
-      <div className="admin-page-header">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#D4AF37] font-bold mb-1">Luxury Catalog</p>
-          <h1 className="text-2xl font-serif font-bold tracking-wide text-[#FAF8F5]">Product Inventory</h1>
-          <p className="text-xs text-[#FAF8F5]/60 mt-1 font-sans">Manage luxury garments, pricing, stock quantities, size variants, and SEO</p>
-        </div>
-        <button
-          onClick={openCreateModal}
-          className="flex items-center gap-2 bg-[#D4AF37] hover:bg-white text-black px-5 py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all shadow-xl btn-3d shrink-0"
-        >
-          <Plus className="w-4 h-4" /> Add New Product
-        </button>
-      </div>
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
-      {/* Search & Status Filter */}
-      <div className="flex flex-col sm:flex-row gap-4 justify-between items-center bg-[#0A2528] p-5 border border-[#D4AF37]/25 rounded-2xl shadow-xl admin-card-3d">
+  return (
+    <div className="admin-page text-[#FAF8F5] font-sans space-y-6">
+      {/* Standardized Header */}
+      <AdminPageHeader
+        badge="Luxury Catalog"
+        title={`Product Inventory (${filteredProducts.length})`}
+        description="Manage luxury garments, pricing, stock quantities, size variants, and pre-orders."
+        actions={
+          <button
+            onClick={openCreateModal}
+            className="flex items-center gap-2 bg-[#D4AF37] hover:bg-[#FAF8F5] text-black px-4 py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-colors shadow-sm cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Add New Product
+          </button>
+        }
+      />
+
+      {/* Search & Status Filter Toolbar */}
+      <div className="flex flex-col sm:flex-row gap-3.5 justify-between items-center bg-[#0A2528] p-4 border border-[#D4AF37]/20 rounded-2xl shadow-md">
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#D4AF37]" />
           <input
@@ -360,9 +382,9 @@ export function ProductsClient({ initialProducts, categories = [], collections =
             <button
               key={st.id}
               onClick={() => setStatusFilter(st.id)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all btn-3d whitespace-nowrap ${
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border transition-colors cursor-pointer whitespace-nowrap ${
                 statusFilter === st.id
-                  ? 'bg-[#D4AF37] text-black border-[#D4AF37] shadow-md'
+                  ? 'bg-[#D4AF37] text-black border-[#D4AF37] shadow-sm'
                   : 'bg-[#06191B] text-[#FAF8F5]/70 border-[#D4AF37]/20 hover:border-[#D4AF37]/50'
               }`}
             >
@@ -373,32 +395,49 @@ export function ProductsClient({ initialProducts, categories = [], collections =
       </div>
 
       {/* Product List Table */}
-      <div className="admin-table-wrapper">
+      <div className="bg-[#0A2528] rounded-2xl border border-[#D4AF37]/20 overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
-          <table className="admin-table">
-            <thead>
+          <table className="w-full text-left text-xs font-sans">
+            <thead className="bg-[#06191B]/80 text-[#D4AF37] font-mono text-[10px] uppercase tracking-wider border-b border-[#D4AF37]/20">
               <tr>
-                <th className="py-4 px-6">Product Garment</th>
-                <th className="py-4 px-4">SKU Code</th>
-                <th className="py-4 px-4">Price</th>
-                <th className="py-4 px-4">Available Stock</th>
-                <th className="py-4 px-4">Store Visibility</th>
-                <th className="py-4 px-6 text-right">Actions</th>
+                <th className="py-3.5 px-6">Product Garment</th>
+                <th className="py-3.5 px-4">SKU Code</th>
+                <th className="py-3.5 px-4">Price</th>
+                <th className="py-3.5 px-4">Available Stock</th>
+                <th className="py-3.5 px-4">Store Visibility</th>
+                <th className="py-3.5 px-6 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#D4AF37]/10">
               {filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-16 text-center text-[#FAF8F5]/50">
-                    No products found. Click &quot;Add New Product&quot; to add your first luxury piece.
+                  <td colSpan={6} className="py-12 px-4 text-center">
+                    <AdminEmptyState
+                      title="No Products Found"
+                      description="No products matched your search or status filter criteria."
+                      icon={Package}
+                      action={
+                        search || statusFilter !== 'ALL' ? (
+                          <button
+                            onClick={() => {
+                              setSearch('');
+                              setStatusFilter('ALL');
+                            }}
+                            className="px-4 py-2 bg-[#0D3337] hover:bg-[#103A3E] text-[#D4AF37] border border-[#D4AF37]/30 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                          >
+                            Reset Filters
+                          </button>
+                        ) : undefined
+                      }
+                    />
                   </td>
                 </tr>
               ) : (
-                filteredProducts.map((p) => {
+                paginatedProducts.map((p) => {
                   const primaryImage = p.images.find((img) => img.isPrimary)?.url || p.images[0]?.url || DEFAULT_IMAGE;
                   return (
-                    <tr key={p.id} className="hover:bg-[#103A3E]/40 transition-colors">
-                      <td className="py-4 px-6">
+                    <tr key={p.id} className="hover:bg-[#103A3E]/30 transition-colors">
+                      <td className="py-3.5 px-6">
                         <div className="flex items-center gap-3.5">
                           <div className="relative w-12 h-16 rounded-xl overflow-hidden bg-[#06191B] flex-shrink-0 border border-[#D4AF37]/30 shadow-md">
                             <Image src={primaryImage} alt={p.title} fill className="object-cover" />
@@ -416,8 +455,8 @@ export function ProductsClient({ initialProducts, categories = [], collections =
                           </div>
                         </div>
                       </td>
-                      <td className="py-4 px-4 font-mono text-xs text-[#D4AF37] font-bold">{p.sku}</td>
-                      <td className="py-4 px-4">
+                      <td className="py-3.5 px-4 font-mono text-xs text-[#D4AF37] font-bold">{p.sku}</td>
+                      <td className="py-3.5 px-4">
                         <div className="flex flex-col">
                           <span className="font-bold font-mono text-[#FAF8F5]">Rs. {p.basePrice.toLocaleString()}</span>
                           {p.discountPrice && (
@@ -425,9 +464,9 @@ export function ProductsClient({ initialProducts, categories = [], collections =
                           )}
                         </div>
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-3.5 px-4">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider border badge-3d ${
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border ${
                             p.stockQuantity > 5
                               ? 'bg-emerald-950/70 text-emerald-300 border-emerald-500/40'
                               : p.stockQuantity > 0
@@ -439,10 +478,10 @@ export function ProductsClient({ initialProducts, categories = [], collections =
                           {p.stockQuantity} in stock
                         </span>
                       </td>
-                      <td className="py-4 px-4">
+                      <td className="py-3.5 px-4">
                         <button
                           onClick={() => handleToggleStatus(p)}
-                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-all border badge-3d ${
+                          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors border cursor-pointer ${
                             p.status === 'PUBLISHED'
                               ? 'bg-emerald-950/70 text-emerald-300 border-emerald-500/40 hover:bg-emerald-900/80'
                               : 'bg-zinc-900/80 text-zinc-400 border-zinc-700 hover:bg-zinc-800'
@@ -452,28 +491,28 @@ export function ProductsClient({ initialProducts, categories = [], collections =
                           {p.status === 'PUBLISHED' ? 'Published' : 'Draft'}
                         </button>
                       </td>
-                      <td className="py-4 px-6 text-right whitespace-nowrap">
-                        <div className="admin-action-group">
+                      <td className="py-3.5 px-6 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => openEditModal(p)}
                             title="Edit Product"
-                            className="admin-btn border-[#D4AF37]/30 text-[#FAF8F5]/80 hover:text-[#D4AF37] hover:bg-[#103A3E] p-2"
+                            className="p-1.5 rounded-lg border border-[#D4AF37]/30 text-[#FAF8F5]/80 hover:text-[#D4AF37] hover:bg-[#103A3E] transition-colors cursor-pointer"
                           >
-                            <Edit3 className="w-4 h-4" />
+                            <Edit3 className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleDuplicateProduct(p.id)}
                             title="Duplicate Product"
-                            className="admin-btn border-cyan-500/30 text-[#FAF8F5]/80 hover:text-cyan-400 hover:bg-[#103A3E] p-2"
+                            className="p-1.5 rounded-lg border border-cyan-500/30 text-[#FAF8F5]/80 hover:text-cyan-400 hover:bg-[#103A3E] transition-colors cursor-pointer"
                           >
-                            <Copy className="w-4 h-4" />
+                            <Copy className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleDeleteProduct(p.id)}
                             title="Delete Product"
-                            className="admin-btn border-rose-500/30 text-[#FAF8F5]/80 hover:text-rose-400 hover:bg-rose-950/40 p-2"
+                            className="p-1.5 rounded-lg border border-rose-500/30 text-[#FAF8F5]/80 hover:text-rose-400 hover:bg-rose-950/40 transition-colors cursor-pointer"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         </div>
                       </td>
@@ -484,6 +523,19 @@ export function ProductsClient({ initialProducts, categories = [], collections =
             </tbody>
           </table>
         </div>
+
+        {filteredProducts.length > 0 && (
+          <AdminPagination
+            currentPage={currentPage}
+            totalItems={filteredProducts.length}
+            itemsPerPage={pageSize}
+            onPageChange={(page: number) => setCurrentPage(page)}
+            onItemsPerPageChange={(newSize: number) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+          />
+        )}
       </div>
 
       {/* Add / Edit Product Modal */}

@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, X, Send, Headphones, ShieldCheck, User, ChevronRight, PhoneCall, Package, Loader2 } from 'lucide-react';
+import { useSettings } from '@/context/SettingsContext';
 
 interface ChatMessage {
   id: string;
@@ -34,6 +35,7 @@ type TrackingState = 'idle' | 'awaiting_order_number' | 'awaiting_phone' | 'load
 
 export const SupportAssistant = () => {
   const pathname = usePathname();
+  const { settings } = useSettings();
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
@@ -44,26 +46,18 @@ export const SupportAssistant = () => {
   const [trackingState, setTrackingState] = useState<TrackingState>('idle');
   const [pendingOrderNumber, setPendingOrderNumber] = useState('');
 
-  // WhatsApp configuration state
-  const [whatsappPhone, setWhatsappPhone] = useState('923180633323');
+  // WhatsApp configuration from central settings
+  const rawWhatsApp = settings.whatsappNumber || '923180633323';
+  const whatsappPhone = rawWhatsApp.replace(/^0/, '92').replace(/\s/g, '');
   const defaultWhatsAppMsg = 'Hi WearOMNIA, I need help with my order.';
+
+  // Detect product page for dynamic mobile bottom clearance
+  const isProductPage = Boolean(pathname?.startsWith('/product/'));
 
   // Hide SupportAssistant on admin routes
   if (pathname?.startsWith('/admin')) {
     return null;
   }
-
-  useEffect(() => {
-    fetch('/api/site-settings')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.settings?.whatsappNumber) {
-          const international = data.settings.whatsappNumber.replace(/^0/, '92').replace(/\s/g, '');
-          setWhatsappPhone(international);
-        }
-      })
-      .catch(() => {});
-  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -190,10 +184,13 @@ export const SupportAssistant = () => {
     }
 
     if (q.includes('shipping') || q.includes('delivery') || q.includes('cod') || q.includes('free')) {
+      const freeShippingMsg = settings.freeShippingThreshold > 0
+        ? `Shipping is FREE on orders above Rs. ${settings.freeShippingThreshold.toLocaleString()} (Standard Rs. ${settings.flatShippingFee} fee for smaller orders).`
+        : `Shipping is FREE on all orders!`;
       return {
         id: Date.now().toString(),
         sender: 'bot',
-        text: 'We provide Nationwide Cash On Delivery across 200+ cities in Pakistan. Shipping is FREE on orders above Rs. 10,000 (Standard Rs. 250 fee for smaller orders). Delivery takes 2-4 business days.',
+        text: `We provide Nationwide Cash On Delivery across 200+ cities in Pakistan. ${freeShippingMsg} Delivery takes ${settings.estimatedDeliveryTime || '2-4 business days'}.`,
         timestamp: time,
         quickReplies: ['Custom Sizing', 'Browse Catalog'],
       };
@@ -236,7 +233,7 @@ export const SupportAssistant = () => {
       return {
         id: Date.now().toString(),
         sender: 'bot',
-        text: 'You can reach our Customer Concierge team via WhatsApp at 03180633323 or email us at Wearomniaa@gmail.com. Support hours: Monday – Saturday: 10:00 AM – 8:00 PM.',
+        text: `You can reach our Customer Concierge team via WhatsApp at ${settings.whatsappNumber || '03180633323'} or email us at ${settings.supportEmail || 'wearomniaa@gmail.com'}. Support hours: Monday – Saturday: 10:00 AM – 8:00 PM.`,
         timestamp: time,
         actionLink: { label: 'Contact Page', url: '/contact' },
         quickReplies: ['Browse Catalog', 'Shipping Info'],
@@ -307,8 +304,12 @@ export const SupportAssistant = () => {
     <>
       {/* Floating Action Buttons Stack (Concierge + WhatsApp) */}
       <div
-        className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 flex flex-col items-end gap-2.5 sm:gap-3 pointer-events-none select-none print:hidden"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
+        className={`fixed right-4 sm:right-6 z-40 flex flex-col items-end gap-3 pointer-events-none select-none print:hidden transition-[bottom] duration-200 ease-out ${
+          isProductPage
+            ? 'bottom-[calc(5.25rem+env(safe-area-inset-bottom,0px))] sm:bottom-6'
+            : 'bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] sm:bottom-6'
+        }`}
+        style={{ paddingRight: 'env(safe-area-inset-right, 0px)' }}
       >
         {/* 1. Concierge Button */}
         <button
@@ -316,7 +317,7 @@ export const SupportAssistant = () => {
           onClick={() => setIsOpen((prev) => !prev)}
           title="WearOMNIA Client Concierge"
           aria-label="Open WearOMNIA Concierge"
-          className="pointer-events-auto group relative flex items-center justify-center gap-2 w-[136px] sm:w-[150px] h-10 sm:h-11 px-3 sm:px-3.5 rounded-full bg-[#06191B] text-[#D4AF37] border border-[#D4AF37]/50 shadow-md hover:border-[#D4AF37] hover:bg-[#0D2F33] hover:shadow-[#D4AF37]/25 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transform-none cursor-pointer"
+          className="pointer-events-auto group relative flex items-center justify-center gap-2.5 w-[140px] sm:w-[150px] min-h-[44px] h-11 px-3.5 rounded-full bg-[#06191B] text-[#D4AF37] border border-[#D4AF37]/50 shadow-lg hover:border-[#D4AF37] hover:bg-[#0D2F33] hover:shadow-[#D4AF37]/25 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transform-none cursor-pointer"
         >
           <Headphones className="w-4 h-4 sm:w-4.5 sm:h-4.5 shrink-0 text-[#D4AF37] transition-transform duration-200 group-hover:scale-110 motion-reduce:transform-none" />
           <span className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-[#FAF8F5] whitespace-nowrap">
@@ -331,7 +332,7 @@ export const SupportAssistant = () => {
           rel="noopener noreferrer"
           title="Chat with WearOMNIA on WhatsApp"
           aria-label="Chat with WearOMNIA on WhatsApp"
-          className="pointer-events-auto group relative flex items-center justify-center gap-2 w-[136px] sm:w-[150px] h-10 sm:h-11 px-3 sm:px-3.5 rounded-full bg-[#25D366] text-white shadow-md hover:bg-[#20BA5A] hover:shadow-[#25D366]/30 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transform-none cursor-pointer border border-white/20"
+          className="pointer-events-auto group relative flex items-center justify-center gap-2.5 w-[140px] sm:w-[150px] min-h-[44px] h-11 px-3.5 rounded-full bg-[#25D366] text-white shadow-lg hover:bg-[#20BA5A] hover:shadow-[#25D366]/30 transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0 motion-reduce:transform-none cursor-pointer border border-white/20"
         >
           <svg
             className="w-4 h-4 sm:w-4.5 sm:h-4.5 fill-current text-white shrink-0 transition-transform duration-200 group-hover:scale-110 motion-reduce:transform-none"
@@ -354,7 +355,11 @@ export const SupportAssistant = () => {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 16 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-28 right-4 sm:bottom-32 sm:right-6 z-50 w-[calc(100%-32px)] sm:w-[400px] h-[500px] sm:h-[580px] max-h-[75vh] bg-[#0A2528] border border-[#D4AF37]/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden"
+            className={`fixed right-4 sm:right-6 z-40 w-[calc(100%-32px)] sm:w-[400px] h-[500px] sm:h-[580px] max-h-[75vh] bg-[#0A2528] border border-[#D4AF37]/30 rounded-2xl shadow-2xl flex flex-col overflow-hidden ${
+              isProductPage
+                ? 'bottom-[calc(11.5rem+env(safe-area-inset-bottom,0px))] sm:bottom-32'
+                : 'bottom-[calc(7.25rem+env(safe-area-inset-bottom,0px))] sm:bottom-32'
+            }`}
             style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}
           >
             {/* Concierge Header */}

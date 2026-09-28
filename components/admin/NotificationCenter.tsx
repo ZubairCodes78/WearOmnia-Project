@@ -63,12 +63,12 @@ export const NotificationCenter = () => {
           setIsOpen(!isOpen);
           requestBrowserPermission();
         }}
-        className="relative p-2 text-teal hover:bg-sand rounded-xl transition-all"
+        className="relative p-2 text-[#D4AF37] hover:bg-[#103A3E] rounded-xl transition-colors"
         title="Real-Time SSE Order Notifications"
       >
         <Bell className="w-5 h-5" />
         {unreadCount > 0 && (
-          <span className="absolute top-1 right-1 bg-red-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
+          <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center animate-pulse">
             {unreadCount}
           </span>
         )}
@@ -76,20 +76,20 @@ export const NotificationCenter = () => {
 
       <button
         onClick={playAudioChime}
-        className="p-2 text-teal hover:bg-sand rounded-xl transition-all hidden sm:block"
+        className="p-2 text-[#D4AF37]/80 hover:text-[#D4AF37] hover:bg-[#103A3E] rounded-xl transition-colors hidden sm:block"
         title="Test Order Audio Chime"
       >
-        <Volume2 className="w-5 h-5 text-champagne-700" />
+        <Volume2 className="w-5 h-5" />
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-offwhite rounded-2xl shadow-2xl border border-sand z-50 overflow-hidden">
-          <div className="p-4 bg-teal text-offwhite flex items-center justify-between">
+        <div className="absolute right-0 mt-3 w-80 sm:w-96 bg-[#0A2528] rounded-2xl shadow-2xl border border-[#D4AF37]/30 z-50 overflow-hidden font-sans">
+          <div className="p-4 bg-[#06191B] border-b border-[#D4AF37]/20 text-[#FAF8F5] flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Bell className="w-4 h-4 text-champagne" />
-              <h4 className="font-serif font-bold text-sm">Real-Time SSE Notifications</h4>
+              <Bell className="w-4 h-4 text-[#D4AF37]" />
+              <h4 className="font-bold text-xs uppercase tracking-wider text-[#FAF8F5]">Real-Time Notifications</h4>
               {unreadCount > 0 && (
-                <span className="bg-champagne text-teal-950 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                <span className="bg-[#D4AF37] text-black text-[10px] font-black px-2 py-0.5 rounded-full">
                   {unreadCount} New
                 </span>
               )}
@@ -97,16 +97,16 @@ export const NotificationCenter = () => {
             {unreadCount > 0 && (
               <button
                 onClick={markAllAsRead}
-                className="text-[11px] text-champagne hover:underline font-semibold"
+                className="text-[11px] text-[#D4AF37] hover:underline font-semibold"
               >
                 Mark all read
               </button>
             )}
           </div>
 
-          <div className="max-h-80 overflow-y-auto divide-y divide-sand">
+          <div className="max-h-80 overflow-y-auto divide-y divide-[#D4AF37]/10">
             {notifications.length === 0 ? (
-              <div className="p-6 text-center text-xs text-charcoal-muted">
+              <div className="p-6 text-center text-xs text-[#FAF8F5]/50">
                 No notifications received yet.
               </div>
             ) : (
@@ -114,21 +114,21 @@ export const NotificationCenter = () => {
                 <div
                   key={n.id}
                   className={`p-4 transition-colors ${
-                    !n.isRead ? 'bg-champagne-50/70 border-l-4 border-teal' : 'bg-offwhite'
+                    !n.isRead ? 'bg-[#0D3337]/60 border-l-4 border-[#D4AF37]' : 'bg-[#0A2528]'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <h5 className="font-serif font-bold text-xs text-teal flex items-center gap-1">
+                      <h5 className="font-bold text-xs text-[#FAF8F5] flex items-center gap-1.5">
                         {n.message.includes('Low Stock') ? (
-                          <AlertTriangle className="w-3.5 h-3.5 text-red-600" />
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
                         ) : (
-                          <ShoppingBag className="w-3.5 h-3.5 text-teal" />
+                          <ShoppingBag className="w-3.5 h-3.5 text-[#D4AF37]" />
                         )}
                         {n.title}
                       </h5>
-                      <p className="text-[11px] text-charcoal-muted mt-0.5">{n.message}</p>
-                      <span className="text-[9px] text-charcoal-muted mt-1 block font-mono">
+                      <p className="text-[11px] text-[#FAF8F5]/70 mt-1 leading-relaxed">{n.message}</p>
+                      <span className="text-[9px] text-[#D4AF37]/80 mt-1.5 block font-mono">
                         {new Date(n.createdAt).toLocaleTimeString()}
                       </span>
                     </div>
@@ -136,7 +136,7 @@ export const NotificationCenter = () => {
                     {!n.isRead && (
                       <button
                         onClick={() => markAsRead(n.id)}
-                        className="text-teal hover:text-teal-900 p-1"
+                        className="text-[#D4AF37] hover:text-white p-1"
                         title="Mark read"
                       >
                         <Check className="w-4 h-4" />
@@ -152,28 +152,28 @@ export const NotificationCenter = () => {
 
       {/* Floating Incoming Toast Notification Banner */}
       {latestToast && (
-        <div className="fixed top-20 right-6 z-50 bg-teal text-offwhite p-5 rounded-2xl shadow-2xl border-2 border-champagne max-w-sm animate-fade-in">
+        <div className="fixed top-20 right-6 z-50 bg-[#0A2528] text-[#FAF8F5] p-5 rounded-2xl shadow-2xl border border-[#D4AF37]/40 max-w-sm font-sans animate-in fade-in duration-200">
           <div className="flex items-start justify-between gap-3">
-            <div className="w-10 h-10 rounded-full bg-champagne text-teal-950 flex items-center justify-center shrink-0">
+            <div className="w-10 h-10 rounded-xl bg-[#0D3337] border border-[#D4AF37]/40 text-[#D4AF37] flex items-center justify-center shrink-0">
               <ShoppingBag className="w-5 h-5" />
             </div>
             <div className="flex-1">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-champagne block">
-                ⚡ Real-Time Instant Alert!
+              <span className="text-[10px] font-bold uppercase tracking-wider text-[#D4AF37] block">
+                Instant Order Alert
               </span>
-              <h4 className="font-serif font-bold text-sm text-offwhite mt-0.5">{latestToast.title}</h4>
-              <p className="text-xs text-offwhite/90 mt-1">{latestToast.message}</p>
+              <h4 className="font-bold text-sm text-[#FAF8F5] mt-0.5">{latestToast.title}</h4>
+              <p className="text-xs text-[#FAF8F5]/80 mt-1 leading-relaxed">{latestToast.message}</p>
             </div>
-            <button onClick={dismissToast} className="text-champagne hover:text-offwhite p-1">
+            <button onClick={dismissToast} className="text-[#FAF8F5]/60 hover:text-white p-1">
               <X className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="mt-3 pt-3 border-t border-teal-800 flex justify-end">
+          <div className="mt-4 pt-3 border-t border-[#D4AF37]/20 flex justify-end">
             <Link
               href="/admin/orders"
               onClick={dismissToast}
-              className="bg-champagne text-teal-950 px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-offwhite transition-colors"
+              className="bg-[#D4AF37] text-black px-4 py-1.5 rounded-lg text-xs font-bold uppercase tracking-wider hover:bg-[#FAF8F5] transition-colors shadow-sm"
             >
               Open Orders Console
             </Link>

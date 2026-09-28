@@ -4,14 +4,17 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { Calendar, ArrowRight, X } from 'lucide-react';
 import { isPreOrderCampaignActive } from '@/lib/preorder';
+import { useSettings } from '@/context/SettingsContext';
 
 interface PreOrderLaunchOverlayProps {
   forceShowForTesting?: boolean;
 }
 
 export function PreOrderLaunchOverlay({ forceShowForTesting = false }: PreOrderLaunchOverlayProps) {
+  const { settings } = useSettings();
   const [isVisible, setIsVisible] = useState(false);
   const prefersReducedMotion = useReducedMotion();
+  const advancePercent = settings.preorder_advance_percent || 50;
 
   useEffect(() => {
     // 1. Verify if Pre-Order Campaign window is active (2026-09-29 to 2026-10-20 Asia/Karachi)
@@ -114,7 +117,7 @@ export function PreOrderLaunchOverlay({ forceShowForTesting = false }: PreOrderL
                 Pre-Order Is <span className="text-[#D4AF37] italic font-normal">Now Open</span>
               </h1>
               <p className="text-xs sm:text-sm text-[#FAF8F5]/75 font-sans max-w-sm mx-auto leading-relaxed">
-                Limited Autumn / Winter 2026 Collection • 50% Advance Booking With Payment Proof
+                Limited Autumn / Winter 2026 Collection • {advancePercent}% Advance Booking With Payment Proof
               </p>
             </div>
 

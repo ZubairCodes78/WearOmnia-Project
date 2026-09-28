@@ -46,22 +46,7 @@ export default async function ReturnsPage() {
   }));
 
   return (
-    <div className="space-y-8">
-      <div className="border-b border-[#D4AF37]/15 pb-6">
-        <div className="flex items-center gap-2.5 mb-1.5">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-          <span className="text-xs uppercase font-extrabold tracking-[0.2em] text-[#D4AF37]">
-            Reverse Logistics & Shipper Advice
-          </span>
-        </div>
-        <h1 className="font-serif text-3xl font-bold tracking-tight text-[#FAF8F5]">
-          Returns & RTO Management
-        </h1>
-        <p className="text-xs text-[#FAF8F5]/60 mt-1 max-w-2xl">
-          Track non-delivered parcels, failed delivery attempts, and submit Shipper Advice directly to PostEx courier network.
-        </p>
-      </div>
-
+    <div className="space-y-6">
       <ReturnsClient initialShipments={sanitized as any} />
     </div>
   );

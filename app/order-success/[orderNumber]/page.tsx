@@ -38,6 +38,9 @@ export default async function OrderSuccessPage({ params }: OrderSuccessPageProps
   const isRejected = isPreOrder && paymentStatus === 'PAYMENT_REJECTED';
   const isApproved = isPreOrder && paymentStatus === 'PAYMENT_APPROVED';
   const isReviewPending = isPreOrder && !isRejected && !isApproved;
+  const advancePercent = order.preOrderAdvanceAmount && order.totalAmount
+    ? Math.round((order.preOrderAdvanceAmount / order.totalAmount) * 100) || 50
+    : 50;
 
   return (
     <div className="editorial-page">
@@ -82,9 +85,9 @@ export default async function OrderSuccessPage({ params }: OrderSuccessPageProps
               {isRejected ? (
                 <>Your Pre-Order <strong className="text-champagne font-mono font-bold">{order.orderNumber}</strong> has been logged, but our finance team could not verify the uploaded payment proof. Please see below to resubmit.</>
               ) : isReviewPending ? (
-                <>Your Pre-Order <strong className="text-champagne font-mono font-bold">{order.orderNumber}</strong> has been submitted with your 50% advance payment proof. Our team is verifying your payment and will confirm shortly via WhatsApp.</>
+                <>Your Pre-Order <strong className="text-champagne font-mono font-bold">{order.orderNumber}</strong> has been submitted with your {advancePercent}% advance payment proof. Our team is verifying your payment and will confirm shortly via WhatsApp.</>
               ) : isPreOrder ? (
-                <>Your 50% advance payment for Pre-Order <strong className="text-champagne font-mono font-bold">{order.orderNumber}</strong> is confirmed! Your artisan piece is reserved and entering production.</>
+                <>Your {advancePercent}% advance payment for Pre-Order <strong className="text-champagne font-mono font-bold">{order.orderNumber}</strong> is confirmed! Your artisan piece is reserved and entering production.</>
               ) : (
                 <>Now comes the hardest part: waiting for it to arrive. Your Cash On Delivery order <strong className="text-champagne font-mono font-bold">{order.orderNumber}</strong> is confirmed and being prepared with care.</>
               )}
@@ -94,7 +97,7 @@ export default async function OrderSuccessPage({ params }: OrderSuccessPageProps
               {isPreOrder ? (
                 <>
                   <span className="bg-teal-950/80 px-4 py-2 rounded-full border border-champagne/30 flex items-center gap-2 shadow-sm">
-                    <ShieldCheck className="w-4 h-4 text-champagne" /> Advance (50%): Rs. {(order.preOrderAdvanceAmount || 0).toLocaleString()}
+                    <ShieldCheck className="w-4 h-4 text-champagne" /> Advance ({advancePercent}%): Rs. {(order.preOrderAdvanceAmount || 0).toLocaleString()}
                   </span>
                   <span className="bg-teal-950/80 px-4 py-2 rounded-full border border-champagne/30 flex items-center gap-2 shadow-sm">
                     <Truck className="w-4 h-4 text-champagne" /> Balance Due on Delivery (COD): Rs. {(order.preOrderRemainingAmount || 0).toLocaleString()}

@@ -28,8 +28,10 @@ import {
   CreditCard,
   QrCode,
   Edit,
+  Settings,
 } from 'lucide-react';
 import { SiteSettingsData } from '@/lib/settings';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 
 interface PreOrderPaymentMethodData {
   id: string;
@@ -608,22 +610,26 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
   };
 
   return (
-    <div className="admin-page text-[#FAF8F5]">
+    <div className="space-y-6">
       {/* Header */}
-      <div className="admin-page-header">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#D4AF37] mb-1 font-bold">System Configuration</p>
-          <h1 className="text-2xl font-serif font-bold text-[#FAF8F5]">Admin &amp; Site Settings</h1>
-          <p className="text-xs text-[#FAF8F5]/60 mt-1 font-sans">Configure business profile, WhatsApp automation number, shipping rates, COD fees, announcement bar, and footer.</p>
-        </div>
-        <button
-          onClick={handleSaveSettings}
-          disabled={savingSettings}
-          className="flex items-center gap-2 bg-[#D4AF37] hover:bg-white text-black px-6 py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all shadow-xl disabled:opacity-50 btn-3d shrink-0"
-        >
-          <Save className="w-4 h-4" /> {savingSettings ? 'Saving...' : 'Save All Settings'}
-        </button>
-      </div>
+      <AdminPageHeader
+        title="Admin & Site Settings"
+        description="Configure business profile, WhatsApp automation number, shipping rates, COD fees, announcement bar, and footer."
+        badge={
+          <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] font-semibold text-[#D4AF37] bg-[#D4AF37]/10 px-2.5 py-1 rounded-md border border-[#D4AF37]/20">
+            <Settings className="w-3.5 h-3.5 text-[#D4AF37]" /> System Configuration
+          </span>
+        }
+        actions={
+          <button
+            onClick={handleSaveSettings}
+            disabled={savingSettings}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#D4AF37] text-black font-semibold text-xs uppercase tracking-wider hover:bg-[#c49f2f] transition-colors disabled:opacity-50"
+          >
+            <Save className="w-4 h-4" /> {savingSettings ? 'Saving...' : 'Save All Settings'}
+          </button>
+        }
+      />
 
       {message && (
         <div className="p-4 bg-[#D4AF37]/10 border border-[#D4AF37]/30 text-[#D4AF37] rounded-xl text-sm font-medium">

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ShieldCheck,
   Search,
@@ -13,7 +13,12 @@ import {
   Settings,
   Truck,
   RotateCcw,
+  FileText,
 } from 'lucide-react';
+import { useDebounce } from '@/hooks/useDebounce';
+import { AdminPagination } from '@/components/admin/AdminPagination';
+import { AdminEmptyState } from '@/components/admin/AdminEmptyState';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 
 interface AuditLogItem {
   id: string;
@@ -32,129 +37,161 @@ interface AuditLogsClientProps {
 export function AuditLogsClient({ initialLogs }: AuditLogsClientProps) {
   const [logs] = useState<AuditLogItem[]>(initialLogs);
   const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
   const [actionFilter, setActionFilter] = useState('ALL');
 
-  const filteredLogs = logs.filter((l) => {
-    const term = search.toLowerCase();
-    const matchesSearch =
-      l.action.toLowerCase().includes(term) ||
-      l.entity.toLowerCase().includes(term) ||
-      (l.details && l.details.toLowerCase().includes(term)) ||
-      (l.ipAddress && l.ipAddress.includes(term));
+  // Pagination
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
-    const matchesAction = actionFilter === 'ALL' || l.action.startsWith(actionFilter);
+  const filteredLogs = useMemo(() => {
+    const term = debouncedSearch.trim().toLowerCase();
+    return logs.filter((l) => {
+      const matchesSearch =
+        !term ||
+        l.action.toLowerCase().includes(term) ||
+        l.entity.toLowerCase().includes(term) ||
+        (l.details && l.details.toLowerCase().includes(term)) ||
+        (l.ipAddress && l.ipAddress.includes(term));
 
-    return matchesSearch && matchesAction;
-  });
+      const matchesAction = actionFilter === 'ALL' || l.action.startsWith(actionFilter);
+
+      return matchesSearch && matchesAction;
+    });
+  }, [logs, debouncedSearch, actionFilter]);
+
+  const totalPages = Math.ceil(filteredLogs.length / pageSize) || 1;
+  const paginatedLogs = filteredLogs.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, actionFilter]);
 
   const getActionBadgeColor = (action: string) => {
-    if (action.includes('SHIPMENT') || action.includes('DISPATCH')) return 'bg-emerald-950/70 text-emerald-300 border-emerald-500/40';
-    if (action.includes('LOGIN') || action.includes('AUTH')) return 'bg-blue-950/70 text-blue-300 border-blue-500/40';
-    if (action.includes('STOCK') || action.includes('INVENTORY')) return 'bg-purple-950/70 text-purple-300 border-purple-500/40';
-    if (action.includes('DELETE') || action.includes('CANCEL')) return 'bg-red-950/70 text-red-300 border-red-500/40';
-    return 'bg-teal-950/70 text-[#D4AF37] border-[#D4AF37]/30';
+    if (action.includes('SHIPMENT') || action.includes('DISPATCH')) return 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20';
+    if (action.includes('LOGIN') || action.includes('AUTH')) return 'bg-blue-500/10 text-blue-400 border-blue-500/20';
+    if (action.includes('STOCK') || action.includes('INVENTORY')) return 'bg-purple-500/10 text-purple-400 border-purple-500/20';
+    if (action.includes('DELETE') || action.includes('CANCEL')) return 'bg-rose-500/10 text-rose-400 border-rose-500/20';
+    return 'bg-[#D4AF37]/10 text-[#D4AF37] border-[#D4AF37]/20';
   };
 
   return (
-    <div className="space-y-8 text-[#FAF8F5]">
+    <div className="space-y-6 text-[#FAF8F5]">
       {/* Header */}
-      <div className="bg-[#0A2528]/85 backdrop-blur-2xl p-8 rounded-3xl border border-[#D4AF37]/30 shadow-2xl flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.25em] font-bold text-[#D4AF37] bg-teal-950/80 px-3.5 py-1 rounded-full border border-[#D4AF37]/30">
-              <ShieldCheck className="w-3 h-3 text-[#D4AF37]" /> Security Compliance
-            </span>
-          </div>
-          <h1 className="font-serif text-3xl font-bold text-[#FAF8F5] mt-2">
-            Security Audit Trail & System Logs
-          </h1>
-          <p className="text-xs text-[#FAF8F5]/70 mt-1 font-sans">
-            Immutable system activity ledger tracking admin logins, shipment dispatches, settings modifications, and stock alterations.
-          </p>
-        </div>
-      </div>
+      <AdminPageHeader
+        title="Security Audit Trail & System Logs"
+        description="Immutable system activity ledger tracking admin logins, shipment dispatches, settings modifications, and stock adjustments."
+        badge={
+          <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] font-semibold text-[#D4AF37] bg-[#D4AF37]/10 px-2.5 py-1 rounded-md border border-[#D4AF37]/20">
+            <ShieldCheck className="w-3.5 h-3.5 text-[#D4AF37]" /> Security Compliance
+          </span>
+        }
+      />
 
       {/* Filter and Search Bar */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-[#0A2528]/80 backdrop-blur-xl p-6 rounded-3xl border border-[#D4AF37]/20 shadow-xl">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="bg-[#0A2528] rounded-xl border border-white/5 p-4 flex flex-col md:flex-row items-center justify-between gap-3 shadow-sm">
+        <div className="flex flex-wrap items-center gap-1.5 w-full md:w-auto overflow-x-auto">
           <button
             onClick={() => setActionFilter('ALL')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-              actionFilter === 'ALL' ? 'bg-[#D4AF37] text-black shadow' : 'bg-[#06191B] text-[#FAF8F5]/80 hover:text-[#D4AF37]'
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-colors whitespace-nowrap ${
+              actionFilter === 'ALL'
+                ? 'bg-[#D4AF37] text-black shadow-sm'
+                : 'text-[#FAF8F5]/70 hover:text-white hover:bg-white/5'
             }`}
           >
             All Logs ({logs.length})
           </button>
           <button
             onClick={() => setActionFilter('SHIPMENT')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-              actionFilter === 'SHIPMENT' ? 'bg-[#D4AF37] text-black shadow' : 'bg-[#06191B] text-[#FAF8F5]/80 hover:text-[#D4AF37]'
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-colors whitespace-nowrap ${
+              actionFilter === 'SHIPMENT'
+                ? 'bg-[#D4AF37] text-black shadow-sm'
+                : 'text-[#FAF8F5]/70 hover:text-white hover:bg-white/5'
             }`}
           >
             Courier & Shipping
           </button>
           <button
             onClick={() => setActionFilter('STOCK')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-              actionFilter === 'STOCK' ? 'bg-[#D4AF37] text-black shadow' : 'bg-[#06191B] text-[#FAF8F5]/80 hover:text-[#D4AF37]'
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-colors whitespace-nowrap ${
+              actionFilter === 'STOCK'
+                ? 'bg-[#D4AF37] text-black shadow-sm'
+                : 'text-[#FAF8F5]/70 hover:text-white hover:bg-white/5'
             }`}
           >
             Stock Adjustments
           </button>
           <button
             onClick={() => setActionFilter('CUSTOMER')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all ${
-              actionFilter === 'CUSTOMER' ? 'bg-[#D4AF37] text-black shadow' : 'bg-[#06191B] text-[#FAF8F5]/80 hover:text-[#D4AF37]'
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold tracking-wide transition-colors whitespace-nowrap ${
+              actionFilter === 'CUSTOMER'
+                ? 'bg-[#D4AF37] text-black shadow-sm'
+                : 'text-[#FAF8F5]/70 hover:text-white hover:bg-white/5'
             }`}
           >
             Clientele Updates
           </button>
         </div>
 
-        <div className="relative w-full md:w-80">
-          <Search className="w-4 h-4 text-[#D4AF37] absolute left-3.5 top-3" />
+        <div className="relative w-full md:w-72">
+          <Search className="w-3.5 h-3.5 text-[#FAF8F5]/40 absolute left-3 top-2.5" />
           <input
             type="text"
-            placeholder="Search Action, Entity, IP, Details..."
+            placeholder="Search action, entity, IP, payload..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[#06191B] rounded-xl text-xs text-[#FAF8F5] border border-[#D4AF37]/20 focus:outline-none focus:border-[#D4AF37] font-sans"
+            className="w-full pl-9 pr-3 py-1.5 bg-[#06191B] rounded-lg text-xs text-[#FAF8F5] border border-white/10 focus:outline-none focus:border-[#D4AF37]/50 font-sans placeholder:text-[#FAF8F5]/30 transition-colors"
           />
         </div>
       </div>
 
       {/* Audit Logs Table */}
-      <div className="bg-[#0A2528]/80 backdrop-blur-2xl rounded-3xl border border-[#D4AF37]/20 shadow-2xl overflow-hidden">
+      <div className="bg-[#0A2528] rounded-xl border border-white/5 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#06191B] text-[#D4AF37] uppercase tracking-wider font-semibold border-b border-[#D4AF37]/15">
+            <thead className="bg-[#06191B] text-[#FAF8F5]/60 font-semibold border-b border-white/5">
               <tr>
-                <th className="p-4">Timestamp</th>
-                <th className="p-4">Action</th>
-                <th className="p-4">Entity</th>
-                <th className="p-4">Details & Payload</th>
-                <th className="p-4">IP Address</th>
+                <th className="px-4 py-3">Timestamp</th>
+                <th className="px-4 py-3">Action</th>
+                <th className="px-4 py-3">Entity</th>
+                <th className="px-4 py-3">Details & Payload</th>
+                <th className="px-4 py-3">IP Address</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#D4AF37]/10">
+            <tbody className="divide-y divide-white/5">
               {filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-12 text-center text-[#FAF8F5]/50 italic">
-                    No security audit logs recorded matching this filter.
+                  <td colSpan={5} className="p-8">
+                    <AdminEmptyState
+                      icon={FileText}
+                      title="No audit logs found"
+                      description="No security activity records match your current filter or search criteria."
+                      action={
+                        search || actionFilter !== 'ALL'
+                          ? {
+                              label: 'Clear Filters',
+                              onClick: () => {
+                                setSearch('');
+                                setActionFilter('ALL');
+                              },
+                            }
+                          : undefined
+                      }
+                    />
                   </td>
                 </tr>
               ) : (
-                filteredLogs.map((log) => (
-                  <tr key={log.id} className="hover:bg-[#103A3E]/40 font-mono transition-colors">
-                    <td className="p-4 text-[#FAF8F5]/60 text-[11px] whitespace-nowrap">
+                paginatedLogs.map((log) => (
+                  <tr key={log.id} className="hover:bg-white/[0.02] font-mono transition-colors">
+                    <td className="px-4 py-3 text-[#FAF8F5]/50 text-[11px] whitespace-nowrap">
                       {new Date(log.createdAt).toLocaleString()}
                     </td>
-                    <td className="p-4">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border font-mono ${getActionBadgeColor(log.action)}`}>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-semibold border font-mono ${getActionBadgeColor(log.action)}`}>
                         {log.action}
                       </span>
                     </td>
-                    <td className="p-4 text-[#FAF8F5] font-sans font-semibold">
+                    <td className="px-4 py-3 text-[#FAF8F5] font-sans font-medium">
                       {log.entity}
                       {log.entityId && (
                         <span className="text-[10px] text-[#D4AF37] block font-mono">
@@ -162,10 +199,10 @@ export function AuditLogsClient({ initialLogs }: AuditLogsClientProps) {
                         </span>
                       )}
                     </td>
-                    <td className="p-4 font-sans text-xs text-[#FAF8F5]/80 max-w-md">
+                    <td className="px-4 py-3 font-sans text-xs text-[#FAF8F5]/80 max-w-md">
                       {log.details || 'Action completed successfully.'}
                     </td>
-                    <td className="p-4 text-[#FAF8F5]/60 text-[11px] font-mono">
+                    <td className="px-4 py-3 text-[#FAF8F5]/50 text-[11px] font-mono">
                       {log.ipAddress || '127.0.0.1'}
                     </td>
                   </tr>
@@ -174,6 +211,20 @@ export function AuditLogsClient({ initialLogs }: AuditLogsClientProps) {
             </tbody>
           </table>
         </div>
+
+        {filteredLogs.length > 0 && (
+          <AdminPagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredLogs.length}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+          />
+        )}
       </div>
     </div>
   );

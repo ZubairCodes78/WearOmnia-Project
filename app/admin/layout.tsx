@@ -143,7 +143,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       <aside
         className={`hidden lg:flex lg:flex-col ${
           isCollapsed ? 'w-20' : 'w-64'
-        } bg-[#0A2528]/95 backdrop-blur-2xl text-[#FAF8F5] border-r border-[#D4AF37]/20 shrink-0 min-h-screen font-sans shadow-2xl transition-all duration-300 ease-in-out relative`}
+        } bg-[#0A2528]/95 backdrop-blur-2xl text-[#FAF8F5] border-r border-[#D4AF37]/20 shrink-0 min-h-screen font-sans shadow-2xl transition-all duration-200 ease-in-out relative`}
       >
         {/* Header Branding + Collapse Toggle */}
         <div className={`p-4 border-b border-[#D4AF37]/20 bg-[#06191B]/40 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>

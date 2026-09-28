@@ -3,47 +3,50 @@
 import React from 'react';
 import { Scissors, Truck, ShieldCheck, RotateCcw, Clock, Coffee, Heart, CheckCircle2 } from 'lucide-react';
 import { ScrollReveal } from '@/components/layout/ScrollReveal';
-
-const FEATURES = [
-  {
-    tag: 'FOR THE 8AM CLASS.',
-    title: 'Wrinkle-Resistant Fabrics',
-    description: 'Breathable, durable, and ready straight from the hanger so you can roll out of bed and still look impeccably put-together.',
-    icon: Clock,
-  },
-  {
-    tag: 'FOR THE "JUST GRAB CHAI" PLAN.',
-    title: 'Effortless Coordinates',
-    description: 'Elevated cuts and flowing tailoring that transition seamlessly from campus lectures to casual chai breaks without missing a beat.',
-    icon: Coffee,
-  },
-  {
-    tag: 'FOR FAMILY DINNERS.',
-    title: 'Graceful Modest Perfection',
-    description: 'Flattering silhouettes with generous coverage that keep you comfortable while earning genuine “Where did you get this?” compliments.',
-    icon: Heart,
-  },
-  {
-    tag: 'FOR "I’LL JUST WEAR SOMETHING SIMPLE".',
-    title: 'Timeless Capsule Pieces',
-    description: 'Because the simplest outfits are the ones you end up wearing three times a week. Hand-finished details that never fade.',
-    icon: Scissors,
-  },
-  {
-    tag: 'BEFORE THE ASSIGNMENT DEADLINE.',
-    title: 'Nationwide Express Delivery',
-    description: 'Carefully packaged and delivered across Pakistan in 2–4 business days with instant Cash On Delivery. Zero advance hassle.',
-    icon: Truck,
-  },
-  {
-    tag: 'ZERO WARDROBE REGRET.',
-    title: '7-Day Easy Exchange',
-    description: 'If the size or fit isn’t 100% perfect, swap it within 7 days with zero friction. Personal sizing assistance right on WhatsApp.',
-    icon: RotateCcw,
-  },
-];
+import { useSettings } from '@/context/SettingsContext';
 
 export const WhyWearOmnia = () => {
+  const { settings } = useSettings();
+
+  const features = [
+    {
+      tag: 'FOR THE 8AM CLASS.',
+      title: 'Wrinkle-Resistant Fabrics',
+      description: 'Breathable, durable, and ready straight from the hanger so you can roll out of bed and still look impeccably put-together.',
+      icon: Clock,
+    },
+    {
+      tag: 'FOR THE "JUST GRAB CHAI" PLAN.',
+      title: 'Effortless Coordinates',
+      description: 'Elevated cuts and flowing tailoring that transition seamlessly from campus lectures to casual chai breaks without missing a beat.',
+      icon: Coffee,
+    },
+    {
+      tag: 'FOR FAMILY DINNERS.',
+      title: 'Graceful Modest Perfection',
+      description: 'Flattering silhouettes with generous coverage that keep you comfortable while earning genuine “Where did you get this?” compliments.',
+      icon: Heart,
+    },
+    {
+      tag: 'FOR "I’LL JUST WEAR SOMETHING SIMPLE".',
+      title: 'Timeless Capsule Pieces',
+      description: 'Because the simplest outfits are the ones you end up wearing three times a week. Hand-finished details that never fade.',
+      icon: Scissors,
+    },
+    {
+      tag: 'BEFORE THE ASSIGNMENT DEADLINE.',
+      title: 'Nationwide Express Delivery',
+      description: `Carefully packaged and delivered across Pakistan in ${settings.estimatedDeliveryTime || '2–4 business days'} with secure Cash On Delivery and transparent order tracking.`,
+      icon: Truck,
+    },
+    {
+      tag: 'ZERO WARDROBE REGRET.',
+      title: '7-Day Easy Exchange',
+      description: 'If the size or fit isn’t 100% perfect, swap it within 7 days with zero friction. Personal sizing assistance right on WhatsApp.',
+      icon: RotateCcw,
+    },
+  ];
+
   return (
     <section className="py-20 sm:py-24 bg-sand/35 border-y border-sand/70">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -62,7 +65,7 @@ export const WhyWearOmnia = () => {
         </ScrollReveal>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
-          {FEATURES.map((item, index) => {
+          {features.map((item, index) => {
             const Icon = item.icon;
             return (
               <ScrollReveal

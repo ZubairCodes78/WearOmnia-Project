@@ -28,6 +28,10 @@ import {
 import { OrderStatusBadge } from './OrderStatusBadge';
 import { normalizePhone } from '@/lib/phone';
 import { DeleteOrderModal } from '@/components/admin/DeleteOrderModal';
+import { useDebounce } from '@/hooks/useDebounce';
+import { AdminPagination } from '@/components/admin/AdminPagination';
+import { AdminEmptyState } from '@/components/admin/AdminEmptyState';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 
 interface OrderItem {
   id: string;
@@ -92,10 +96,15 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [search, setSearch] = useState(initialSearch);
+  const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState(initialStatus || 'ALL');
   const [actionQueueFilter, setActionQueueFilter] = useState<
     'ALL' | 'CONFIRMATION_PENDING' | 'TRACKING_PENDING' | 'DELIVERED_PENDING' | 'LABELS_READY'
   >('ALL');
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(25);
 
   // Multi-selection state
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -197,14 +206,21 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
 
   const labelsReadyCount = orders.filter((o) => Boolean(resolveTracking(o))).length;
 
+  // Reset page to 1 when filters or search change
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearch, statusFilter, actionQueueFilter]);
+
   // Filtered orders
   const filteredOrders = orders.filter((o) => {
+    const query = debouncedSearch.trim().toLowerCase();
     const matchesSearch =
-      o.orderNumber.toLowerCase().includes(search.toLowerCase()) ||
-      o.customerName.toLowerCase().includes(search.toLowerCase()) ||
-      o.customerPhone.includes(search) ||
-      o.shippingCity.toLowerCase().includes(search.toLowerCase()) ||
-      (resolveTracking(o)?.toLowerCase() || '').includes(search.toLowerCase());
+      !query ||
+      o.orderNumber.toLowerCase().includes(query) ||
+      o.customerName.toLowerCase().includes(query) ||
+      o.customerPhone.includes(query) ||
+      o.shippingCity.toLowerCase().includes(query) ||
+      (resolveTracking(o)?.toLowerCase() || '').includes(query);
 
     if (!matchesSearch) return false;
 
@@ -234,6 +250,12 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
 
     return true;
   });
+
+  // Paginated slice
+  const paginatedOrders = filteredOrders.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize
+  );
 
   // Selection handlers
   const toggleSelectAll = () => {
@@ -551,29 +573,33 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
       {/* ─────────────────────────────────────────────────────────────────────────────
           2. PAGE HEADER & SEARCH BAR
       ───────────────────────────────────────────────────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#D4AF37] font-bold">Lifecycle Operating System</p>
-          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#FAF8F5]">
-            Orders &amp; Shipments ({filteredOrders.length})
-          </h1>
-          <p className="text-xs text-[#FAF8F5]/60 font-sans mt-0.5">
-            State-driven lifecycle queue with manual confirmation, sequential WhatsApp automation, and bulk courier tools.
-          </p>
+      <AdminPageHeader
+        badge="Lifecycle Operating System"
+        title={`Orders & Shipments (${filteredOrders.length})`}
+        description="State-driven lifecycle queue with manual confirmation, sequential WhatsApp automation, and bulk courier tools."
+        actions={
+          <button
+            onClick={exportCSV}
+            className="w-full sm:w-auto bg-[#D4AF37] text-black px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-white transition-colors shadow-sm flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+          >
+            <Download className="w-4 h-4" /> Export CSV
+          </button>
+        }
+      />
+
+      <div className="bg-[#0A2528] p-3.5 sm:p-4 rounded-2xl border border-[#D4AF37]/20 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
+        <div className="relative w-full sm:w-80">
+          <Search className="w-4 h-4 text-[#D4AF37] absolute left-3.5 top-3.5" />
+          <input
+            type="text"
+            placeholder="Search by Order #, phone, name, tracking..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-[#06191B] rounded-xl text-xs text-[#FAF8F5] placeholder-[#FAF8F5]/40 border border-[#D4AF37]/25 focus:outline-none focus:ring-1 focus:ring-[#D4AF37] font-sans"
+          />
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center gap-3">
-          <div className="relative w-full sm:w-72">
-            <Search className="w-4 h-4 text-[#D4AF37] absolute left-3.5 top-3.5" />
-            <input
-              type="text"
-              placeholder="Search by Order #, phone, name, tracking..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-[#06191B] rounded-xl text-xs text-[#FAF8F5] placeholder-[#FAF8F5]/40 border border-[#D4AF37]/25 focus:outline-none focus:ring-1 focus:ring-[#D4AF37] font-sans"
-            />
-          </div>
-
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -591,13 +617,6 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
             <option value="CANCELLED">Cancelled</option>
             <option value="RETURNED">Returned</option>
           </select>
-
-          <button
-            onClick={exportCSV}
-            className="w-full sm:w-auto bg-[#D4AF37] text-black px-4 py-2.5 rounded-xl text-xs font-extrabold uppercase tracking-wider hover:bg-white transition-all shadow-md flex items-center justify-center gap-2 shrink-0 cursor-pointer"
-          >
-            <Download className="w-4 h-4" /> Export CSV
-          </button>
         </div>
       </div>
 
@@ -656,14 +675,26 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
       ───────────────────────────────────────────────────────────────────────────── */}
       <div className="bg-[#0A2528] rounded-2xl border border-[#D4AF37]/20 overflow-hidden shadow-xl">
         {filteredOrders.length === 0 ? (
-          <div className="p-16 text-center space-y-3">
-            <div className="w-16 h-16 rounded-2xl bg-teal-900/60 text-[#D4AF37] flex items-center justify-center mx-auto border border-[#D4AF37]/30 shadow-lg">
-              <FileText className="w-8 h-8" />
-            </div>
-            <h3 className="font-serif text-2xl font-bold text-[#FAF8F5]">No Orders Found</h3>
-            <p className="text-xs text-[#FAF8F5]/60 max-w-sm mx-auto font-sans">
-              No orders matched the current search or lifecycle filter criteria.
-            </p>
+          <div className="p-8">
+            <AdminEmptyState
+              title="No Orders Found"
+              description="No orders matched the current search or lifecycle filter criteria."
+              icon={FileText}
+              action={
+                search || statusFilter !== 'ALL' || actionQueueFilter !== 'ALL' ? (
+                  <button
+                    onClick={() => {
+                      setSearch('');
+                      setStatusFilter('ALL');
+                      setActionQueueFilter('ALL');
+                    }}
+                    className="px-4 py-2 bg-[#0D3337] hover:bg-[#103A3E] text-[#D4AF37] border border-[#D4AF37]/30 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
+                  >
+                    Reset Filters
+                  </button>
+                ) : undefined
+              }
+            />
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -696,7 +727,7 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#D4AF37]/10">
-                {filteredOrders.map((order) => {
+                {paginatedOrders.map((order) => {
                   const tracking = resolveTracking(order);
                   const nextAction = getNextLifecycleAction(order);
                   const isSelected = selectedIds.includes(order.id);
@@ -923,6 +954,19 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
               </tbody>
             </table>
           </div>
+        )}
+
+        {filteredOrders.length > 0 && (
+          <AdminPagination
+            currentPage={currentPage}
+            totalItems={filteredOrders.length}
+            itemsPerPage={pageSize}
+            onPageChange={(page: number) => setCurrentPage(page)}
+            onItemsPerPageChange={(newSize: number) => {
+              setPageSize(newSize);
+              setCurrentPage(1);
+            }}
+          />
         )}
       </div>
 

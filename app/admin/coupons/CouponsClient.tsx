@@ -23,6 +23,7 @@ import {
   parseKarachiDateTime,
   calculateDurationDisplay,
 } from '@/lib/coupons';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 
 export interface CouponItem {
   id: string;
@@ -264,30 +265,25 @@ export const CouponsClient: React.FC<{ initialCoupons: CouponItem[] }> = ({ init
   };
 
   return (
-    <div className="admin-page text-[#FAF8F5] space-y-8">
+    <div className="space-y-6">
       {/* ── 1. HEADER ───────────────────────────────────────────────────────── */}
-      <div className="admin-page-header">
-        <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#D4AF37] mb-1 font-bold">Exclusive Incentives</p>
-          <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.25em] font-bold text-[#D4AF37] bg-teal-950/80 px-3.5 py-1 rounded-full border border-[#D4AF37]/30 badge-3d">
-              <Tag className="w-3 h-3 text-[#D4AF37]" /> Promotional Campaigns & Vouchers
-            </span>
-          </div>
-          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#FAF8F5] mt-2">
-            Promo Coupons & Scheduling ({coupons.length})
-          </h1>
-          <p className="text-xs text-[#FAF8F5]/70 mt-1 font-sans">
-            Manage discount codes, campaign schedules (Asia/Karachi), pre-order rules, and redemptions.
-          </p>
-        </div>
-        <button
-          onClick={openCreateModal}
-          className="bg-[#D4AF37] text-black hover:bg-white px-6 py-3 rounded-xl text-xs uppercase font-extrabold tracking-widest transition-all shadow-xl flex items-center justify-center gap-2 btn-3d shrink-0 cursor-pointer"
-        >
-          <Plus className="w-4 h-4" /> Create New Coupon
-        </button>
-      </div>
+      <AdminPageHeader
+        title={`Promo Coupons & Scheduling (${coupons.length})`}
+        description="Manage discount codes, campaign schedules (Asia/Karachi), pre-order rules, and redemptions."
+        badge={
+          <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-[0.2em] font-semibold text-[#D4AF37] bg-[#D4AF37]/10 px-2.5 py-1 rounded-md border border-[#D4AF37]/20">
+            <Tag className="w-3.5 h-3.5 text-[#D4AF37]" /> Promotional Campaigns & Vouchers
+          </span>
+        }
+        actions={
+          <button
+            onClick={openCreateModal}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-[#D4AF37] text-black font-semibold text-xs uppercase tracking-wider hover:bg-[#c49f2f] transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4" /> Create New Coupon
+          </button>
+        }
+      />
 
       {/* ── 2. PRE-ORDER LAUNCH CAMPAIGN SCHEDULE HIGHLIGHT ──────────────────── */}
       {preOrderCoupon && (

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, Tag, Lock, ShieldCheck, CheckCircle2, Heart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { useSettings } from '@/context/SettingsContext';
 
 export const CartDrawer: React.FC = () => {
   const {
@@ -20,14 +21,17 @@ export const CartDrawer: React.FC = () => {
     discountAmount,
   } = useCart();
 
+  const { settings } = useSettings();
+
   const [couponInput, setCouponInput] = useState('');
   const [couponError, setCouponError] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
 
-  const freeShippingThreshold = 10000;
+  const freeShippingThreshold = typeof settings.freeShippingThreshold === 'number' ? settings.freeShippingThreshold : 10000;
+  const flatShippingFee = typeof settings.flatShippingFee === 'number' ? settings.flatShippingFee : 250;
   const progressPercent = Math.min(100, (subtotal / freeShippingThreshold) * 100);
   const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
-  const shippingFee = subtotal >= freeShippingThreshold || cart.length === 0 ? 0 : 250;
+  const shippingFee = subtotal >= freeShippingThreshold || cart.length === 0 ? 0 : flatShippingFee;
   const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee);
 
   const handleApplyCoupon = async (e: React.FormEvent) => {

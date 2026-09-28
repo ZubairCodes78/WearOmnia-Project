@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useCart } from '@/context/CartContext';
+import { useSettings } from '@/context/SettingsContext';
 import {
   Truck,
   ShieldCheck,
@@ -64,13 +65,25 @@ export default function CheckoutPage() {
   const [couponInput, setCouponInput] = useState('');
   const [couponError, setCouponError] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
+  const { settings } = useSettings();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [siteSettings, setSiteSettings] = useState({
-    flatShippingFee: 250,
-    freeShippingThreshold: 10000,
-    codCharge: 0,
+    flatShippingFee: typeof settings?.flatShippingFee === 'number' ? settings.flatShippingFee : 250,
+    freeShippingThreshold: typeof settings?.freeShippingThreshold === 'number' ? settings.freeShippingThreshold : 10000,
+    codCharge: typeof settings?.codCharge === 'number' ? settings.codCharge : 0,
   });
+
+  // Keep checkout in sync with live settings
+  useEffect(() => {
+    if (settings) {
+      setSiteSettings({
+        flatShippingFee: typeof settings.flatShippingFee === 'number' ? settings.flatShippingFee : 250,
+        freeShippingThreshold: typeof settings.freeShippingThreshold === 'number' ? settings.freeShippingThreshold : 10000,
+        codCharge: typeof settings.codCharge === 'number' ? settings.codCharge : 0,
+      });
+    }
+  }, [settings]);
 
   // Pre-Order Detection & State
   const isPreOrderCart = cart.length > 0 && cart.every((i) => i.isPreOrder);
@@ -100,22 +113,6 @@ export default function CheckoutPage() {
   const [screenshotError, setScreenshotError] = useState('');
   const [copiedAccount, setCopiedAccount] = useState(false);
 
-  // Fetch site settings
-  useEffect(() => {
-    fetch('/api/site-settings')
-      .then(res => res.json())
-      .then(data => {
-        if (data.settings) {
-          setSiteSettings({
-            flatShippingFee: data.settings.flatShippingFee || 250,
-            freeShippingThreshold: data.settings.freeShippingThreshold || 10000,
-            codCharge: data.settings.codCharge || 0,
-          });
-        }
-      })
-      .catch(console.error);
-  }, []);
-
   // Fetch pre-order configuration if pre-order items present
   useEffect(() => {
     if (isPreOrderCart) {
@@ -135,7 +132,7 @@ export default function CheckoutPage() {
 
   const shippingFee = subtotal >= siteSettings.freeShippingThreshold || cart.length === 0 ? 0 : siteSettings.flatShippingFee;
   const codFee = isPreOrderCart ? 0 : siteSettings.codCharge;
-  const effectiveAdvancePercent = preOrderConfig?.advancePercent || 50;
+  const effectiveAdvancePercent = preOrderConfig?.advancePercent || settings?.preorder_advance_percent || 50;
 
   const totalAmount = isPreOrderCart
     ? Math.max(0, subtotal - discountAmount + shippingFee)

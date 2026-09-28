@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminSession } from '@/lib/auth';
 import { getPreOrderSettings, updatePreOrderSettings } from '@/lib/settings';
@@ -74,6 +75,12 @@ export async function POST(req: NextRequest) {
       'preorder_config',
       `Updated Pre-Order settings: enabled=${updated.preorder_enabled}, advance=${updated.preorder_advance_percent}%`
     );
+
+    try {
+      revalidatePath('/', 'layout');
+    } catch {
+      // Ignored in non-SSR test environments
+    }
 
     return NextResponse.json({
       success: true,

@@ -25,6 +25,7 @@ import { useFlyToCart } from '@/components/cart/FlyToCartProvider';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { SizeGuideModal } from '@/components/shop/SizeGuideModal';
 import { ProductImageZoom } from '@/components/shop/ProductImageZoom';
+import { useSettings } from '@/context/SettingsContext';
 
 interface ProductClientProps {
   product: any;
@@ -37,6 +38,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({
   relatedProducts,
   defaultAdvancePercent = 50,
 }) => {
+  const { settings } = useSettings();
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { triggerFlyToCart } = useFlyToCart();
@@ -60,8 +62,8 @@ export const ProductClient: React.FC<ProductClientProps> = ({
   const activePrice = product.discountPrice || product.basePrice;
   const isWish = isInWishlist(product.id);
 
-  // Dynamic Pre-Order Advance Calculation
-  const advancePercent = product.preOrderAdvancePercent || defaultAdvancePercent || 50;
+  // Dynamic Pre-Order Advance Calculation from Single Source of Truth
+  const advancePercent = product.preOrderAdvancePercent ?? settings.preorder_advance_percent ?? defaultAdvancePercent ?? 50;
   const advanceAmount = Math.round((activePrice * advancePercent) / 100);
   const remainingAmount = Math.max(0, activePrice - advanceAmount);
 
@@ -168,15 +170,15 @@ export const ProductClient: React.FC<ProductClientProps> = ({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           {/* Left: Gallery Column */}
-          <div className="lg:col-span-7 flex flex-col-reverse sm:flex-row gap-4">
+          <div className="lg:col-span-7 flex flex-col-reverse sm:flex-row gap-3 sm:gap-4">
             {/* Thumbnails */}
             {images.length > 1 && (
-              <div className="flex sm:flex-col gap-3 overflow-x-auto sm:overflow-y-auto shrink-0 max-h-[600px]">
+              <div className="flex sm:flex-col gap-2 sm:gap-3 overflow-x-auto sm:overflow-x-hidden sm:overflow-y-auto shrink-0 sm:max-h-[600px] pb-1 sm:pb-0 no-scrollbar">
                 {images.map((img: any, i: number) => (
                   <button
                     key={i}
                     onClick={() => setSelectedImageIndex(i)}
-                    className={`relative w-20 h-24 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${selectedImageIndex === i
+                    className={`relative w-16 h-20 sm:w-20 sm:h-24 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${selectedImageIndex === i
                       ? 'border-teal shadow-md scale-105'
                       : 'border-sand opacity-70 hover:opacity-100'
                       }`}
@@ -185,7 +187,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                       src={img.url}
                       alt="thumb"
                       fill
-                      sizes="80px"
+                      sizes="(max-width: 640px) 64px, 80px"
                       loading="lazy"
                       quality={85}
                       className="object-cover"
@@ -432,7 +434,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({
               >
                 <Zap className="w-4 h-4 text-teal fill-current" />
                 {product.isPreOrder
-                  ? `Pre-Order Now (${product.preOrderAdvancePercent || 50}% Advance)`
+                  ? `Pre-Order Now (${advancePercent}% Advance)`
                   : 'Instant Checkout (Cash On Delivery)'}
               </button>
             </div>
@@ -442,7 +444,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({
               <div className="card-3d-subtle bg-sand/40 p-3 rounded-2xl border border-sand/70 flex flex-col items-center gap-1.5 shadow-sm">
                 <Truck className="w-4 h-4 text-teal" />
                 <span className="font-semibold text-charcoal">{product.isPreOrder ? 'Pre-Order' : 'Express COD'}</span>
-                <span className="text-[10px] text-charcoal-muted">{product.isPreOrder ? 'Handcrafted' : '2-4 Days'}</span>
+                <span className="text-[10px] text-charcoal-muted">{product.isPreOrder ? 'Handcrafted' : (settings.estimatedDeliveryTime || '2-4 Days')}</span>
               </div>
               <div className="card-3d-subtle bg-sand/40 p-3 rounded-2xl border border-sand/70 flex flex-col items-center gap-1.5 shadow-sm">
                 <ShieldCheck className="w-4 h-4 text-teal" />
@@ -503,7 +505,14 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                   <p>{product.careInstructions || 'Dry Clean Recommended. Iron on reverse side.'}</p>
                 )}
                 {activeTab === 'shipping' && (
-                  <p>Nationwide Cash On Delivery available across Pakistan. Dispatched in 24 hours. Delivery within 2-4 business days.</p>
+                  <div className="space-y-1.5">
+                    <p>Nationwide Cash On Delivery available across Pakistan. Dispatched in 24 hours. Estimated delivery: {settings.estimatedDeliveryTime || '2-4 business days'}.</p>
+                    <p className="font-semibold text-teal">
+                      {settings.freeShippingThreshold > 0
+                        ? `Free Delivery on orders above Rs. ${settings.freeShippingThreshold.toLocaleString()}. Standard delivery fee: Rs. ${settings.flatShippingFee}.`
+                        : `Free Delivery on all orders!`}
+                    </p>
+                  </div>
                 )}
               </div>
             </div>
@@ -637,71 +646,6 @@ export const ProductClient: React.FC<ProductClientProps> = ({
         )}
       </div>
 
-      {/* Size Guide Modal */}
-      {sizeGuideOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-offwhite text-teal w-full max-w-xl p-6 sm:p-8 rounded-3xl border border-sand shadow-2xl space-y-6">
-            <div className="flex items-center justify-between border-b border-sand pb-4">
-              <div>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-champagne-700 block">Fit & Measurements</span>
-                <h3 className="font-serif text-2xl font-bold">WearOMNIA Size Guide</h3>
-              </div>
-              <button onClick={() => setSizeGuideOpen(false)} className="p-2 text-teal hover:text-champagne-700">
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-
-            <div className="overflow-x-auto">
-              <table className="w-full text-center text-xs">
-                <thead className="bg-teal text-champagne uppercase tracking-wider font-bold">
-                  <tr>
-                    <th className="p-3">Size</th>
-                    <th className="p-3">Bust (Inches)</th>
-                    <th className="p-3">Waist (Inches)</th>
-                    <th className="p-3">Hips (Inches)</th>
-                    <th className="p-3">Length (Inches)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-sand">
-                  <tr>
-                    <td className="p-3 font-bold">S</td>
-                    <td className="p-3">36"</td>
-                    <td className="p-3">30"</td>
-                    <td className="p-3">39"</td>
-                    <td className="p-3">48"</td>
-                  </tr>
-                  <tr>
-                    <td className="p-3 font-bold">M</td>
-                    <td className="p-3">39"</td>
-                    <td className="p-3">33"</td>
-                    <td className="p-3">42"</td>
-                    <td className="p-3">49"</td>
-                  </tr>
-                  <tr>
-                    <td className="p-3 font-bold">L</td>
-                    <td className="p-3">42"</td>
-                    <td className="p-3">36"</td>
-                    <td className="p-3">45"</td>
-                    <td className="p-3">50"</td>
-                  </tr>
-                  <tr>
-                    <td className="p-3 font-bold">XL</td>
-                    <td className="p-3">45"</td>
-                    <td className="p-3">39"</td>
-                    <td className="p-3">48"</td>
-                    <td className="p-3">50"</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <p className="text-[11px] text-charcoal-muted text-center font-sans">
-              All luxury garments feature generous couture margins. For custom tailormade sizing, contact our atelier concierge via WhatsApp.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Lightbox Modal */}
       {lightboxOpen && (
         <div className="fixed inset-0 z-50 bg-charcoal/90 backdrop-blur-md flex items-center justify-center p-4">
@@ -723,17 +667,17 @@ export const ProductClient: React.FC<ProductClientProps> = ({
       )}
 
       {/* Sticky Add to Cart Mobile Bottom Bar */}
-      <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 bg-offwhite/95 backdrop-blur-xl border-t border-sand p-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-3 shadow-2xl">
-        <div>
-          <span className="font-serif text-sm font-bold text-teal block truncate max-w-[140px]">{product.title}</span>
+      <div className="sm:hidden fixed bottom-0 inset-x-0 z-30 bg-offwhite/95 backdrop-blur-xl border-t border-sand px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] flex items-center justify-between gap-3 shadow-2xl">
+        <div className="min-w-0 flex-1">
+          <span className="font-serif text-sm font-bold text-teal block truncate">{product.title}</span>
           <span className="font-serif text-xs font-bold text-champagne-700">Rs. {activePrice.toLocaleString()}</span>
         </div>
         <button
           onClick={handleAddToCart}
-          disabled={currentStock <= 0}
-          className="bg-teal text-champagne px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow"
+          disabled={!product.isPreOrder && currentStock <= 0}
+          className="bg-teal text-champagne px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow shrink-0 active:scale-95 transition-transform"
         >
-          <ShoppingBag className="w-4 h-4" /> Add to Bag
+          <ShoppingBag className="w-4 h-4" /> {product.isPreOrder ? 'Pre-Order' : 'Add to Bag'}
         </button>
       </div>
       {/* Size Guide Modal */}

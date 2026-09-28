@@ -11,6 +11,7 @@ import {
   Users,
 } from 'lucide-react';
 import { OrderStatusBadge } from '../orders/OrderStatusBadge';
+import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,8 +21,7 @@ export default async function AdminDashboardPage() {
 
   const [
     totalOrders,
-    todayOrdersCount,
-    todayOrders,
+    todayAggregate,
     pendingOrders,
     confirmedOrders,
     dispatchedOrders,
@@ -32,15 +32,16 @@ export default async function AdminDashboardPage() {
     outOfStockProducts,
     totalProducts,
     totalCustomers,
-    allOrders,
+    salesAggregate,
     allProducts,
-    deliveredUnsettledShipments,
+    unsettledAggregate,
+    cityBreakdown,
   ] = await Promise.all([
     prisma.order.count(),
-    prisma.order.count({ where: { createdAt: { gte: startOfToday } } }),
-    prisma.order.findMany({
+    prisma.order.aggregate({
       where: { createdAt: { gte: startOfToday } },
-      select: { totalAmount: true },
+      _sum: { totalAmount: true },
+      _count: { id: true },
     }),
     prisma.order.count({ where: { status: 'PENDING' } }),
     prisma.order.count({ where: { status: 'CONFIRMED' } }),
@@ -56,72 +57,70 @@ export default async function AdminDashboardPage() {
     prisma.product.count({ where: { stockQuantity: { lte: 0 } } }),
     prisma.product.count(),
     prisma.customer.count(),
-    prisma.order.findMany({ select: { totalAmount: true, shippingCity: true, status: true } }),
+    prisma.order.aggregate({
+      where: { status: { not: 'CANCELLED' } },
+      _sum: { totalAmount: true },
+      _count: { id: true },
+      _avg: { totalAmount: true },
+    }),
     prisma.product.findMany({ select: { stockQuantity: true, basePrice: true } }),
-    prisma.shipment.findMany({
+    prisma.shipment.aggregate({
       where: {
         status: { in: ['DELIVERED', 'Delivered'] },
         OR: [{ settlementStatus: 'PENDING' }, { settlementStatus: null }, { settlementStatus: 'UNPAID' }],
       },
-      select: { codAmount: true },
+      _sum: { codAmount: true },
+      _count: { id: true },
+    }),
+    prisma.order.groupBy({
+      by: ['shippingCity'],
+      where: { status: { not: 'CANCELLED' } },
+      _sum: { totalAmount: true },
+      _count: { id: true },
+      orderBy: { _sum: { totalAmount: 'desc' } },
+      take: 6,
     }),
   ]);
 
-  const validOrders = allOrders.filter((o) => o.status !== 'CANCELLED');
-  const todayRevenue = todayOrders.reduce((sum, o) => sum + o.totalAmount, 0);
-  const totalRevenue = validOrders.reduce((sum, o) => sum + o.totalAmount, 0);
-  const averageOrderValue = validOrders.length > 0 ? Math.round(totalRevenue / validOrders.length) : 0;
+  const todayRevenue = todayAggregate._sum.totalAmount || 0;
+  const todayOrdersCount = todayAggregate._count.id || 0;
+  const totalRevenue = salesAggregate._sum.totalAmount || 0;
+  const validOrdersCount = salesAggregate._count.id || 0;
+  const averageOrderValue = Math.round(salesAggregate._avg.totalAmount || 0);
   const totalStockValuation = allProducts.reduce((sum, p) => sum + p.stockQuantity * p.basePrice, 0);
-  const pendingSettlementValue = deliveredUnsettledShipments.reduce((sum, s) => sum + s.codAmount, 0);
+  const pendingSettlementValue = unsettledAggregate._sum.codAmount || 0;
+  const unsettledCount = unsettledAggregate._count.id || 0;
 
-  // City Breakdown calculation
-  const citySalesMap: Record<string, { count: number; total: number }> = {};
-  validOrders.forEach((o) => {
-    const city = o.shippingCity?.trim() || 'Other';
-    if (!citySalesMap[city]) citySalesMap[city] = { count: 0, total: 0 };
-    citySalesMap[city].count += 1;
-    citySalesMap[city].total += o.totalAmount;
-  });
-
-  const citySalesList = Object.entries(citySalesMap)
-    .map(([city, data]) => ({ city, ...data }))
-    .sort((a, b) => b.total - a.total);
+  const citySalesList = cityBreakdown.map((item) => ({
+    city: item.shippingCity?.trim() || 'Other',
+    count: item._count.id,
+    total: item._sum.totalAmount || 0,
+  }));
 
   return (
-    <div className="admin-page text-[#FAF8F5] space-y-8 sm:space-y-10">
-      {/* 1. Page Header */}
-      <div className="bg-[#0A2528] p-6 sm:p-8 rounded-2xl border border-[#D4AF37]/20 flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <span className="text-[10px] uppercase tracking-[0.25em] font-semibold text-[#D4AF37]">
-              WearOMNIA Atelier
-            </span>
-            <span className="text-[#D4AF37]/40">•</span>
-            <span className="text-[10px] text-emerald-400 font-mono font-medium">Live Commercial Console</span>
+    <div className="admin-page text-[#FAF8F5] space-y-8">
+      {/* 1. Standardized SaaS Page Header */}
+      <AdminPageHeader
+        badge="WearOMNIA Atelier"
+        title="Commerce & Operations"
+        description="Real-time commercial performance, nationwide Cash On Delivery dispatch pipeline, and inventory status."
+        actions={
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/admin/shipping"
+              className="bg-[#0D3337] hover:bg-[#103A3E] text-[#D4AF37] border border-[#D4AF37]/30 px-4 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider transition-colors flex items-center gap-2"
+            >
+              <Truck className="w-3.5 h-3.5" /> Shipping Hub
+            </Link>
+            <Link
+              href="/admin/orders"
+              className="bg-[#D4AF37] text-black hover:bg-[#FAF8F5] px-4 py-2.5 rounded-xl text-xs uppercase font-black tracking-wider transition-colors flex items-center gap-2 shadow-sm"
+            >
+              Orders Console <ArrowUpRight className="w-3.5 h-3.5" />
+            </Link>
           </div>
-          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-[#FAF8F5] tracking-tight">
-            Commerce &amp; Operations
-          </h1>
-          <p className="text-xs text-[#FAF8F5]/70 mt-1.5 font-sans max-w-xl leading-relaxed">
-            Real-time commercial performance, nationwide Cash On Delivery dispatch pipeline, and inventory status.
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <Link
-            href="/admin/shipping"
-            className="bg-[#0D3337] hover:bg-[#103A3E] text-[#D4AF37] border border-[#D4AF37]/30 px-5 py-2.5 rounded-xl text-xs uppercase font-semibold tracking-wider transition-all flex items-center gap-2"
-          >
-            <Truck className="w-3.5 h-3.5" /> Shipping Hub
-          </Link>
-          <Link
-            href="/admin/orders"
-            className="bg-[#D4AF37] text-teal-950 hover:bg-white px-5 py-2.5 rounded-xl text-xs uppercase font-bold tracking-wider transition-all flex items-center gap-2 shadow-sm"
-          >
-            Orders Console <ArrowUpRight className="w-3.5 h-3.5" />
-          </Link>
-        </div>
-      </div>
+        }
+      />
 
       {/* 2. Primary KPI / Overview Area */}
       <div>
@@ -155,7 +154,7 @@ export default async function AdminDashboardPage() {
             <p className="font-serif text-2xl sm:text-3xl font-bold text-[#FAF8F5]">Rs. {totalRevenue.toLocaleString()}</p>
             <div className="flex items-center justify-between text-xs pt-3 mt-3 border-t border-white/5">
               <span className="text-[#D4AF37] font-medium">Avg Order: Rs. {averageOrderValue.toLocaleString()}</span>
-              <span className="text-[10px] text-[#FAF8F5]/40 font-mono">{validOrders.length} orders</span>
+              <span className="text-[10px] text-[#FAF8F5]/40 font-mono">{validOrdersCount} orders</span>
             </div>
           </div>
 
@@ -186,7 +185,7 @@ export default async function AdminDashboardPage() {
             </div>
             <p className="font-serif text-2xl sm:text-3xl font-bold text-amber-300">Rs. {pendingSettlementValue.toLocaleString()}</p>
             <div className="flex items-center justify-between text-xs pt-3 mt-3 border-t border-white/5">
-              <span className="text-amber-200/80 font-medium">{deliveredUnsettledShipments.length} parcels pending payment</span>
+              <span className="text-amber-200/80 font-medium">{unsettledCount} parcels pending payment</span>
               <Link href="/admin/shipping/cod" className="text-amber-300 hover:underline text-[10px] font-bold">
                 Reconcile →
               </Link>

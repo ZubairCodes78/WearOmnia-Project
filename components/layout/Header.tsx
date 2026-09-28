@@ -7,9 +7,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Heart, Search, Menu, X, Truck, MapPin, Phone } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
+import { useSettings } from '@/context/SettingsContext';
+import { AnnouncementTicker } from '@/components/layout/AnnouncementTicker';
 
 export const Header: React.FC = () => {
   const pathname = usePathname();
+  const { settings } = useSettings();
   const { cart, setIsCartOpen } = useCart();
   const { wishlist } = useWishlist();
 
@@ -62,23 +65,15 @@ export const Header: React.FC = () => {
   const navLinks = [
     { name: 'Home', href: '/' },
     { name: 'Shop All', href: '/shop' },
-    ...categories.map((c) => ({ name: c.name, href: `/shop?category=${c.id}` })),
+    ...categories.map((c) => ({ name: c.name, href: `/shop?category=${c.slug}` })),
     { name: 'Our Story', href: '/our-story' },
     { name: 'Contact Us', href: '/contact' },
   ];
 
   return (
     <>
-      {/* Top Announcement Bar */}
-      <div className="bg-teal text-champagne text-[10px] sm:text-xs py-2 px-3 sm:px-4 text-center tracking-wider sm:tracking-widest uppercase font-sans font-semibold border-b border-champagne/20 shadow-sm relative overflow-hidden">
-        <span className="inline-flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5"><Truck className="w-3.5 h-3.5 text-champagne" /> Nationwide Express Delivery Across Pakistan</span>
-          <span className="hidden md:inline">•</span>
-          <span className="hidden md:inline">Free Shipping On Orders Above Rs. 10,000</span>
-          <span className="hidden sm:inline">•</span>
-          <span className="hidden sm:inline font-bold text-offwhite">Cash On Delivery Available</span>
-        </span>
-      </div>
+      {/* Top Announcement Bar — Continuous Infinite Ticker */}
+      <AnnouncementTicker />
 
       {/* Main Sticky Header with Premium Glass Effect */}
       <header
@@ -310,8 +305,10 @@ export const Header: React.FC = () => {
               </div>
 
               <div className="border-t border-sand pt-6 mt-6 text-center text-xs text-charcoal-muted font-sans space-y-2">
-                <p className="inline-flex items-center justify-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-teal" /> Lahore, Pakistan</p>
-                <a href="tel:+923180633323" className="flex items-center justify-center gap-1.5 hover:text-champagne-700 transition-colors"><Phone className="w-3.5 h-3.5 text-teal" /> Helpline: 03180633323</a>
+                <p className="inline-flex items-center justify-center gap-1.5"><MapPin className="w-3.5 h-3.5 text-teal" /> {settings.storeAddress || 'Lahore, Pakistan'}</p>
+                <a href={`tel:${(settings.storePhone || settings.whatsappNumber || '03180633323').replace(/^0/, '+92').replace(/\s/g, '')}`} className="flex items-center justify-center gap-1.5 hover:text-champagne-700 transition-colors">
+                  <Phone className="w-3.5 h-3.5 text-teal" /> Helpline: {settings.storePhone || settings.whatsappNumber || '03180633323'}
+                </a>
               </div>
             </motion.div>
           </>

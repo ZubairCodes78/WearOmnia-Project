@@ -1,7 +1,15 @@
 import React from 'react';
 import { Truck, Clock, ShieldCheck, MapPin } from 'lucide-react';
+import { getPublicSiteSettings } from '@/lib/settings';
 
-export default function ShippingPolicyPage() {
+export const dynamic = 'force-dynamic';
+
+export default async function ShippingPolicyPage() {
+  const settings = await getPublicSiteSettings();
+  const freeThresholdStr = settings.freeShippingThreshold > 0
+    ? `Rs. ${settings.freeShippingThreshold.toLocaleString()} or above`
+    : 'all orders';
+
   return (
     <div className="editorial-page">
       <div className="editorial-container max-w-4xl">
@@ -22,6 +30,7 @@ export default function ShippingPolicyPage() {
               All WearOMNIA orders are processed and inspected at our main Lahore location before dispatching.
             </p>
             <ul className="list-disc pl-5 space-y-1 text-charcoal-muted">
+              <li><strong>Nationwide Delivery Timeline:</strong> {settings.estimatedDeliveryTime || '2-4 business days'}.</li>
               <li><strong>Major Cities (Lahore, Karachi, Islamabad, Rawalpindi, Faisalabad):</strong> 2 to 3 Business Days.</li>
               <li><strong>Other Cities & Remote Districts:</strong> 3 to 5 Business Days.</li>
               <li>Orders placed on Sundays or Public Holidays will be processed on the next business day.</li>
@@ -32,12 +41,20 @@ export default function ShippingPolicyPage() {
             <h3 className="font-serif text-xl font-bold text-teal flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-champagne-700" /> 2. Shipping Charges & Free Delivery
             </h3>
-            <p>
-              We offer <strong>FREE Cash On Delivery Shipping</strong> across Pakistan on all orders with a subtotal of <strong>Rs. 10,000 or above</strong>.
-            </p>
-            <p>
-              For orders below Rs. 10,000, a standard nationwide delivery fee of <strong>Rs. 250</strong> applies.
-            </p>
+            {settings.freeShippingThreshold > 0 ? (
+              <>
+                <p>
+                  We offer <strong>FREE Cash On Delivery Shipping</strong> across Pakistan on all orders with a subtotal of <strong>Rs. {settings.freeShippingThreshold.toLocaleString()} or above</strong>.
+                </p>
+                <p>
+                  For orders below Rs. {settings.freeShippingThreshold.toLocaleString()}, a standard nationwide delivery fee of <strong>Rs. {settings.flatShippingFee}</strong> applies.
+                </p>
+              </>
+            ) : (
+              <p>
+                We offer <strong>FREE Cash On Delivery Shipping</strong> across Pakistan on <strong>all orders</strong>.
+              </p>
+            )}
           </div>
 
           <div className="space-y-3 pt-4 border-t border-sand">
@@ -45,7 +62,7 @@ export default function ShippingPolicyPage() {
               <Clock className="w-5 h-5 text-champagne-700" /> 3. Cash On Delivery (COD) Inspection
             </h3>
             <p>
-              Payment must be made in full to the courier representative (TCS or Leopard Courier) prior to opening the sealed outer box. If you suspect tampering or outer envelope damage, please contact our WhatsApp concierge (03180633323) or email wearomniaa@gmail.com immediately before accepting delivery.
+              Payment must be made in full to the courier representative prior to opening the sealed outer box. If you suspect tampering or outer envelope damage, please contact our WhatsApp concierge ({settings.whatsappNumber || '03180633323'}) or email {settings.supportEmail || 'wearomniaa@gmail.com'} immediately before accepting delivery.
             </p>
           </div>
         </div>
