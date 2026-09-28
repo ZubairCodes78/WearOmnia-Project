@@ -44,7 +44,7 @@ export async function GET() {
       enabled: settings.preorder_enabled,
       advancePercent: settings.preorder_advance_percent || 50,
       instructions: settings.preorder_payment_instructions || '',
-      paymentMethods: methods,
+      paymentMethods: sanitizedMethods,
     });
   } catch (error) {
     console.error('Error fetching public pre-order settings:', error);
