@@ -180,7 +180,7 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
   return (
     <AnimatePresence>
       {isOpen && (
-        <>
+        <div className="fixed inset-0 z-50 overflow-hidden flex items-center justify-center p-3 sm:p-6">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
@@ -188,16 +188,16 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-charcoal/70 backdrop-blur-xs"
+            className="fixed inset-0 bg-charcoal/70 backdrop-blur-xs cursor-pointer"
           />
 
-          {/* Modal Container */}
+          {/* Modal Container - Centered via Flexbox, strictly contained in viewport */}
           <motion.div
-            initial={{ opacity: 0, y: 20, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 20, scale: 0.98 }}
-            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-x-2 sm:inset-x-auto top-[3vh] sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 w-auto sm:w-[94vw] sm:max-w-3xl max-h-[94vh] sm:max-h-[90vh] z-50 bg-offwhite rounded-2xl sm:rounded-3xl shadow-2xl border border-sand overflow-hidden flex flex-col"
+            initial={{ opacity: 0, scale: 0.96, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.96, y: 15 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="relative z-10 w-full sm:max-w-3xl max-h-[92vh] sm:max-h-[88vh] bg-offwhite rounded-2xl sm:rounded-3xl shadow-2xl border border-sand overflow-hidden flex flex-col my-auto"
           >
             {/* Modal Header */}
             <div className="flex items-center justify-between p-3.5 sm:p-5 border-b border-sand shrink-0 bg-sand/20">
@@ -402,7 +402,7 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
               )}
             </div>
           </motion.div>
-        </>
+        </div>
       )}
     </AnimatePresence>
   );
