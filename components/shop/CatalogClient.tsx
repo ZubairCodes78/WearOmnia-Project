@@ -31,6 +31,7 @@ interface CatalogClientProps {
   initialCategory?: string;
   initialSearch?: string;
   initialWishlist?: boolean;
+  initialPreOrder?: boolean;
 }
 
 export const CatalogClient: React.FC<CatalogClientProps> = ({
@@ -39,6 +40,7 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
   initialCategory = '',
   initialSearch = '',
   initialWishlist = false,
+  initialPreOrder = false,
 }) => {
   const { wishlist } = useWishlist();
   const [search, setSearch] = useState(initialSearch);
@@ -50,6 +52,7 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
   const [gridCols, setGridCols] = useState<'2' | '3' | '4'>('3');
   const [quickViewProduct, setQuickViewProduct] = useState<ProductItem | null>(null);
   const [showWishlistOnly, setShowWishlistOnly] = useState(initialWishlist);
+  const [showPreOrderOnly, setShowPreOrderOnly] = useState(initialPreOrder);
   const [currentPage, setCurrentPage] = useState(1);
   const productsPerPage = 12;
 
@@ -74,6 +77,11 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
         if (showWishlistOnly) {
           const inWish = wishlist.some((w) => w.productId === p.id);
           if (!inWish) return false;
+        }
+
+        // Pre-order filter mode
+        if (showPreOrderOnly) {
+          if (!p.isPreOrder) return false;
         }
 
         // Search query
@@ -103,7 +111,7 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
         }
 
         // Stock availability
-        if (inStockOnly && (!p.inStock || p.stockQuantity <= 0)) {
+        if (inStockOnly && (!p.isPreOrder && (!p.inStock || p.stockQuantity <= 0))) {
           return false;
         }
 
@@ -117,7 +125,7 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
         if (sortBy === 'bestseller') return b.isBestSeller ? 1 : -1;
         return 0; // default newest
       });
-  }, [products, search, selectedCategory, selectedSize, selectedColor, inStockOnly, sortBy, showWishlistOnly, wishlist]);
+  }, [products, search, selectedCategory, selectedSize, selectedColor, inStockOnly, sortBy, showWishlistOnly, showPreOrderOnly, wishlist]);
 
   const resetFilters = () => {
     setSearch('');
@@ -126,13 +134,14 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
     setSelectedColor('');
     setInStockOnly(false);
     setShowWishlistOnly(false);
+    setShowPreOrderOnly(false);
     setSortBy('newest');
     setCurrentPage(1);
   };
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [search, selectedCategory, selectedSize, selectedColor, inStockOnly, sortBy, showWishlistOnly]);
+  }, [search, selectedCategory, selectedSize, selectedColor, inStockOnly, sortBy, showWishlistOnly, showPreOrderOnly]);
 
   const totalPages = Math.max(1, Math.ceil(filteredProducts.length / productsPerPage));
   const visibleProducts = filteredProducts.slice(
@@ -154,39 +163,54 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
 
   return (
     <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-8 sm:py-12">
-      {/* Header Title Section with Clean Modern Kicker */}
+      {/* Header Title Section */}
       <div className="text-center max-w-2xl mx-auto mb-8 sm:mb-12 space-y-2">
         <span className="font-calligraphy text-xs sm:text-sm text-champagne-700 block tracking-[0.2em]">
-          {showWishlistOnly ? 'Saved Favorites' : 'Everyday Ready-to-Wear'}
+          {showWishlistOnly ? 'Saved Favorites' : showPreOrderOnly ? 'Advance Booking' : 'New Collection'}
         </span>
         <h1 className="font-serif text-2xl sm:text-4xl lg:text-5xl font-black text-teal tracking-tight uppercase">
-          {showWishlistOnly ? 'Your Saved Favorites' : 'The Wardrobe Upgrade'}
+          {showWishlistOnly ? 'Saved Favorites' : showPreOrderOnly ? 'Pre-Order Collection' : 'Shop All Outfits'}
         </h1>
         <p className="text-xs sm:text-sm text-charcoal-muted max-w-md mx-auto leading-relaxed">
           {showWishlistOnly
             ? 'The outfits you have your eye on. Ready whenever you are.'
-            : 'For uni mornings, chai breaks, last-minute plans and those “I have nothing to wear” emergencies.'}
+            : showPreOrderOnly
+              ? 'Reserve upcoming handcrafted garments. Pay 50% advance to confirm your order.'
+              : 'Thoughtfully designed modest outfits for every day, university, and family occasions.'}
         </p>
         <p className="text-xs text-charcoal-muted font-medium pt-1">
-          Showing {filteredProducts.length} {filteredProducts.length === 1 ? 'curated outfit' : 'curated outfits'}
+          Showing {filteredProducts.length} {filteredProducts.length === 1 ? 'outfit' : 'outfits'}
         </p>
       </div>
 
       {/* Filter Control Bar */}
       <div className="bg-sand/40 p-3 sm:p-4 rounded-2xl border border-sand mb-6 sm:mb-8 flex flex-col lg:flex-row items-center justify-between gap-4 shadow-sm">
-        {/* Category Pills */}
+        {/* Category & Status Pills */}
         <div className="flex overflow-x-auto no-scrollbar pb-1 sm:pb-0 gap-2 w-full lg:w-auto shrink-0 flex-nowrap sm:flex-wrap">
           <button
             onClick={() => {
               setSelectedCategory('');
               setShowWishlistOnly(false);
+              setShowPreOrderOnly(false);
             }}
-            className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs uppercase font-semibold transition-all shrink-0 ${!selectedCategory && !showWishlistOnly
+            className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs uppercase font-semibold transition-all shrink-0 ${!selectedCategory && !showWishlistOnly && !showPreOrderOnly
               ? 'bg-teal text-champagne shadow-md'
               : 'bg-offwhite text-charcoal hover:bg-sand'
               }`}
           >
             All Products
+          </button>
+          <button
+            onClick={() => {
+              setShowPreOrderOnly(!showPreOrderOnly);
+              setShowWishlistOnly(false);
+            }}
+            className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs uppercase font-bold transition-all shrink-0 ${showPreOrderOnly
+              ? 'bg-amber-600 text-white shadow-md'
+              : 'bg-offwhite text-amber-900 border border-amber-300/60 hover:bg-amber-50'
+              }`}
+          >
+            Pre-Order
           </button>
           {categories.map((c) => (
             <button
@@ -194,8 +218,9 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
               onClick={() => {
                 setSelectedCategory(c.slug);
                 setShowWishlistOnly(false);
+                setShowPreOrderOnly(false);
               }}
-              className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs uppercase font-semibold transition-all shrink-0 ${selectedCategory === c.slug && !showWishlistOnly
+              className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs uppercase font-semibold transition-all shrink-0 ${selectedCategory === c.slug && !showWishlistOnly && !showPreOrderOnly
                 ? 'bg-teal text-champagne shadow-md'
                 : 'bg-offwhite text-charcoal hover:bg-sand'
                 }`}
@@ -204,7 +229,10 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
             </button>
           ))}
           <button
-            onClick={() => setShowWishlistOnly(!showWishlistOnly)}
+            onClick={() => {
+              setShowWishlistOnly(!showWishlistOnly);
+              setShowPreOrderOnly(false);
+            }}
             className={`px-3.5 py-1.5 sm:px-4 sm:py-2 rounded-xl text-xs uppercase font-semibold flex items-center gap-1.5 transition-all shrink-0 ${showWishlistOnly
               ? 'bg-red-700 text-offwhite shadow-md'
               : 'bg-offwhite text-charcoal hover:bg-sand'

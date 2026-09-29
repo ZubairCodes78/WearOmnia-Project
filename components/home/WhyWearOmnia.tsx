@@ -18,7 +18,7 @@ export const WhyWearOmnia = () => {
     {
       tag: 'FOR THE "JUST GRAB CHAI" PLAN.',
       title: 'Effortless Coordinates',
-      description: 'Elevated cuts and flowing tailoring that transition seamlessly from campus lectures to casual chai breaks without missing a beat.',
+      description: 'Modern cuts and flowing tailoring that transition seamlessly from campus lectures to casual chai breaks without missing a beat.',
       icon: Coffee,
     },
     {
@@ -29,7 +29,7 @@ export const WhyWearOmnia = () => {
     },
     {
       tag: 'FOR "I’LL JUST WEAR SOMETHING SIMPLE".',
-      title: 'Timeless Capsule Pieces',
+      title: 'Classic Everyday Pieces',
       description: 'Because the simplest outfits are the ones you end up wearing three times a week. Hand-finished details that never fade.',
       icon: Scissors,
     },

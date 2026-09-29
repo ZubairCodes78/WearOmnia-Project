@@ -8,14 +8,18 @@ interface ShopPageProps {
     category?: string;
     search?: string;
     wishlist?: string;
+    preorder?: string;
   }>;
 }
 
 export async function generateMetadata({ searchParams }: ShopPageProps) {
-  const { category, search } = await searchParams;
+  const { category, search, preorder } = await searchParams;
   let title = 'Shop Our Collection';
   let description = 'Explore our latest modest and stylish stitched clothing.';
-  if (category) {
+  if (preorder === 'true') {
+    title = 'Pre-Order Collection';
+    description = 'Reserve upcoming handcrafted garments with advance booking.';
+  } else if (category) {
     title = `${category.replace('-', ' ').toUpperCase()} Collection`;
   } else if (search) {
     title = `Search Results for "${search}"`;
@@ -50,6 +54,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
       initialCategory={params.category || ''}
       initialSearch={params.search || ''}
       initialWishlist={params.wishlist === 'true'}
+      initialPreOrder={params.preorder === 'true'}
     />
   );
 }

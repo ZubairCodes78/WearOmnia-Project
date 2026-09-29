@@ -58,7 +58,21 @@ export default async function ProductPage({ params }: ProductPageProps) {
     take: 4,
   });
 
-  const jsonLd = generateProductSchema(product);
+  const sizeGuideImage = product.images.find((img) => img.altText === 'SIZE_GUIDE')?.url || null;
+  const galleryImages = product.images.filter((img) => img.altText !== 'SIZE_GUIDE');
+
+  const sanitizedProduct = {
+    ...product,
+    images: galleryImages,
+    sizeGuideImage,
+  };
+
+  const sanitizedRelated = relatedProducts.map((p) => ({
+    ...p,
+    images: p.images.filter((img) => img.altText !== 'SIZE_GUIDE'),
+  }));
+
+  const jsonLd = generateProductSchema(sanitizedProduct);
 
   return (
     <>
@@ -67,8 +81,8 @@ export default async function ProductPage({ params }: ProductPageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <ProductClient
-        product={product}
-        relatedProducts={relatedProducts}
+        product={sanitizedProduct}
+        relatedProducts={sanitizedRelated}
         defaultAdvancePercent={preOrderSettings.preorder_advance_percent || 50}
       />
     </>

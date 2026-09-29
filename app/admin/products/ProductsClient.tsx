@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Plus, Search, Trash2, Edit3, Copy, Eye, EyeOff, Package, X, Check, Image as ImageIcon, Layers } from 'lucide-react';
+import { Plus, Search, Trash2, Edit3, Copy, Eye, EyeOff, Package, X, Check, Image as ImageIcon, Layers, Ruler, UploadCloud, Loader2 } from 'lucide-react';
 import { ProductImageUploader } from '@/components/admin/ProductImageUploader';
 import { useDebounce } from '@/hooks/useDebounce';
 import { AdminPagination } from '@/components/admin/AdminPagination';
@@ -59,6 +59,7 @@ interface Product {
   preOrderEstimatedAvailability?: string | null;
   categoryId?: string | null;
   collectionId?: string | null;
+  sizeGuideImage?: string | null;
   images: ProductImage[];
   variants: ProductVariant[];
   category?: { name: string } | null;
@@ -112,6 +113,10 @@ export function ProductsClient({ initialProducts, categories = [], collections =
     { size: 'L', color: 'Black', stock: 5 },
   ]);
   const [formSizeGuide, setFormSizeGuide] = useState('');
+  const [formSizeGuideImage, setFormSizeGuideImage] = useState<string | null>(null);
+  const [guideUploading, setGuideUploading] = useState(false);
+  const guideFileInputRef = React.useRef<HTMLInputElement>(null);
+
   // Pre-Order Form State
   const [formIsPreOrder, setFormIsPreOrder] = useState(false);
   const [formPreOrderAdvancePercent, setFormPreOrderAdvancePercent] = useState('');
@@ -130,6 +135,31 @@ export function ProductsClient({ initialProducts, categories = [], collections =
       })
       .catch(() => { });
   }, []);
+
+  const handleGuideFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setGuideUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const res = await fetch('/api/admin/products/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (res.ok && data.url) {
+        setFormSizeGuideImage(data.url);
+      } else {
+        alert(data.error || 'Failed to upload size guide image');
+      }
+    } catch (err: any) {
+      alert(err?.message || 'Error uploading size guide image');
+    } finally {
+      setGuideUploading(false);
+      if (guideFileInputRef.current) guideFileInputRef.current.value = '';
+    }
+  };
 
   const openCreateModal = () => {
     setEditingProduct(null);
@@ -152,6 +182,7 @@ export function ProductsClient({ initialProducts, categories = [], collections =
       { size: 'L', color: 'Black', stock: 5 },
     ]);
     setFormSizeGuide('');
+    setFormSizeGuideImage(null);
     setFormIsPreOrder(false);
     setFormPreOrderAdvancePercent('');
     setFormPreOrderNote('');
@@ -179,6 +210,7 @@ export function ProductsClient({ initialProducts, categories = [], collections =
       product.variants.map((v) => ({ size: v.size, color: v.color, stock: v.stock }))
     );
     setFormSizeGuide((product as any).sizeGuideId || '');
+    setFormSizeGuideImage(product.sizeGuideImage || null);
     setFormIsPreOrder(Boolean(product.isPreOrder));
     setFormPreOrderAdvancePercent(product.preOrderAdvancePercent ? product.preOrderAdvancePercent.toString() : '');
     setFormPreOrderNote(product.preOrderNote || '');
@@ -231,6 +263,7 @@ export function ProductsClient({ initialProducts, categories = [], collections =
       categoryId: formCategory || null,
       collectionId: formCollection || null,
       sizeGuideId: formSizeGuide || null,
+      sizeGuideImage: formSizeGuideImage,
       isPreOrder: formIsPreOrder,
       preOrderAdvancePercent: formPreOrderAdvancePercent ? parseInt(formPreOrderAdvancePercent) : null,
       preOrderNote: formPreOrderNote || null,
@@ -855,6 +888,87 @@ export function ProductsClient({ initialProducts, categories = [], collections =
                   images={formImages}
                   onChange={(imgs) => setFormImages(imgs)}
                 />
+              </div>
+
+              {/* Product Size Guide Image Manager (Requirements 15 & 16) */}
+              <div className="space-y-3 bg-[#06191B] p-5 rounded-2xl border border-[#D4AF37]/20">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <label className="flex items-center gap-2 text-xs font-bold text-[#D4AF37] uppercase tracking-wider">
+                      <Ruler className="w-4 h-4 text-[#D4AF37]" />
+                      <span>Product Size Guide Image</span>
+                    </label>
+                    <p className="text-[10.5px] text-[#FAF8F5]/60 mt-0.5">
+                      Upload this specific garment&apos;s measurement guide image. Stored securely on Cloudflare R2.
+                    </p>
+                  </div>
+                </div>
+
+                <input
+                  ref={guideFileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/jpg"
+                  onChange={handleGuideFileUpload}
+                  className="hidden"
+                />
+
+                {formSizeGuideImage ? (
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 bg-[#0A2528] p-4 rounded-xl border border-[#D4AF37]/30">
+                    <div className="relative w-28 h-36 rounded-lg overflow-hidden border border-[#D4AF37]/40 bg-black/40 shrink-0">
+                      <Image
+                        src={formSizeGuideImage}
+                        alt="Size Guide"
+                        fill
+                        className="object-contain"
+                      />
+                    </div>
+                    <div className="space-y-2 flex-1 min-w-0">
+                      <div className="flex items-center gap-2 text-xs text-[#FAF8F5]">
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                        <span className="font-semibold truncate">Size Guide Active for this Product</span>
+                      </div>
+                      <p className="text-[11px] text-[#FAF8F5]/60 break-all line-clamp-2">
+                        {formSizeGuideImage}
+                      </p>
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          type="button"
+                          disabled={guideUploading}
+                          onClick={() => guideFileInputRef.current?.click()}
+                          className="px-3.5 py-1.5 rounded-lg bg-[#103A3E] text-[#D4AF37] border border-[#D4AF37]/40 text-xs font-bold uppercase hover:bg-[#D4AF37] hover:text-black transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          {guideUploading ? <Loader2 className="w-3 h-3 animate-spin" /> : <UploadCloud className="w-3 h-3" />}
+                          Replace Image
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setFormSizeGuideImage(null)}
+                          className="px-3.5 py-1.5 rounded-lg bg-rose-950/70 text-rose-300 border border-rose-800/40 text-xs font-bold uppercase hover:bg-rose-900 transition-all cursor-pointer flex items-center gap-1.5"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                          Remove
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => guideFileInputRef.current?.click()}
+                    className="border border-dashed border-[#D4AF37]/30 rounded-xl p-5 text-center cursor-pointer hover:border-[#D4AF37] hover:bg-[#0A2528]/50 transition-all group"
+                  >
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-10 h-10 rounded-xl bg-[#0A2528] flex items-center justify-center text-[#D4AF37] group-hover:scale-105 transition-transform">
+                        {guideUploading ? <Loader2 className="w-5 h-5 animate-spin" /> : <UploadCloud className="w-5 h-5" />}
+                      </div>
+                      <p className="text-xs font-semibold text-[#FAF8F5]">
+                        {guideUploading ? 'Uploading to Cloudflare R2...' : 'Click to Upload Product Size Guide Image'}
+                      </p>
+                      <p className="text-[10px] text-[#FAF8F5]/50">
+                        JPEG, PNG or WebP up to 10MB
+                      </p>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Product Variants Manager */}

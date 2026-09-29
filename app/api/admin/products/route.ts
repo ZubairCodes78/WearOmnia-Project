@@ -19,7 +19,17 @@ export async function GET() {
       },
       orderBy: { createdAt: 'desc' },
     });
-    return NextResponse.json({ products });
+
+    const mappedProducts = products.map((p) => {
+      const guideImg = p.images.find((img) => img.altText === 'SIZE_GUIDE');
+      return {
+        ...p,
+        sizeGuideImage: guideImg?.url || null,
+        images: p.images.filter((img) => img.altText !== 'SIZE_GUIDE'),
+      };
+    });
+
+    return NextResponse.json({ products: mappedProducts });
   } catch (error: any) {
     return NextResponse.json({ error: error.message || 'Failed to fetch products' }, { status: 500 });
   }
@@ -123,6 +133,7 @@ export async function POST(req: Request) {
       images, // array of URLs or { url, isPrimary }
       variants, // array of { size, color, colorHex, stock, sku }
       sizeGuideId,
+      sizeGuideImage,
     } = body;
 
     if (!title || !basePrice || !sku) {
@@ -190,7 +201,26 @@ export async function POST(req: Request) {
       },
     });
 
-    return NextResponse.json({ success: true, product });
+    if (sizeGuideImage && typeof sizeGuideImage === 'string') {
+      await prisma.productImage.create({
+        data: {
+          productId: product.id,
+          url: sizeGuideImage,
+          altText: 'SIZE_GUIDE',
+          displayOrder: 999,
+          isPrimary: false,
+        },
+      });
+    }
+
+    return NextResponse.json({
+      success: true,
+      product: {
+        ...product,
+        sizeGuideImage: sizeGuideImage || null,
+        images: product.images.filter((img) => img.altText !== 'SIZE_GUIDE'),
+      },
+    });
   } catch (error: any) {
     console.error('Product creation error:', error);
     return NextResponse.json({ error: error.message || 'Failed to create product' }, { status: 500 });
@@ -225,6 +255,7 @@ export async function PUT(req: Request) {
       images,
       variants,
       sizeGuideId,
+      sizeGuideImage,
     } = body;
 
     if (!id) {
@@ -233,11 +264,11 @@ export async function PUT(req: Request) {
 
     const parsedStock = stockQuantity !== undefined ? parseInt(stockQuantity) : undefined;
 
-    // Delete existing images & variants if new lists are provided
+    // Delete existing gallery images & variants if new lists are provided (leave SIZE_GUIDE image untouched)
     let oldImagesToRemove: string[] = [];
     if (images) {
       const existingImages = await prisma.productImage.findMany({
-        where: { productId: id },
+        where: { productId: id, altText: { not: 'SIZE_GUIDE' } },
         select: { url: true },
       });
       const newUrls = (images || []).map((img: any) =>
@@ -247,7 +278,9 @@ export async function PUT(req: Request) {
         .map((img) => img.url)
         .filter((url) => url && !newUrls.includes(url));
 
-      await prisma.productImage.deleteMany({ where: { productId: id } });
+      await prisma.productImage.deleteMany({
+        where: { productId: id, altText: { not: 'SIZE_GUIDE' } },
+      });
     }
     if (variants) {
       await prisma.productVariant.deleteMany({ where: { productId: id } });
@@ -314,6 +347,39 @@ export async function PUT(req: Request) {
       },
     });
 
+    // Handle dedicated product size guide image (Upload, Replace, Remove)
+    if (sizeGuideImage !== undefined) {
+      const existingGuideImg = await prisma.productImage.findFirst({
+        where: { productId: id, altText: 'SIZE_GUIDE' },
+      });
+
+      if (existingGuideImg && existingGuideImg.url !== sizeGuideImage) {
+        await prisma.productImage.delete({ where: { id: existingGuideImg.id } });
+        try {
+          const refCount = await prisma.productImage.count({
+            where: { url: existingGuideImg.url },
+          });
+          if (refCount === 0) {
+            await deleteFile(existingGuideImg.url);
+          }
+        } catch (cleanupErr) {
+          console.warn('[R2 Cleanup] Failed to delete orphaned size guide image:', cleanupErr);
+        }
+      }
+
+      if (sizeGuideImage && typeof sizeGuideImage === 'string' && (!existingGuideImg || existingGuideImg.url !== sizeGuideImage)) {
+        await prisma.productImage.create({
+          data: {
+            productId: id,
+            url: sizeGuideImage,
+            altText: 'SIZE_GUIDE',
+            displayOrder: 999,
+            isPrimary: false,
+          },
+        });
+      }
+    }
+
     // Safely clean up orphaned R2 images that are no longer referenced anywhere in DB
     if (oldImagesToRemove.length > 0) {
       for (const oldUrl of oldImagesToRemove) {
@@ -330,7 +396,18 @@ export async function PUT(req: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, product: updated });
+    const currentGuideImg = await prisma.productImage.findFirst({
+      where: { productId: id, altText: 'SIZE_GUIDE' },
+    });
+
+    return NextResponse.json({
+      success: true,
+      product: {
+        ...updated,
+        sizeGuideImage: currentGuideImg?.url || null,
+        images: updated.images.filter((img) => img.altText !== 'SIZE_GUIDE'),
+      },
+    });
   } catch (error: any) {
     console.error('Product update error:', error);
     return NextResponse.json({ error: error.message || 'Failed to update product' }, { status: 500 });

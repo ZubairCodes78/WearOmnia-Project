@@ -19,5 +19,11 @@ export default async function AdminProductsPage() {
     prisma.collection.findMany(),
   ]);
 
-  return <ProductsClient initialProducts={products} categories={categories} collections={collections} />;
+  const mappedProducts = products.map((p) => ({
+    ...p,
+    sizeGuideImage: p.images.find((img) => img.altText === 'SIZE_GUIDE')?.url || null,
+    images: p.images.filter((img) => img.altText !== 'SIZE_GUIDE'),
+  }));
+
+  return <ProductsClient initialProducts={mappedProducts} categories={categories} collections={collections} />;
 }

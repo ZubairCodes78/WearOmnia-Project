@@ -297,40 +297,30 @@ export const ProductClient: React.FC<ProductClientProps> = ({
               </div>
             )}
 
-            {/* Description */}
-            <p className="text-xs text-charcoal-muted leading-relaxed font-sans">
-              {product.description}
-            </p>
-
-            {/* Relatable Compliment Note */}
-            <div className="bg-sand/50 border border-sand/80 rounded-2xl p-3.5 flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-champagne-700 shrink-0 mt-0.5" />
-              <p className="text-[11px] sm:text-xs text-charcoal/90 leading-relaxed font-sans">
-                <strong className="text-teal font-bold">The Compliment Magnet:</strong> The kind of outfit that makes <span className="italic font-medium">&ldquo;Where did you get this?&rdquo;</span> inevitable. Looks effortless — we&apos;ll let you take the credit.
-              </p>
-            </div>
-
-            {/* Variants Selector */}
+            {/* Size Selection */}
             {sizes.length > 0 && (
-              <div className="space-y-2">
+              <div className="space-y-2.5 pt-2">
                 <div className="flex items-center justify-between text-xs font-semibold">
-                  <span className="uppercase text-charcoal">Select Size:</span>
-                  <span
+                  <span className="uppercase text-charcoal tracking-wider">Select Size</span>
+                  <button
+                    type="button"
                     onClick={() => setSizeGuideOpen(true)}
-                    className="text-teal underline font-normal cursor-pointer hover:text-champagne-700 transition-colors"
+                    className="text-teal underline font-semibold cursor-pointer hover:text-champagne-700 transition-colors"
                   >
                     Size Guide
-                  </span>
+                  </button>
                 </div>
                 <div className="flex flex-wrap gap-2.5">
                   {sizes.map((sz) => (
                     <button
                       key={sz}
+                      type="button"
                       onClick={() => setSelectedSize(sz)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${selectedSize === sz
-                        ? 'bg-teal text-champagne border-teal shadow-md scale-105'
-                        : 'bg-sand text-charcoal border-sand hover:border-champagne'
-                        }`}
+                      className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${
+                        selectedSize === sz
+                          ? 'bg-teal text-champagne border-teal shadow-md scale-105'
+                          : 'bg-sand text-charcoal border-sand hover:border-champagne'
+                      }`}
                     >
                       {sz}
                     </button>
@@ -339,18 +329,21 @@ export const ProductClient: React.FC<ProductClientProps> = ({
               </div>
             )}
 
+            {/* Color Selection if multiple colors */}
             {colors.length > 0 && (
-              <div className="space-y-2">
-                <span className="text-xs uppercase font-semibold text-charcoal block">Select Color:</span>
+              <div className="space-y-2.5">
+                <span className="text-xs uppercase font-semibold text-charcoal tracking-wider block">Select Color</span>
                 <div className="flex flex-wrap gap-2.5">
                   {colors.map((col) => (
                     <button
                       key={col}
+                      type="button"
                       onClick={() => setSelectedColor(col)}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${selectedColor === col
-                        ? 'bg-teal text-champagne border-teal shadow-md scale-105'
-                        : 'bg-sand text-charcoal border-sand hover:border-champagne'
-                        }`}
+                      className={`px-4 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider border transition-all ${
+                        selectedColor === col
+                          ? 'bg-teal text-champagne border-teal shadow-md scale-105'
+                          : 'bg-sand text-charcoal border-sand hover:border-champagne'
+                      }`}
                     >
                       {col}
                     </button>
@@ -359,33 +352,38 @@ export const ProductClient: React.FC<ProductClientProps> = ({
               </div>
             )}
 
-            {/* Quantity Picker & Stock Badge */}
-            <div className="flex items-center gap-4 pt-2">
-              <span className="text-xs uppercase font-semibold text-charcoal">Quantity:</span>
+            {/* Quantity */}
+            <div className="flex items-center gap-4 pt-1">
+              <span className="text-xs uppercase font-semibold text-charcoal tracking-wider">Quantity:</span>
               <div className="flex items-center border border-sand rounded-xl bg-sand">
                 <button
+                  type="button"
                   onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                  className="p-2 text-charcoal hover:bg-sand-dark rounded-l-xl"
+                  className="p-2.5 text-charcoal hover:bg-sand-dark rounded-l-xl transition-colors cursor-pointer"
+                  aria-label="Decrease quantity"
                 >
                   <Minus className="w-3.5 h-3.5" />
                 </button>
-                <span className="px-4 text-xs font-bold">{quantity}</span>
+                <span className="px-4 text-xs font-bold text-teal">{quantity}</span>
                 <button
+                  type="button"
                   onClick={() => setQuantity((q) => Math.min(currentStock, q + 1))}
-                  className="p-2 text-charcoal hover:bg-sand-dark rounded-r-xl"
+                  className="p-2.5 text-charcoal hover:bg-sand-dark rounded-r-xl transition-colors cursor-pointer"
+                  aria-label="Increase quantity"
                 >
                   <Plus className="w-3.5 h-3.5" />
                 </button>
               </div>
               <span className="text-xs text-charcoal-muted">
-                {currentStock > 0 ? `${currentStock} units in stock` : 'Out of stock'}
+                {product.isPreOrder ? 'Available for Pre-Order' : currentStock > 0 ? `${currentStock} units in stock` : 'Out of stock'}
               </span>
             </div>
 
-            {/* Action Buttons with 3D Micro-Interactions */}
-            <div className="space-y-3 pt-4 border-t border-sand/80">
+            {/* Main CTA Buttons */}
+            <div className="space-y-3 pt-3 border-t border-sand/80">
               <div className="flex gap-3">
                 <button
+                  type="button"
                   onClick={handleAddToCart}
                   disabled={!product.isPreOrder && currentStock <= 0}
                   className="flex-1 btn-premium btn-primary !py-4 rounded-2xl text-xs uppercase font-extrabold tracking-widest transition-all shadow-xl flex items-center justify-center gap-2 disabled:opacity-50 border border-champagne/30 cursor-pointer"
@@ -406,6 +404,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                 </button>
 
                 <button
+                  type="button"
                   onClick={() =>
                     toggleWishlist({
                       productId: product.id,
@@ -417,17 +416,20 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                       sku: product.sku,
                     })
                   }
-                  className={`p-4 rounded-2xl border transition-all card-3d-subtle cursor-pointer ${isWish
-                    ? 'bg-red-50 text-red-600 border-red-200'
-                    : 'bg-sand/60 text-charcoal border-sand hover:border-champagne'
-                    }`}
+                  className={`p-4 rounded-2xl border transition-all card-3d-subtle cursor-pointer ${
+                    isWish
+                      ? 'bg-red-50 text-red-600 border-red-200'
+                      : 'bg-sand/60 text-charcoal border-sand hover:border-champagne'
+                  }`}
                   title="Save to Wishlist"
+                  aria-label="Save to Wishlist"
                 >
                   <Heart className={`w-5 h-5 ${isWish ? 'fill-current' : ''}`} />
                 </button>
               </div>
 
               <button
+                type="button"
                 onClick={handleBuyNow}
                 disabled={!product.isPreOrder && currentStock <= 0}
                 className="w-full btn-premium btn-champagne !py-4 rounded-2xl text-xs uppercase font-black tracking-widest transition-all shadow-xl flex items-center justify-center gap-2.5 disabled:opacity-50 border border-teal/20 cursor-pointer"
@@ -435,83 +437,81 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                 <Zap className="w-4 h-4 text-teal fill-current" />
                 {product.isPreOrder
                   ? `Pre-Order Now (${advancePercent}% Advance)`
-                  : 'Instant Checkout (Cash On Delivery)'}
+                  : 'Buy Now (Cash On Delivery)'}
               </button>
             </div>
 
-            {/* Guarantee Cards with 3D Depth */}
-            <div className="grid grid-cols-3 gap-2.5 pt-4 border-t border-sand/80 text-[11px] text-center text-charcoal-muted">
-              <div className="card-3d-subtle bg-sand/40 p-3 rounded-2xl border border-sand/70 flex flex-col items-center gap-1.5 shadow-sm">
-                <Truck className="w-4 h-4 text-teal" />
-                <span className="font-semibold text-charcoal">{product.isPreOrder ? 'Pre-Order' : 'Express COD'}</span>
-                <span className="text-[10px] text-charcoal-muted">{product.isPreOrder ? 'Handcrafted' : (settings.estimatedDeliveryTime || '2-4 Days')}</span>
+            {/* Shipping / Delivery Information */}
+            <div className="rounded-2xl border border-sand bg-sand/40 p-4 space-y-3 text-xs">
+              <div className="flex items-center gap-2 text-teal font-bold font-serif text-sm">
+                <Truck className="w-4 h-4 text-teal shrink-0" />
+                <span>Shipping &amp; Delivery Information</span>
               </div>
-              <div className="card-3d-subtle bg-sand/40 p-3 rounded-2xl border border-sand/70 flex flex-col items-center gap-1.5 shadow-sm">
-                <ShieldCheck className="w-4 h-4 text-teal" />
-                <span className="font-semibold text-charcoal">100% Authentic</span>
-                <span className="text-[10px] text-charcoal-muted">Premium Stitch</span>
-              </div>
-              <div className="card-3d-subtle bg-sand/40 p-3 rounded-2xl border border-sand/70 flex flex-col items-center gap-1.5 shadow-sm">
-                <RotateCcw className="w-4 h-4 text-teal" />
-                <span className="font-semibold text-charcoal">7-Day Easy</span>
-                <span className="text-[10px] text-charcoal-muted">Exchange</span>
+              <div className="space-y-2 text-charcoal-muted font-sans leading-relaxed">
+                <p className="font-semibold text-teal">
+                  {settings.freeShippingThreshold > 0
+                    ? `Free Delivery on orders above Rs. ${settings.freeShippingThreshold.toLocaleString()}. Standard delivery fee: Rs. ${settings.flatShippingFee}.`
+                    : 'Free Delivery on all orders!'}
+                </p>
+                <p>
+                  {product.isPreOrder
+                    ? 'Pre-order garments are custom crafted upon booking and dispatched upon arrival. Nationwide Cash On Delivery.'
+                    : `Dispatched within 24 hours. Estimated delivery: ${settings.estimatedDeliveryTime || '2-4 business days'} across Pakistan.`}
+                </p>
+                <div className="flex flex-wrap items-center gap-4 pt-1 text-[11px] text-charcoal">
+                  <span className="flex items-center gap-1.5">
+                    <ShieldCheck className="w-3.5 h-3.5 text-teal" /> 100% Authentic Quality
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <RotateCcw className="w-3.5 h-3.5 text-teal" /> 7-Day Easy Exchange
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Relatable Fashion Assurance Banner */}
-            <div className="bg-sand/50 border border-champagne/60 p-3 rounded-2xl flex items-center justify-between gap-2 text-xs">
-              <div className="flex items-center gap-2">
-                <Heart className="w-4 h-4 text-teal shrink-0" />
-                <span className="text-[11px] text-charcoal-muted">
-                  <strong className="text-teal font-bold">Dawat Compliment Rate:</strong> 99.4% aunties ask where you got it.
-                </span>
+            {/* Description */}
+            <div className="space-y-2.5 pt-4 border-t border-sand/80">
+              <h3 className="font-serif text-base font-bold text-teal">Description</h3>
+              <div className="space-y-2 text-xs text-charcoal-muted leading-relaxed font-sans">
+                {product.description
+                  ?.split(/\n+/)
+                  .filter((p: string) => p.trim().length > 0)
+                  .map((paragraph: string, idx: number) => (
+                    <p key={idx}>{paragraph.trim()}</p>
+                  )) || <p>{product.description}</p>}
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-teal bg-champagne/40 px-2.5 py-1 rounded-full border border-champagne/60 shrink-0">
-                Tailor-Free
-              </span>
             </div>
 
-            {/* Accordion Specification Tabs */}
-            <div className="pt-4 border-t border-sand">
-              <div className="flex border-b border-sand">
-                <button
-                  onClick={() => setActiveTab('fabric')}
-                  className={`pb-2 px-3 text-xs uppercase font-semibold border-b-2 transition-all ${activeTab === 'fabric' ? 'border-teal text-teal' : 'border-transparent text-charcoal-muted'
-                    }`}
-                >
-                  Fabric & Craft
-                </button>
-                <button
-                  onClick={() => setActiveTab('care')}
-                  className={`pb-2 px-3 text-xs uppercase font-semibold border-b-2 transition-all ${activeTab === 'care' ? 'border-teal text-teal' : 'border-transparent text-charcoal-muted'
-                    }`}
-                >
-                  Care Details
-                </button>
-                <button
-                  onClick={() => setActiveTab('shipping')}
-                  className={`pb-2 px-3 text-xs uppercase font-semibold border-b-2 transition-all ${activeTab === 'shipping' ? 'border-teal text-teal' : 'border-transparent text-charcoal-muted'
-                    }`}
-                >
-                  Shipping Terms
-                </button>
-              </div>
-
-              <div className="py-4 text-xs text-charcoal-muted leading-relaxed font-sans">
-                {activeTab === 'fabric' && (
-                  <p>{product.fabricDetails || 'High grade luxury fabric crafted with precision embroideries.'}</p>
+            {/* Details */}
+            <div className="space-y-2.5 pt-4 border-t border-sand/80">
+              <h3 className="font-serif text-base font-bold text-teal">Product Details</h3>
+              <div className="divide-y divide-sand/70 rounded-xl border border-sand/70 bg-sand/30 overflow-hidden text-xs">
+                {product.fabricDetails && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 gap-1">
+                    <span className="font-semibold text-charcoal">Fabric</span>
+                    <span className="text-charcoal-muted font-sans sm:text-right">{product.fabricDetails}</span>
+                  </div>
                 )}
-                {activeTab === 'care' && (
-                  <p>{product.careInstructions || 'Dry Clean Recommended. Iron on reverse side.'}</p>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 gap-1">
+                  <span className="font-semibold text-charcoal">Fit</span>
+                  <span className="text-charcoal-muted font-sans sm:text-right">Regular tailored fit</span>
+                </div>
+                {product.careInstructions && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 gap-1">
+                    <span className="font-semibold text-charcoal">Care</span>
+                    <span className="text-charcoal-muted font-sans sm:text-right">{product.careInstructions}</span>
+                  </div>
                 )}
-                {activeTab === 'shipping' && (
-                  <div className="space-y-1.5">
-                    <p>Nationwide Cash On Delivery available across Pakistan. Dispatched in 24 hours. Estimated delivery: {settings.estimatedDeliveryTime || '2-4 business days'}.</p>
-                    <p className="font-semibold text-teal">
-                      {settings.freeShippingThreshold > 0
-                        ? `Free Delivery on orders above Rs. ${settings.freeShippingThreshold.toLocaleString()}. Standard delivery fee: Rs. ${settings.flatShippingFee}.`
-                        : `Free Delivery on all orders!`}
-                    </p>
+                {colors.length > 0 && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 gap-1">
+                    <span className="font-semibold text-charcoal">Color</span>
+                    <span className="text-charcoal-muted font-sans sm:text-right">{colors.join(', ')}</span>
+                  </div>
+                )}
+                {product.category?.name && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 gap-1">
+                    <span className="font-semibold text-charcoal">Category</span>
+                    <span className="text-charcoal-muted font-sans sm:text-right">{product.category.name}</span>
                   </div>
                 )}
               </div>
@@ -702,6 +702,8 @@ export const ProductClient: React.FC<ProductClientProps> = ({
         isOpen={sizeGuideOpen}
         onClose={() => setSizeGuideOpen(false)}
         productId={product.id}
+        sizeGuideImage={product.sizeGuideImage}
+        productTitle={product.title}
       />
     </div>
   );

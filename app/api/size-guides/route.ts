@@ -27,12 +27,18 @@ export async function GET(req: NextRequest) {
     if (productId) {
       const product = await prisma.product.findUnique({
         where: { id: productId },
-        select: { sizeGuideId: true },
+        select: {
+          sizeGuideId: true,
+          images: {
+            where: { altText: 'SIZE_GUIDE' },
+            select: { url: true },
+          },
+        },
       });
 
-      let guide = null;
+      const sizeGuideImage = product?.images[0]?.url || null;
 
-      // Product has a specific guide assigned
+      let guide = null;
       if (product?.sizeGuideId) {
         guide = await prisma.sizeGuide.findUnique({
           where: { id: product.sizeGuideId },
@@ -40,18 +46,23 @@ export async function GET(req: NextRequest) {
         });
       }
 
-      // Fallback to default guide
-      if (!guide) {
-        guide = await prisma.sizeGuide.findFirst({
-          where: { isDefault: true },
-          include: { entries: { orderBy: { displayOrder: 'asc' } } },
+      // If product has its own size guide image or assigned size guide
+      if (sizeGuideImage || guide) {
+        return NextResponse.json({
+          sizeGuideImage,
+          ...(guide || {
+            id: 'custom-product-guide',
+            name: 'Product Size Guide',
+            productType: 'STITCHED',
+            measurementUnit: 'inches',
+            columns: '[]',
+            entries: [],
+          }),
         });
       }
 
-      if (!guide) {
-        return NextResponse.json({ error: 'No size guide available' }, { status: 404 });
-      }
-      return NextResponse.json(guide);
+      // Explicitly return 404 when no size guide is available for this product (NO global fallback)
+      return NextResponse.json({ error: 'Size guide not available for this product' }, { status: 404 });
     }
 
     // Get all guides
