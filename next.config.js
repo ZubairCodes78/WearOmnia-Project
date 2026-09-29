@@ -34,10 +34,14 @@ if (process.env.R2_PUBLIC_URL) {
 }
 
 const nextConfig = {
+  compress: true,
   images: {
     remotePatterns,
     qualities: [75, 85, 90],
     formats: ['image/avif', 'image/webp'],
+    deviceSizes: [390, 640, 750, 828, 1080, 1200, 1920],
+    imageSizes: [16, 32, 64, 128, 256],
+    minimumCacheTTL: 2592000, // 30 days
   },
   eslint: {
     ignoreDuringBuilds: true,
@@ -46,8 +50,26 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+    optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
   devIndicators: false,
+  // Ensure production headers for caching
+  async headers() {
+    return [
+      {
+        source: '/images/(.*)',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=2592000, immutable' },
+        ],
+      },
+      {
+        source: '/_next/static/(.*)',
+        headers: [
+          { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
+        ],
+      },
+    ];
+  },
 };
 
 module.exports = nextConfig;

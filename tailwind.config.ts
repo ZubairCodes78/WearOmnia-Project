@@ -45,11 +45,12 @@ const config: Config = {
         sand: '#F4F0EA',
       },
       fontFamily: {
-        serif: ['Plus Jakarta Sans', 'Poppins', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        sans: ['Plus Jakarta Sans', 'Jost', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        calligraphy: ['Plus Jakarta Sans', 'Jost', '-apple-system', 'sans-serif'],
+        serif: ['var(--font-jakarta)', 'Plus Jakarta Sans', 'Poppins', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        sans: ['var(--font-jakarta)', 'Plus Jakarta Sans', 'Jost', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+        calligraphy: ['var(--font-jakarta)', 'Plus Jakarta Sans', 'Jost', '-apple-system', 'sans-serif'],
         admin: ['Poppins', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
-        italicLuxury: ['Instrument Serif', 'Playfair Display', 'Georgia', 'serif'],
+        italicLuxury: ['var(--font-instrument)', 'Instrument Serif', 'Georgia', 'serif'],
+        jost: ['var(--font-jost)', 'Jost', '-apple-system', 'sans-serif'],
       },
       animation: {
         'fade-in': 'fadeIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards',

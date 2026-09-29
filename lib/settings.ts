@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma';
+import { unstable_cache } from 'next/cache';
 
 export interface SiteSettingsData {
   businessName: string;
@@ -92,7 +93,7 @@ export const DEFAULT_SITE_SETTINGS: SiteSettingsData = {
   postex_store_address_name: '',
 };
 
-export async function getSiteSettings(): Promise<SiteSettingsData> {
+async function _getSiteSettings(): Promise<SiteSettingsData> {
   try {
     const record = await prisma.siteSettings.findUnique({
       where: { key: 'site_config' },
@@ -105,6 +106,12 @@ export async function getSiteSettings(): Promise<SiteSettingsData> {
   }
   return DEFAULT_SITE_SETTINGS;
 }
+
+export const getSiteSettings = unstable_cache(
+  _getSiteSettings,
+  ['site-settings'],
+  { revalidate: 120, tags: ['site-settings'] },
+);
 
 export async function updateSiteSettings(data: Partial<SiteSettingsData>): Promise<SiteSettingsData> {
   const current = await getSiteSettings();
@@ -267,7 +274,7 @@ export const DEFAULT_PREORDER_SETTINGS: PreOrderSettings = {
   preorder_payment_instructions: 'Please transfer the required 50% advance payment to any of our official payment accounts below and upload the payment proof screenshot. Your pre-order will be verified by our team within 24 hours.',
 };
 
-export async function getPreOrderSettings(): Promise<PreOrderSettings> {
+async function _getPreOrderSettings(): Promise<PreOrderSettings> {
   try {
     const record = await prisma.siteSettings.findUnique({
       where: { key: 'preorder_config' },
@@ -280,6 +287,12 @@ export async function getPreOrderSettings(): Promise<PreOrderSettings> {
   }
   return DEFAULT_PREORDER_SETTINGS;
 }
+
+export const getPreOrderSettings = unstable_cache(
+  _getPreOrderSettings,
+  ['preorder-settings'],
+  { revalidate: 120, tags: ['preorder-settings'] },
+);
 
 export async function updatePreOrderSettings(data: Partial<PreOrderSettings>): Promise<PreOrderSettings> {
   const current = await getPreOrderSettings();

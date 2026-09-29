@@ -27,13 +27,14 @@ export async function generateMetadata({ searchParams }: ShopPageProps) {
   return generateCategoryMetadata(title, description);
 }
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60; // ISR: revalidate every 60 seconds
 
 export default async function ShopPage({ searchParams }: ShopPageProps) {
   const params = await searchParams;
 
   const [products, categories] = await Promise.all([
     prisma.product.findMany({
+      where: { status: 'PUBLISHED' },
       include: {
         images: { orderBy: { displayOrder: 'asc' } },
         variants: true,

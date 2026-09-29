@@ -45,7 +45,7 @@ async function getLaunchProducts() {
   }
 }
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 60; // ISR: revalidate every 60 seconds
 
 export default async function HomePage() {
   // ── Coming Soon Mode ─────────────────────────────────────────────────────

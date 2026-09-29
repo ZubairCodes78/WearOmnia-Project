@@ -18,7 +18,20 @@ export async function generateMetadata({ params }: ProductPageProps) {
   return generateProductMetadata(product);
 }
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 120; // ISR: revalidate every 2 minutes
+
+// Pre-render all published product pages at build time
+export async function generateStaticParams() {
+  try {
+    const products = await prisma.product.findMany({
+      where: { status: 'PUBLISHED' },
+      select: { slug: true },
+    });
+    return products.map((p) => ({ slug: p.slug }));
+  } catch {
+    return [];
+  }
+}
 
 import { getPreOrderSettings } from '@/lib/settings';
 

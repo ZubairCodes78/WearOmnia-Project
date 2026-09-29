@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { Plus_Jakarta_Sans, Instrument_Serif, Jost } from 'next/font/google';
 import { CartProvider } from '@/context/CartContext';
 import { WishlistProvider } from '@/context/WishlistContext';
 import { SettingsProvider } from '@/context/SettingsContext';
@@ -7,12 +8,37 @@ import { Header } from '@/components/layout/Header';
 import { Footer } from '@/components/layout/Footer';
 import { CartDrawer } from '@/components/cart/CartDrawer';
 import { WhatsAppFloat } from '@/components/layout/WhatsAppFloat';
-import { SupportAssistant } from '@/components/layout/SupportAssistant';
+import { LazySupportAssistant } from '@/components/layout/LazySupportAssistant';
 import { ToastProvider } from '@/components/layout/ToastProvider';
 import { FlyToCartProvider } from '@/components/cart/FlyToCartProvider';
 import { getPublicSiteSettings } from '@/lib/settings';
-
 import { getCampaignPhase } from '@/lib/preorder';
+
+// ─── Fonts via next/font (self-hosted, no render-blocking external requests) ──
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700', '800'],
+  style: ['normal', 'italic'],
+  variable: '--font-jakarta',
+  display: 'swap',
+});
+
+const instrumentSerif = Instrument_Serif({
+  subsets: ['latin'],
+  weight: ['400'],
+  style: ['normal', 'italic'],
+  variable: '--font-instrument',
+  display: 'swap',
+});
+
+const jost = Jost({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600', '700'],
+  variable: '--font-jost',
+  display: 'swap',
+});
+
+const fontVars = `${plusJakartaSans.variable} ${instrumentSerif.variable} ${jost.variable}`;
 
 function isComingSoonMode(): boolean {
   const envComingSoon =
@@ -114,15 +140,8 @@ export default async function RootLayout({
             type="application/ld+json"
             dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
           />
-          {/* Instrument Serif — italic luxury headline on Coming Soon page */}
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-          <link
-            href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital,wght@0,400;1,400&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Jost:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap"
-            rel="stylesheet"
-          />
         </head>
-        <body className="bg-offwhite text-charcoal antialiased" suppressHydrationWarning>
+        <body className={`bg-offwhite text-charcoal antialiased ${fontVars}`} suppressHydrationWarning>
           <SettingsProvider initialSettings={initialSettings}>
             <CartProvider>
               <WishlistProvider>
@@ -149,7 +168,7 @@ export default async function RootLayout({
         />
       </head>
       <body
-        className="bg-offwhite text-charcoal flex flex-col min-h-screen antialiased"
+        className={`bg-offwhite text-charcoal flex flex-col min-h-screen antialiased ${fontVars}`}
         suppressHydrationWarning
       >
         <SettingsProvider initialSettings={initialSettings}>
@@ -161,7 +180,7 @@ export default async function RootLayout({
                   <main className="flex-1">{children}</main>
                   <CartDrawer />
                   <WhatsAppFloat />
-                  <SupportAssistant />
+                  <LazySupportAssistant />
                   <Footer />
                 </FlyToCartProvider>
               </ToastProvider>
