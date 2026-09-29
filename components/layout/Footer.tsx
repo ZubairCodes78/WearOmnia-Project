@@ -120,6 +120,7 @@ export const Footer = () => {
             <ul className="space-y-2 text-xs text-offwhite/80">
               <li><Link href="/shop" className="hover:text-champagne transition-colors duration-300">Shop All Collection</Link></li>
               <li><Link href="/our-story" className="hover:text-champagne transition-colors duration-300 font-medium text-champagne">Our Story &amp; Heritage</Link></li>
+              <li><Link href="/founder" className="hover:text-champagne transition-colors duration-300">Founder &amp; Vision</Link></li>
               <li><Link href="/track-order" className="hover:text-champagne transition-colors duration-300 flex items-center gap-1.5"><Package className="w-3.5 h-3.5 text-champagne/80" /> Track My Order</Link></li>
               <li><Link href="/size-guide" className="hover:text-champagne transition-colors duration-300">Size &amp; Fit Guide</Link></li>
               <li><Link href="/contact" className="hover:text-champagne transition-colors duration-300">Contact Us</Link></li>

@@ -35,8 +35,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const imageType = (formData.get('type') as string | null)?.toLowerCase();
+    const customFolder = imageType === 'size-guide' ? 'size-guides' : undefined;
+
     const buffer = Buffer.from(await file.arrayBuffer());
-    const saveResult = await saveProductImage(buffer, file.type);
+    const saveResult = await saveProductImage(buffer, file.type, customFolder);
 
     if (!saveResult.success || !saveResult.url) {
       return NextResponse.json(

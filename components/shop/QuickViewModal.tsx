@@ -159,6 +159,17 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
                         </div>
                       )}
 
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+                        <span className="bg-sand/70 text-teal text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-sand">
+                          Modest Fit
+                        </span>
+                        {product.description?.toLowerCase().includes('pocket') && (
+                          <span className="bg-sand/70 text-teal text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-sand">
+                            Practical Pockets
+                          </span>
+                        )}
+                      </div>
+
                       <p className="text-xs text-charcoal-muted mt-3 line-clamp-3 leading-relaxed">
                         {product.description}
                       </p>

@@ -496,6 +496,14 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                 </p>
                 <div className="flex flex-wrap items-center gap-4 pt-1 text-[11px] text-charcoal">
                   <span className="flex items-center gap-1.5">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-teal" /> Modest Fit
+                  </span>
+                  {(product.description?.toLowerCase().includes('pocket') || product.fabricDetails?.toLowerCase().includes('pocket')) && (
+                    <span className="flex items-center gap-1.5">
+                      <CheckCircle2 className="w-3.5 h-3.5 text-teal" /> Practical Pockets
+                    </span>
+                  )}
+                  <span className="flex items-center gap-1.5">
                     <ShieldCheck className="w-3.5 h-3.5 text-teal" /> 100% Authentic Quality
                   </span>
                   <span className="flex items-center gap-1.5">
@@ -530,8 +538,16 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                 )}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 gap-1">
                   <span className="font-semibold text-charcoal">Fit</span>
-                  <span className="text-charcoal-muted font-sans sm:text-right">Regular tailored fit</span>
+                  <span className="text-charcoal-muted font-sans sm:text-right">
+                    {product.description?.toLowerCase().includes('relaxed') ? 'Relaxed Modest Fit' : 'Modest Fit'}
+                  </span>
                 </div>
+                {(product.description?.toLowerCase().includes('pocket') || product.fabricDetails?.toLowerCase().includes('pocket')) && (
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 gap-1">
+                    <span className="font-semibold text-charcoal">Pockets</span>
+                    <span className="text-charcoal-muted font-sans sm:text-right">Practical Pockets</span>
+                  </div>
+                )}
                 {product.careInstructions && (
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 gap-1">
                     <span className="font-semibold text-charcoal">Care</span>

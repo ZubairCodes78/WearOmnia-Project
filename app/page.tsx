@@ -21,6 +21,7 @@ import { prisma } from '@/lib/prisma';
 import { HeroSlider } from '@/components/home/HeroSlider';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { BrandStory } from '@/components/home/BrandStory';
+import { FounderPreview } from '@/components/home/FounderPreview';
 import { WhyWearOmnia } from '@/components/home/WhyWearOmnia';
 import { NewsletterSection } from '@/components/home/NewsletterSection';
 import { PageTransition } from '@/components/layout/PageTransition';
@@ -115,6 +116,9 @@ export default async function HomePage() {
 
         {/* Authentic Founder Story: OUR STORY */}
         <BrandStory />
+
+        {/* Founder Vision Preview */}
+        <FounderPreview />
 
         {/* VIP Newsletter Registration */}
         <NewsletterSection />

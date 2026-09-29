@@ -85,7 +85,7 @@ export default function OurStoryPage() {
                   We started WearOMNIA because &ldquo;I have nothing to wear&rdquo; somehow became a daily morning meeting before 8AM university lectures, coffee runs, and impromptu plans.
                 </p>
                 <p>
-                  For years, young Pakistani women faced an annoying compromise: stiff, synthetic fabrics that wrinkle within twenty minutes, or complicated formal wear that felt impossible to style casually.
+                  For years, young Pakistani women faced an annoying compromise: stiff, synthetic fabrics that lose their drape within twenty minutes, or complicated formal wear that felt impossible to style casually.
                 </p>
                 <p>
                   We wanted ready-to-wear modest pieces that look like you planned the outfit for hours — even when you got ready in five minutes. Breathable fabrics, graceful drapes, and timeless cuts that you can wear on repeat with total confidence.

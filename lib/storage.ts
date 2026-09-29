@@ -8,6 +8,13 @@ import {
   HeadObjectCommand,
   GetObjectCommand,
 } from '@aws-sdk/client-s3';
+import {
+  validateImageBuffer,
+  optimizeProductImage,
+  optimizeSizeGuideImage,
+  optimizeQrCodeImage,
+  optimizePaymentProofImage,
+} from './image-optimizer';
 
 const ALLOWED_MIME_TYPES: Record<string, string> = {
   'image/jpeg': '.jpg',
@@ -248,30 +255,44 @@ export async function saveProductImage(
   mimeType: string,
   customFolder?: string
 ): Promise<{ success: boolean; url?: string; error?: string }> {
-  if (buffer.length > 10 * 1024 * 1024) {
-    return { success: false, error: 'Product image exceeds maximum allowed limit of 10MB.' };
+  // 1. Validate image format, dimensions and corruption
+  const validation = await validateImageBuffer(buffer, mimeType, 15 * 1024 * 1024);
+  if (!validation.valid) {
+    return { success: false, error: validation.error || 'Invalid product image file.' };
   }
 
-  const extension = ALLOWED_MIME_TYPES[mimeType.toLowerCase()];
-  if (!extension) {
-    return {
-      success: false,
-      error: 'Unsupported image format. Allowed formats: JPEG, JPG, PNG, WebP.',
-    };
+  // 2. Automatically optimize (resize oversized dimensions, compress, convert to WebP)
+  let optimizedBuffer = buffer;
+  let finalMime = 'image/webp';
+  let finalExt = '.webp';
+
+  try {
+    const isSizeGuide = customFolder?.includes('size-guide');
+    const optRes = isSizeGuide
+      ? await optimizeSizeGuideImage(buffer)
+      : await optimizeProductImage(buffer);
+    optimizedBuffer = optRes.buffer;
+    finalMime = optRes.mimeType;
+    finalExt = optRes.extension;
+  } catch (optErr) {
+    console.warn('[Image Optimizer] Processing error, continuing with validated original:', optErr);
+    const fallbackExt = ALLOWED_MIME_TYPES[mimeType.toLowerCase()] || '.jpg';
+    finalExt = fallbackExt;
+    finalMime = mimeType;
   }
 
-  // 1. Cloudflare R2 upload if configured
+  // 3. Cloudflare R2 upload if configured
   if (isR2Configured()) {
     const uuid = crypto.randomUUID();
     const folderPrefix = customFolder
       ? `products/${customFolder.replace(/^\/+|\/+$/g, '')}`
       : 'products';
-    const key = `${folderPrefix}/prod_${uuid}${extension}`;
+    const key = `${folderPrefix}/prod_${uuid}${finalExt}`;
 
     const r2Res = await uploadFile({
-      buffer,
+      buffer: optimizedBuffer,
       key,
-      mimeType,
+      mimeType: finalMime,
       cacheControl: 'public, max-age=31536000, immutable',
     });
 
@@ -298,10 +319,10 @@ export async function saveProductImage(
   try {
     await ensureDir(PRODUCT_IMAGES_DIR);
     const uuid = crypto.randomUUID();
-    const filename = `prod_${uuid}${extension}`;
+    const filename = `prod_${uuid}${finalExt}`;
     const filePath = path.join(PRODUCT_IMAGES_DIR, filename);
 
-    await fs.writeFile(filePath, buffer);
+    await fs.writeFile(filePath, optimizedBuffer);
     return { success: true, url: `/uploads/products/${filename}` };
   } catch (err: any) {
     return {
@@ -455,23 +476,34 @@ export async function saveQrCode(
   buffer: Buffer,
   mimeType: string
 ): Promise<{ success: boolean; filename?: string; error?: string }> {
-  if (buffer.length > MAX_PROOF_SIZE) {
-    return { success: false, error: 'QR Code image exceeds 5MB limit.' };
+  const validation = await validateImageBuffer(buffer, mimeType, 5 * 1024 * 1024);
+  if (!validation.valid) {
+    return { success: false, error: validation.error || 'Invalid QR code image file.' };
   }
 
-  const extension = ALLOWED_MIME_TYPES[mimeType.toLowerCase()];
-  if (!extension) {
-    return { success: false, error: 'Invalid format. Allowed: JPEG, PNG, WebP.' };
+  let finalBuffer = buffer;
+  let finalMime = 'image/webp';
+  let finalExt = '.webp';
+
+  try {
+    const optRes = await optimizeQrCodeImage(buffer);
+    finalBuffer = optRes.buffer;
+    finalMime = optRes.mimeType;
+    finalExt = optRes.extension;
+  } catch (err) {
+    console.warn('[QR Optimizer] Optimization fallback:', err);
+    finalExt = ALLOWED_MIME_TYPES[mimeType.toLowerCase()] || '.png';
+    finalMime = mimeType;
   }
 
   if (isR2Configured()) {
     const uuid = crypto.randomUUID();
-    const key = `qr-codes/qr_${uuid}${extension}`;
+    const key = `qr-codes/qr_${uuid}${finalExt}`;
 
     const r2Res = await uploadFile({
-      buffer,
+      buffer: finalBuffer,
       key,
-      mimeType,
+      mimeType: finalMime,
       cacheControl: 'public, max-age=31536000',
     });
 
@@ -493,10 +525,10 @@ export async function saveQrCode(
   try {
     await ensureDir(QR_STORAGE_DIR);
     const uuid = crypto.randomUUID();
-    const filename = `qr_${uuid}${extension}`;
+    const filename = `qr_${uuid}${finalExt}`;
     const filePath = path.join(QR_STORAGE_DIR, filename);
 
-    await fs.writeFile(filePath, buffer);
+    await fs.writeFile(filePath, finalBuffer);
     return { success: true, filename };
   } catch (err: any) {
     return { success: false, error: `Failed to save QR code: ${err?.message}` };

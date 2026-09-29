@@ -11,8 +11,8 @@ export const WhyWearOmnia = () => {
   const features = [
     {
       tag: 'FOR THE 8AM CLASS.',
-      title: 'Wrinkle-Resistant Fabrics',
-      description: 'Breathable, durable, and ready straight from the hanger so you can roll out of bed and still look impeccably put-together.',
+      title: 'Modest Fit & Daily Comfort',
+      description: 'Breathable, relaxed tailoring with modest coverage designed for effortless everyday wear and all-day comfort.',
       icon: Clock,
     },
     {

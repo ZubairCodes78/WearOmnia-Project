@@ -37,6 +37,7 @@ const nextConfig = {
   images: {
     remotePatterns,
     qualities: [75, 85, 90],
+    formats: ['image/avif', 'image/webp'],
   },
   eslint: {
     ignoreDuringBuilds: true,
