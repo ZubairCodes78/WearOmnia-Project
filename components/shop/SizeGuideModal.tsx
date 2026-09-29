@@ -172,8 +172,19 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
     }
   };
 
-  const columns = guide?.columns ? (JSON.parse(guide.columns) as string[]) : [];
-  const entries = guide?.entries || [];
+  let columns: string[] = [];
+  if (guide?.columns) {
+    try {
+      columns = typeof guide.columns === 'string' ? JSON.parse(guide.columns) : guide.columns;
+      if (!Array.isArray(columns)) columns = [];
+    } catch {
+      columns = typeof guide.columns === 'string'
+        ? guide.columns.split(',').map((s) => s.trim()).filter(Boolean)
+        : [];
+    }
+  }
+
+  const entries = Array.isArray(guide?.entries) ? guide.entries : [];
   const hasEntries = entries.length > 0 && columns.length > 0;
   const isUnstitched = guide?.productType === 'UNSTITCHED';
 

@@ -34,17 +34,19 @@ export const ProductImageZoom: React.FC<ProductImageZoomProps> = ({
   const rafId = useRef<number | null>(null);
 
   useEffect(() => {
-    // Detect whether current device has true cursor hover capability
+    // Detect whether current device has true cursor hover capability and desktop width
     const checkHover = () => {
       const match = window.matchMedia('(hover: hover) and (pointer: fine)');
-      setIsHoverSupported(match.matches);
+      setIsHoverSupported(match.matches && window.innerWidth >= 1024);
     };
     checkHover();
 
     const mediaQuery = window.matchMedia('(hover: hover) and (pointer: fine)');
     mediaQuery.addEventListener('change', checkHover);
+    window.addEventListener('resize', checkHover);
     return () => {
       mediaQuery.removeEventListener('change', checkHover);
+      window.removeEventListener('resize', checkHover);
       if (rafId.current) cancelAnimationFrame(rafId.current);
     };
   }, []);
@@ -125,7 +127,7 @@ export const ProductImageZoom: React.FC<ProductImageZoomProps> = ({
           onOpenLightbox();
         }
       }}
-      className={`relative w-full aspect-[3/4] rounded-lg overflow-hidden bg-sand border border-sand shadow-lg group select-none ${
+      className={`relative w-full aspect-[3/4] rounded-lg overflow-hidden bg-sand border border-sand shadow-lg group select-none touch-pan-y ${
         isHoverSupported ? 'cursor-zoom-in' : 'cursor-pointer'
       } ${className}`}
     >

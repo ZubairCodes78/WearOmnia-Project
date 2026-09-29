@@ -45,10 +45,16 @@ export const ProductClient: React.FC<ProductClientProps> = ({
   const { triggerFlyToCart } = useFlyToCart();
   const mainImageRef = useRef<HTMLDivElement>(null);
 
+  const rawVariants = Array.isArray(product?.variants) ? product.variants : [];
+  const rawImages = Array.isArray(product?.images) && product.images.length > 0
+    ? product.images.filter(Boolean)
+    : [{ url: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop' }];
+  const reviews = Array.isArray(product?.reviews) ? product.reviews.filter(Boolean) : [];
+
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [selectedSize, setSelectedSize] = useState(product.variants[0]?.size || 'Standard');
-  const [selectedColor, setSelectedColor] = useState(product.variants[0]?.color || 'Default');
+  const [selectedSize, setSelectedSize] = useState<string>(rawVariants[0]?.size || 'Standard');
+  const [selectedColor, setSelectedColor] = useState<string>(rawVariants[0]?.color || 'Default');
   const [quantity, setQuantity] = useState(1);
   const [addedToast, setAddedToast] = useState(false);
   const [activeTab, setActiveTab] = useState<'fabric' | 'care' | 'shipping' | 'returns'>('fabric');
@@ -59,24 +65,33 @@ export const ProductClient: React.FC<ProductClientProps> = ({
   const [reviewComment, setReviewComment] = useState('');
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
-  const images = product.images.length > 0 ? product.images : [{ url: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop' }];
-  const activePrice = product.discountPrice || product.basePrice;
-  const isWish = isInWishlist(product.id);
+  const images = rawImages;
+  const basePrice = typeof product?.basePrice === 'number'
+    ? product.basePrice
+    : (Number(product?.basePrice) || 0);
+  const discountPrice = typeof product?.discountPrice === 'number'
+    ? product.discountPrice
+    : (product?.discountPrice ? Number(product.discountPrice) : null);
+  const activePrice = (discountPrice !== null && discountPrice > 0) ? discountPrice : basePrice;
+  const isWish = isInWishlist(product?.id || '');
+  const isPreOrder = Boolean(product?.isPreOrder);
 
   // Dynamic Pre-Order Advance Calculation from Single Source of Truth
-  const advancePercent = product.preOrderAdvancePercent ?? settings.preorder_advance_percent ?? defaultAdvancePercent ?? 50;
-  const advanceAmount = Math.round((activePrice * advancePercent) / 100);
+  const advancePercent = product?.preOrderAdvancePercent ?? settings?.preorder_advance_percent ?? defaultAdvancePercent ?? 50;
+  const advanceAmount = Math.round((activePrice * (advancePercent || 50)) / 100);
   const remainingAmount = Math.max(0, activePrice - advanceAmount);
 
-  const sizes = Array.from(new Set(product.variants.map((v: any) => v.size))) as string[];
-  const colors = Array.from(new Set(product.variants.map((v: any) => v.color))) as string[];
+  const sizes = Array.from(new Set(rawVariants.map((v: any) => v?.size).filter(Boolean))) as string[];
+  const colors = Array.from(new Set(rawVariants.map((v: any) => v?.color).filter(Boolean))) as string[];
 
   // Selected Variant Stock Check
-  const currentVariant = product.variants.find(
-    (v: any) => v.size === selectedSize && v.color === selectedColor
-  ) || product.variants[0];
+  const currentVariant = rawVariants.find(
+    (v: any) => v?.size === selectedSize && v?.color === selectedColor
+  ) || rawVariants[0];
 
-  const currentStock = currentVariant ? currentVariant.stock : product.stockQuantity;
+  const currentStock = currentVariant
+    ? (currentVariant.stock ?? 0)
+    : (typeof product?.stockQuantity === 'number' ? product.stockQuantity : 0);
 
   const handleAddToCart = () => {
     const currentImgSrc = images[selectedImageIndex]?.url || images[0]?.url || '';
@@ -84,21 +99,21 @@ export const ProductClient: React.FC<ProductClientProps> = ({
 
     triggerFlyToCart(imgEl, currentImgSrc, () => {
       addToCart({
-        productId: product.id,
-        title: product.title,
-        slug: product.slug,
+        productId: product?.id || '',
+        title: product?.title || 'WearOMNIA Garment',
+        slug: product?.slug || '',
         image: currentImgSrc,
         price: activePrice,
-        basePrice: product.basePrice,
+        basePrice: basePrice,
         size: selectedSize,
         color: selectedColor,
-        sku: product.sku,
+        sku: product?.sku || '',
         quantity,
-        maxStock: product.isPreOrder ? 999 : currentStock,
-        isPreOrder: Boolean(product.isPreOrder),
+        maxStock: isPreOrder ? 999 : currentStock,
+        isPreOrder,
       });
       setAddedToast(true);
-      setTimeout(() => setAddedToast(false), 800);
+      setTimeout(() => setAddedToast(false), 1200);
     });
   };
 
@@ -174,7 +189,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({
           <div className="lg:col-span-7 flex flex-col-reverse sm:flex-row gap-3 sm:gap-4">
             {/* Thumbnails */}
             {images.length > 1 && (
-              <div className="flex sm:flex-col gap-2 sm:gap-3 overflow-x-auto sm:overflow-x-hidden sm:overflow-y-auto shrink-0 sm:max-h-[600px] pb-1 sm:pb-0 no-scrollbar">
+              <div className="flex sm:flex-col gap-2 sm:gap-3 overflow-x-auto sm:overflow-x-hidden sm:overflow-y-auto shrink-0 sm:max-h-[600px] pb-1 sm:pb-0 pr-16 sm:pr-0 no-scrollbar">
                 {images.map((img: any, i: number) => (
                   <button
                     key={i}
@@ -256,7 +271,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                       <Star key={i} className="w-4 h-4 fill-current text-champagne" />
                     ))}
                   </div>
-                  <span className="text-charcoal-muted font-sans font-medium">({product.reviews.length} Verified Reviews)</span>
+                  <span className="text-charcoal-muted font-sans font-medium">({reviews.length} Verified Reviews)</span>
                 </div>
               </div>
             </div>
@@ -554,12 +569,12 @@ export const ProductClient: React.FC<ProductClientProps> = ({
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
             {/* Reviews List */}
             <div className="lg:col-span-7 space-y-4">
-              {product.reviews.length === 0 ? (
+              {reviews.length === 0 ? (
                 <div className="bg-sand/40 p-8 rounded-2xl text-center text-xs text-charcoal-muted">
                   No approved reviews yet for this product. Be the first to leave your feedback!
                 </div>
               ) : (
-                product.reviews.map((rev: any) => (
+                reviews.map((rev: any) => (
                   <div key={rev.id} className="bg-offwhite p-6 rounded-2xl border border-sand space-y-2">
                     <div className="flex items-center justify-between">
                       <h4 className="font-serif font-bold text-teal text-sm">{rev.customerName}</h4>
@@ -689,32 +704,43 @@ export const ProductClient: React.FC<ProductClientProps> = ({
       )}
 
       {/* Sticky Add to Cart Mobile Bottom Bar */}
-      <div className="sm:hidden fixed bottom-0 inset-x-0 z-30 bg-offwhite/95 backdrop-blur-xl border-t border-sand px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shadow-2xl">
+      <div className="sm:hidden fixed bottom-0 inset-x-0 z-30 bg-offwhite/95 backdrop-blur-xl border-t border-sand px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] shadow-2xl">
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0 flex-1">
-            <span className="font-serif text-sm font-bold text-teal block truncate">{product.title}</span>
+            <span className="font-serif text-sm font-bold text-teal block truncate">{product?.title || 'WearOMNIA'}</span>
             <div className="flex items-baseline gap-2 flex-wrap">
               <span className="font-serif text-xs font-bold text-champagne-700">Rs. {activePrice.toLocaleString()}</span>
-              {product.discountPrice && (
-                <span className="text-[10px] text-charcoal-muted line-through">Rs. {product.basePrice.toLocaleString()}</span>
+              {discountPrice && (
+                <span className="text-[10px] text-charcoal-muted line-through">Rs. {basePrice.toLocaleString()}</span>
               )}
-              {product.isPreOrder && (
+              {isPreOrder && (
                 <span className="bg-amber-600 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded">PRE-ORDER</span>
               )}
             </div>
-            {product.isPreOrder && (
+            {isPreOrder && (
               <span className="text-[10px] text-amber-900 font-semibold">
                 {advancePercent}% Advance: Rs. {advanceAmount.toLocaleString()}
               </span>
             )}
           </div>
           <button
-            onClick={handleBuyNow}
-            disabled={!product.isPreOrder && currentStock <= 0}
-            className="bg-teal text-champagne px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow shrink-0 active:scale-95 transition-transform"
+            onClick={handleAddToCart}
+            disabled={!isPreOrder && currentStock <= 0}
+            className="bg-teal text-champagne px-5 py-3 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow shrink-0 active:scale-95 transition-transform disabled:opacity-50 cursor-pointer"
           >
-            <ShoppingBag className="w-4 h-4" />
-            {product.isPreOrder ? 'Pre-Order' : 'Add to Bag'}
+            {addedToast ? (
+              <>
+                <Check className="w-4 h-4 text-champagne" /> Added!
+              </>
+            ) : isPreOrder ? (
+              <>
+                <ShoppingBag className="w-4 h-4" /> Pre-Order
+              </>
+            ) : (
+              <>
+                <ShoppingBag className="w-4 h-4" /> Add to Bag
+              </>
+            )}
           </button>
         </div>
       </div>

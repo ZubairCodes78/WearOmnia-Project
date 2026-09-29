@@ -44,32 +44,40 @@ export default async function ProductPage({ params }: ProductPageProps) {
     notFound();
   }
 
-  // Fetch related products in same category
-  const relatedProducts = await prisma.product.findMany({
-    where: {
-      categoryId: product.categoryId,
-      id: { not: product.id },
-    },
-    include: {
-      images: { orderBy: { displayOrder: 'asc' } },
-      variants: true,
-      category: true,
-    },
-    take: 4,
-  });
+  // Fetch related products in same category if categoryId exists
+  let relatedProducts: any[] = [];
+  if (product.categoryId) {
+    relatedProducts = await prisma.product.findMany({
+      where: {
+        categoryId: product.categoryId,
+        id: { not: product.id },
+        status: 'PUBLISHED',
+      },
+      include: {
+        images: { orderBy: { displayOrder: 'asc' } },
+        variants: true,
+        category: true,
+      },
+      take: 4,
+    });
+  }
 
-  const sizeGuideImage = product.images.find((img) => img.altText === 'SIZE_GUIDE')?.url || null;
-  const galleryImages = product.images.filter((img) => img.altText !== 'SIZE_GUIDE');
+  const rawImages = Array.isArray(product.images) ? product.images : [];
+  const sizeGuideImage = rawImages.find((img: any) => img.altText === 'SIZE_GUIDE')?.url || null;
+  const galleryImages = rawImages.filter((img: any) => img.altText !== 'SIZE_GUIDE');
 
   const sanitizedProduct = {
     ...product,
     images: galleryImages,
     sizeGuideImage,
+    variants: Array.isArray(product.variants) ? product.variants : [],
+    reviews: Array.isArray(product.reviews) ? product.reviews : [],
   };
 
   const sanitizedRelated = relatedProducts.map((p) => ({
     ...p,
-    images: p.images.filter((img) => img.altText !== 'SIZE_GUIDE'),
+    images: Array.isArray(p.images) ? p.images.filter((img: any) => img.altText !== 'SIZE_GUIDE') : [],
+    variants: Array.isArray(p.variants) ? p.variants : [],
   }));
 
   const jsonLd = generateProductSchema(sanitizedProduct);
