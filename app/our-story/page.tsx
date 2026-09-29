@@ -59,7 +59,7 @@ export default function OurStoryPage() {
             <div className="lg:col-span-6">
               <div className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-xl border border-sand">
                 <Image
-                  src="/images/kaftan-1.jpg"
+                  src="/images/kaftan-1.webp"
                   alt="WearOMNIA Artisan Workshop"
                   fill
                   priority

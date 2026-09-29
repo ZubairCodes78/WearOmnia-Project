@@ -19,7 +19,7 @@ interface SlideData {
 const SLIDES: SlideData[] = [
   {
     id: 1,
-    image: '/1 slider.jpeg',
+    image: '/images/1 slider.webp',
     alt: 'The Ease Edit - WearOMNIA',
     ctaText: 'Shop Now',
     ctaLink: '/shop',
@@ -29,7 +29,7 @@ const SLIDES: SlideData[] = [
   },
   {
     id: 2,
-    image: '/2 slider.jpeg',
+    image: '/images/2 slider.webp',
     alt: 'Gulistan Collection - WearOMNIA',
     ctaText: 'Shop Collection',
     ctaLink: '/shop',
@@ -39,7 +39,7 @@ const SLIDES: SlideData[] = [
   },
   {
     id: 3,
-    image: '/3 slider.jpeg',
+    image: '/images/3 slider.webp',
     alt: 'WearOMNIA Pre-Booking Is Now Live',
     ctaText: 'Pre-Order Now',
     ctaLink: '/shop?preorder=true',

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { getSiteSettings, updateSiteSettings } from '@/lib/settings';
 import { verifyAdminSession } from '@/lib/auth';
 
@@ -27,8 +27,10 @@ export async function POST(req: Request) {
     const body = await req.json();
     const updated = await updateSiteSettings(body);
     
-    // Purge cached server layouts so desktop and mobile immediately see updated settings
+    // Purge both the page cache and the unstable_cache data layer so
+    // storefront immediately sees the updated settings (not after 120s TTL)
     try {
+      revalidateTag('site-settings');
       revalidatePath('/', 'layout');
     } catch {
       // Ignored in non-SSR test environments

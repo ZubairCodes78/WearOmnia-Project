@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { revalidatePath } from 'next/cache';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminSession } from '@/lib/auth';
 import { getPreOrderSettings, updatePreOrderSettings } from '@/lib/settings';
@@ -76,7 +76,10 @@ export async function POST(req: NextRequest) {
       `Updated Pre-Order settings: enabled=${updated.preorder_enabled}, advance=${updated.preorder_advance_percent}%`
     );
 
+    // Purge both the page cache and the unstable_cache data layer so
+    // storefront immediately sees updated preorder settings (not after 120s TTL)
     try {
+      revalidateTag('preorder-settings');
       revalidatePath('/', 'layout');
     } catch {
       // Ignored in non-SSR test environments

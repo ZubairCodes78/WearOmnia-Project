@@ -15,7 +15,7 @@ export const BrandStory: React.FC = () => {
           <ScrollReveal variant="slide-left" className="lg:col-span-6">
             <div className="relative aspect-[4/5] sm:aspect-[3/4] lg:aspect-[4/5] rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg border border-sand/80 max-w-lg mx-auto lg:max-w-none">
               <Image
-                src="/images/kaftan-1.jpg"
+                src="/images/kaftan-1.webp"
                 alt="WearOMNIA Atelier Craftsmanship"
                 fill
                 sizes="(max-width: 1024px) 100vw, 50vw"
