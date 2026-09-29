@@ -352,6 +352,11 @@ export const ProductClient: React.FC<ProductClientProps> = ({
               </div>
             )}
 
+            {/* Product Color Disclaimer Note */}
+            <p className="text-[11px] text-charcoal-muted leading-relaxed font-sans">
+              Please note: The product color may slightly vary from the images due to lighting, photography, and screen settings.
+            </p>
+
             {/* Quantity */}
             <div className="flex items-center gap-4 pt-1">
               <span className="text-xs uppercase font-semibold text-charcoal tracking-wider">Quantity:</span>
