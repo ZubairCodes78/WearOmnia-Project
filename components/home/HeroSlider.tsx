@@ -23,10 +23,9 @@ const SLIDES: SlideData[] = [
     alt: 'The Ease Edit - WearOMNIA',
     ctaText: 'Shop Now',
     ctaLink: '/shop',
-    // Mobile crops slightly towards model (58%) while desktop centers
-    objectPosition: 'object-[58%_center] sm:object-center',
+    objectPosition: 'object-center',
     // Placed in open area to the right below the artwork text
-    ctaPositionClasses: 'right-5 sm:right-[10%] lg:right-[14%] bottom-8 sm:bottom-[14%] lg:bottom-[16%]',
+    ctaPositionClasses: 'right-3 sm:right-[8%] lg:right-[12%] bottom-3 sm:bottom-[10%] lg:bottom-[13%]',
   },
   {
     id: 2,
@@ -34,10 +33,9 @@ const SLIDES: SlideData[] = [
     alt: 'Gulistan Collection - WearOMNIA',
     ctaText: 'Shop Collection',
     ctaLink: '/shop',
-    // Mobile centers with a gentle nudge towards right model & title
-    objectPosition: 'object-[53%_center] sm:object-center',
+    objectPosition: 'object-center',
     // Placed below "Gulistan COLLECTION" text on the right
-    ctaPositionClasses: 'right-5 sm:right-[10%] lg:right-[14%] bottom-8 sm:bottom-[14%] lg:bottom-[16%]',
+    ctaPositionClasses: 'right-3 sm:right-[8%] lg:right-[12%] bottom-3 sm:bottom-[10%] lg:bottom-[13%]',
   },
   {
     id: 3,
@@ -47,7 +45,7 @@ const SLIDES: SlideData[] = [
     ctaLink: '/shop?preorder=true',
     objectPosition: 'object-center',
     // Centered horizontally below "PRE-BOOKING IS NOW LIVE!"
-    ctaPositionClasses: 'left-1/2 -translate-x-1/2 bottom-7 sm:bottom-[11%] lg:bottom-[13%]',
+    ctaPositionClasses: 'left-1/2 -translate-x-1/2 bottom-3 sm:bottom-[9%] lg:bottom-[12%]',
   },
 ];
 
@@ -77,8 +75,8 @@ export const HeroSlider: React.FC = () => {
       onTouchStart={() => setIsPaused(true)}
       onTouchEnd={() => setIsPaused(false)}
     >
-      {/* Responsive Aspect Ratio Stage */}
-      <div className="relative w-full h-[420px] sm:h-[500px] md:h-[580px] lg:h-[640px] xl:h-[700px] max-h-[82vh] overflow-hidden">
+      {/* Responsive Aspect Ratio Stage - Exact 1920x800 (2.4:1) banner ratio to eliminate cropping */}
+      <div className="relative w-full aspect-[1920/800] max-h-[800px] overflow-hidden">
         {/* Background Slides */}
         <AnimatePresence mode="wait">
           <motion.div
@@ -95,7 +93,7 @@ export const HeroSlider: React.FC = () => {
               fill
               priority={slide.id === 1}
               sizes="100vw"
-              quality={90}
+              quality={85}
               className={`object-cover ${slide.objectPosition}`}
             />
           </motion.div>
@@ -106,15 +104,15 @@ export const HeroSlider: React.FC = () => {
           <AnimatePresence mode="wait">
             <motion.div
               key={slide.id}
-              initial={{ opacity: 0, y: 8 }}
+              initial={{ opacity: 0, y: 6 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -6 }}
-              transition={{ duration: 0.35, ease: 'easeOut' }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
             >
               <Link href={slide.ctaLink} className="inline-block">
-                <span className="group flex items-center justify-center gap-2 sm:gap-2.5 px-5 py-2.5 sm:px-7 sm:py-3.5 rounded-lg sm:rounded-xl bg-[#06191B]/90 hover:bg-[#06191B] text-champagne hover:text-offwhite border border-champagne/60 hover:border-champagne text-xs sm:text-sm uppercase font-bold tracking-[0.16em] transition-all duration-300 shadow-xl backdrop-blur-xs cursor-pointer">
+                <span className="group flex items-center justify-center gap-1.5 sm:gap-2.5 px-3 py-1.5 sm:px-6 sm:py-3 rounded-lg sm:rounded-xl bg-[#06191B]/90 hover:bg-[#06191B] text-champagne hover:text-offwhite border border-champagne/60 hover:border-champagne text-[11px] sm:text-xs uppercase font-bold tracking-[0.14em] sm:tracking-[0.16em] transition-all duration-300 shadow-xl backdrop-blur-xs cursor-pointer">
                   <span>{slide.ctaText}</span>
-                  <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform duration-300" />
+                  <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform duration-300" />
                 </span>
               </Link>
             </motion.div>
@@ -122,20 +120,20 @@ export const HeroSlider: React.FC = () => {
         </div>
 
         {/* Slide Indicators */}
-        <div className="absolute bottom-3 sm:bottom-4 left-4 sm:left-8 z-20 flex items-center gap-2">
+        <div className="absolute bottom-2 sm:bottom-4 left-3 sm:left-8 z-20 flex items-center gap-1.5 sm:gap-2">
           {SLIDES.map((s, idx) => (
             <button
               key={s.id}
               onClick={() => setCurrent(idx)}
               aria-label={`Go to slide ${idx + 1}`}
-              className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+              className={`h-1 sm:h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
                 current === idx
-                  ? 'w-7 sm:w-8 bg-champagne'
-                  : 'w-2 sm:w-2.5 bg-white/40 hover:bg-white/70'
+                  ? 'w-5 sm:w-8 bg-champagne'
+                  : 'w-1.5 sm:w-2.5 bg-white/40 hover:bg-white/70'
               }`}
             />
           ))}
-          <span className="text-[10px] font-mono text-champagne/80 font-bold ml-1 hidden sm:inline-block">
+          <span className="text-[9px] sm:text-[10px] font-mono text-champagne/80 font-bold ml-1 hidden sm:inline-block">
             0{current + 1} / 0{SLIDES.length}
           </span>
         </div>

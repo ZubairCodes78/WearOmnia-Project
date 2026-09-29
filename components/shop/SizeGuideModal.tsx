@@ -83,10 +83,35 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
   }, [productId, propGuideImage]);
 
   useEffect(() => {
+    if (propGuideImage) {
+      setActiveImage(propGuideImage);
+      setNotFound(false);
+    }
+  }, [propGuideImage]);
+
+  useEffect(() => {
     if (isOpen) {
       fetchGuide();
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
     }
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isOpen, fetchGuide]);
+
+  // Keyboard Escape support
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   // Find My Size calculator for tabular guides
   const calculateRecommendation = () => {
@@ -161,35 +186,35 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.25 }}
+            transition={{ duration: 0.2 }}
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-charcoal/65 backdrop-blur-xs"
+            className="fixed inset-0 z-50 bg-charcoal/70 backdrop-blur-xs"
           />
 
           {/* Modal Container */}
           <motion.div
-            initial={{ opacity: 0, y: 25, scale: 0.98 }}
+            initial={{ opacity: 0, y: 20, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 25, scale: 0.98 }}
-            transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="fixed inset-x-3 sm:inset-x-auto top-[4vh] sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 w-auto sm:w-full sm:max-w-2xl max-h-[90vh] z-50 bg-offwhite rounded-2xl sm:rounded-3xl shadow-2xl border border-sand overflow-hidden flex flex-col"
+            exit={{ opacity: 0, y: 20, scale: 0.98 }}
+            transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
+            className="fixed inset-x-2 sm:inset-x-auto top-[3vh] sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 w-auto sm:w-[94vw] sm:max-w-3xl max-h-[94vh] sm:max-h-[90vh] z-50 bg-offwhite rounded-2xl sm:rounded-3xl shadow-2xl border border-sand overflow-hidden flex flex-col"
           >
             {/* Modal Header */}
-            <div className="flex items-center justify-between p-4 sm:p-5 border-b border-sand shrink-0 bg-sand/20">
-              <div className="flex items-center gap-3">
-                <div className="w-9 h-9 sm:w-10 sm:h-10 bg-teal text-champagne rounded-xl flex items-center justify-center shrink-0">
-                  <Ruler className="w-5 h-5" />
+            <div className="flex items-center justify-between p-3.5 sm:p-5 border-b border-sand shrink-0 bg-sand/20">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-teal text-champagne rounded-xl flex items-center justify-center shrink-0">
+                  <Ruler className="w-4 h-4 sm:w-5 sm:h-5" />
                 </div>
                 <div>
-                  <h2 className="font-serif text-lg sm:text-xl font-bold text-teal">Size Guide</h2>
-                  <p className="text-[10px] sm:text-[11px] uppercase tracking-wider text-champagne-700 font-semibold truncate max-w-xs sm:max-w-sm">
+                  <h2 className="font-serif text-base sm:text-xl font-bold text-teal leading-tight">Size Guide</h2>
+                  <p className="text-[10px] sm:text-[11px] uppercase tracking-wider text-champagne-700 font-semibold truncate max-w-[200px] sm:max-w-md">
                     {productTitle ? `${productTitle}` : 'Garment Measurements'}
                   </p>
                 </div>
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-full bg-sand hover:bg-champagne flex items-center justify-center text-charcoal transition-colors cursor-pointer"
+                className="w-8 h-8 rounded-full bg-sand hover:bg-champagne flex items-center justify-center text-charcoal transition-colors cursor-pointer shrink-0"
                 aria-label="Close size guide"
               >
                 <X className="w-4 h-4" />
@@ -197,7 +222,7 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
             </div>
 
             {/* Modal Scrollable Content */}
-            <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-5">
+            <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-4">
               {loading && (
                 <div className="text-center py-14">
                   <div className="w-8 h-8 border-2 border-teal border-t-transparent rounded-full animate-spin mx-auto" />
@@ -207,27 +232,26 @@ export const SizeGuideModal: React.FC<SizeGuideModalProps> = ({
 
               {!loading && (
                 <>
-                  {/* 1. Product's Own Size Guide Image (Primary Display) */}
+                  {/* 1. Product's Dedicated Size Guide Image (Natural Aspect Ratio Preserved) */}
                   {activeImage && (
-                    <div className="space-y-2">
-                      <div className="relative w-full rounded-xl overflow-hidden border border-sand bg-white shadow-sm">
-                        <div className="relative w-full aspect-[4/3] sm:aspect-[16/11] max-h-[55vh]">
-                          <Image
+                    <div className="space-y-2.5">
+                      <div className="w-full rounded-xl overflow-hidden border border-sand bg-white shadow-sm flex flex-col items-center">
+                        <div className="w-full flex justify-center items-center p-2.5 sm:p-5 bg-white overflow-x-auto">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
                             src={activeImage}
                             alt={productTitle ? `${productTitle} Size Guide` : 'Product Size Guide'}
-                            fill
-                            sizes="(max-width: 640px) 100vw, 600px"
-                            priority
-                            className="object-contain"
+                            className="w-auto h-auto max-w-full max-h-[62vh] sm:max-h-[72vh] object-contain rounded-lg shadow-2xs select-none"
+                            loading="lazy"
                           />
                         </div>
-                        <div className="p-2.5 sm:p-3 bg-sand/30 border-t border-sand flex items-center justify-between text-[11px] text-charcoal-muted font-sans">
-                          <span>Specific measurements for this product</span>
+                        <div className="w-full p-2.5 sm:p-3 bg-sand/30 border-t border-sand flex items-center justify-between text-[11px] text-charcoal-muted font-sans">
+                          <span className="font-medium">Specific measurements for this product</span>
                           <a
                             href={activeImage}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-teal font-bold hover:underline"
+                            className="text-teal font-bold hover:underline inline-flex items-center gap-1"
                           >
                             Open Full Size ↗
                           </a>

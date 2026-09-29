@@ -171,12 +171,14 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
                           <label className="text-xs uppercase font-semibold text-charcoal">
                             Select Size:
                           </label>
-                          <button
-                            onClick={() => setSizeGuideOpen(true)}
-                            className="text-[11px] text-teal underline font-normal cursor-pointer hover:text-champagne-700 transition-colors flex items-center gap-1"
-                          >
-                            <Ruler className="w-3 h-3" /> Size Guide
-                          </button>
+                          {Boolean((product as any).sizeGuideImage || (product as any).sizeGuideId) && (
+                            <button
+                              onClick={() => setSizeGuideOpen(true)}
+                              className="text-[11px] text-teal underline font-normal cursor-pointer hover:text-champagne-700 transition-colors flex items-center gap-1"
+                            >
+                              <Ruler className="w-3 h-3" /> Size Guide
+                            </button>
+                          )}
                         </div>
                         <div className="flex flex-wrap gap-2">
                           {sizes.map((sz) => (
@@ -273,6 +275,8 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
         isOpen={sizeGuideOpen}
         onClose={() => setSizeGuideOpen(false)}
         productId={product.id}
+        sizeGuideImage={(product as any).sizeGuideImage}
+        productTitle={product.title}
       />
     </>
   );

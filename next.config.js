@@ -36,7 +36,7 @@ if (process.env.R2_PUBLIC_URL) {
 const nextConfig = {
   images: {
     remotePatterns,
-    qualities: [75, 85],
+    qualities: [75, 85, 90],
   },
   eslint: {
     ignoreDuringBuilds: true,

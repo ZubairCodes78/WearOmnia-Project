@@ -18,6 +18,7 @@ import {
   Plus,
   Minus,
   CheckCircle2,
+  Ruler,
 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
@@ -302,13 +303,15 @@ export const ProductClient: React.FC<ProductClientProps> = ({
               <div className="space-y-2.5 pt-2">
                 <div className="flex items-center justify-between text-xs font-semibold">
                   <span className="uppercase text-charcoal tracking-wider">Select Size</span>
-                  <button
-                    type="button"
-                    onClick={() => setSizeGuideOpen(true)}
-                    className="text-teal underline font-semibold cursor-pointer hover:text-champagne-700 transition-colors"
-                  >
-                    Size Guide
-                  </button>
+                  {Boolean(product.sizeGuideImage || (product as any).sizeGuideId) && (
+                    <button
+                      type="button"
+                      onClick={() => setSizeGuideOpen(true)}
+                      className="text-teal underline font-semibold cursor-pointer hover:text-champagne-700 transition-colors"
+                    >
+                      Size Guide
+                    </button>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-2.5">
                   {sizes.map((sz) => (
@@ -326,6 +329,19 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Standalone Size Guide button if product has no size options but has a size guide */}
+            {sizes.length === 0 && Boolean(product.sizeGuideImage || (product as any).sizeGuideId) && (
+              <div className="pt-2">
+                <button
+                  type="button"
+                  onClick={() => setSizeGuideOpen(true)}
+                  className="text-teal underline text-xs font-semibold cursor-pointer hover:text-champagne-700 transition-colors inline-flex items-center gap-1.5"
+                >
+                  <Ruler className="w-3.5 h-3.5" /> Size Guide
+                </button>
               </div>
             )}
 
