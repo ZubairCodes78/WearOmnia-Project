@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "123456789012",
-    "project_id": "wearomnia-admin",
-    "storage_bucket": "wearomnia-admin.appspot.com"
+    "project_number": "169895470613",
+    "project_id": "wearomnia-e774f",
+    "storage_bucket": "wearomnia-e774f.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:123456789012:android:abcdef0123456789abcdef",
+        "mobilesdk_app_id": "1:169895470613:android:a1dab971b8c13251a0101c",
         "android_client_info": {
           "package_name": "com.wearomnia.wearomnia_admin"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyDummyKeyForWearOmniaAdminApp12345"
+          "current_key": "AIzaSyBLpbmkPd3wAxks0gPUEO6-kFvEMmoiYic"
         }
       ],
       "services": {

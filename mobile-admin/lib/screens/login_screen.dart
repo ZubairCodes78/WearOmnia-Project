@@ -278,10 +278,11 @@ class _LoginScreenState extends State<LoginScreen> {
                         shape: BoxShape.circle,
                         border: Border.all(color: AppColors.primary, width: 1.5),
                       ),
-                      child: const Icon(
-                        Icons.shield_outlined,
-                        size: 44,
-                        color: AppColors.primary,
+                      child: Image.asset(
+                        'assets/images/logo.png',
+                        width: 56,
+                        height: 56,
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),

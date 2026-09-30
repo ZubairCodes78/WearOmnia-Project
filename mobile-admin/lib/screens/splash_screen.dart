@@ -58,10 +58,11 @@ class _SplashScreenState extends State<SplashScreen> {
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.shopping_bag_outlined,
-                size: 56,
-                color: AppColors.primary,
+              child: Image.asset(
+                'assets/images/logo.png',
+                width: 72,
+                height: 72,
+                fit: BoxFit.contain,
               ),
             ),
             const SizedBox(height: 24),
