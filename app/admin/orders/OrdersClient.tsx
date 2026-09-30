@@ -35,10 +35,12 @@ import {
   BulkConfirmModal,
   BulkShipmentModal,
   BulkStatusModal,
+  BulkWhatsAppModal,
   BulkResultModal,
   BulkResultItem,
   BulkSummary,
 } from '@/components/admin/BulkOperationsModals';
+import { validatePhone } from '@/lib/phone';
 
 interface OrderItem {
   id: string;
@@ -54,6 +56,7 @@ interface Order {
   orderNumber: string;
   customerName: string;
   customerPhone: string;
+  customerWhatsapp?: string | null;
   customerEmail: string | null;
   shippingProvince: string;
   shippingCity: string;
@@ -131,6 +134,8 @@ export function OrdersClient({
   const [showBulkConfirmModal, setShowBulkConfirmModal] = useState(false);
   const [showBulkShipmentModal, setShowBulkShipmentModal] = useState(false);
   const [showBulkStatusModal, setShowBulkStatusModal] = useState(false);
+  const [showBulkWhatsAppModal, setShowBulkWhatsAppModal] = useState(false);
+  const [isRetryingWhatsApp, setIsRetryingWhatsApp] = useState(false);
   const [bulkResultModal, setBulkResultModal] = useState<{
     title: string;
     summary: BulkSummary;
@@ -456,16 +461,27 @@ export function OrdersClient({
   };
 
   // 2. Bulk Send WhatsApp Execution
-  const executeBulkSendWhatsApp = async () => {
-    if (selectedIds.length === 0 || isBulkProcessing) return;
+  const executeBulkSendWhatsApp = async (
+    action: 'AUTO' | 'CONFIRMATION' | 'TRACKING' | 'DELIVERED' = 'AUTO',
+    forceResend: boolean = false,
+    customIds?: string[]
+  ) => {
+    const targetIds = customIds || selectedIds;
+    if (targetIds.length === 0 || isBulkProcessing) return;
+
+    setShowBulkWhatsAppModal(false);
     setIsBulkProcessing(true);
-    setBulkProcessingLabel(`Sending WhatsApp messages to ${selectedIds.length} customers...`);
+    setBulkProcessingLabel(`Sending WhatsApp messages to ${targetIds.length} customers...`);
 
     try {
       const res = await fetch('/api/admin/orders/send-lifecycle-whatsapp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ orderIds: selectedIds }),
+        body: JSON.stringify({
+          orderIds: targetIds,
+          expectedAction: action,
+          forceResend,
+        }),
       });
       const data = await res.json();
 
@@ -474,7 +490,7 @@ export function OrdersClient({
       } else {
         const sentIds = new Set(
           (data.results || [])
-            .filter((r: any) => r.success)
+            .filter((r: any) => r.status === 'SENT' || r.success)
             .map((r: any) => r.orderId)
         );
 
@@ -499,19 +515,24 @@ export function OrdersClient({
         setSelectedIds((prev) => prev.filter((id) => !sentIds.has(id)));
 
         setBulkResultModal({
-          title: 'Bulk WhatsApp Dispatch Results',
+          title: 'WhatsApp Bulk Send Complete',
           summary: {
-            total: selectedIds.length,
+            total: targetIds.length,
             successful: data.sent || 0,
-            skipped: 0,
+            skipped: data.skipped || 0,
             failed: data.failed || 0,
           },
           results: (data.results || []).map((r: any) => ({
             orderId: r.orderId,
             orderNumber: r.orderNumber,
-            success: r.success,
-            action: r.action || 'WHATSAPP',
-            message: r.error || (r.success ? 'Message delivered successfully' : 'Failed'),
+            customerName: r.customerName,
+            customerPhone: r.customerPhone,
+            success: r.status === 'SENT' || (r.success && !r.skipped),
+            skipped: r.status === 'SKIPPED' || r.skipped,
+            status: r.status,
+            action: r.action || action,
+            messageId: r.messageId,
+            message: r.error || (r.status === 'SENT' ? 'Message delivered successfully via Meta API' : 'Message dispatched'),
           })),
         });
       }
@@ -519,7 +540,14 @@ export function OrdersClient({
       alert('Network error executing bulk WhatsApp dispatch.');
     } finally {
       setIsBulkProcessing(false);
+      setIsRetryingWhatsApp(false);
     }
+  };
+
+  const handleRetryFailedWhatsApp = async (failedOrderIds: string[]) => {
+    if (failedOrderIds.length === 0) return;
+    setIsRetryingWhatsApp(true);
+    await executeBulkSendWhatsApp('AUTO', true, failedOrderIds);
   };
 
   // 3. Bulk Create PostEx Shipments Execution
@@ -775,6 +803,23 @@ export function OrdersClient({
   const alreadyTrackedShipments = selectedOrders.filter((o) =>
     Boolean(resolveTracking(o))
   ).length;
+
+  const eligibleForWhatsApp = selectedOrders.filter((o) => {
+    const phone = o.customerWhatsapp || o.customerPhone;
+    return phone && validatePhone(phone);
+  }).length;
+  const skippedForWhatsApp = selectedOrders.length - eligibleForWhatsApp;
+  const skippedWhatsAppReasons = selectedOrders
+    .filter((o) => {
+      const phone = o.customerWhatsapp || o.customerPhone;
+      return !phone || !validatePhone(phone);
+    })
+    .map((o) => {
+      const phone = o.customerWhatsapp || o.customerPhone;
+      return !phone
+        ? `#${o.orderNumber}: Missing customer phone number`
+        : `#${o.orderNumber}: Invalid Pakistani phone format (${phone})`;
+    });
 
   return (
     <div className="space-y-6 text-[#FAF8F5] font-sans">
@@ -1439,7 +1484,7 @@ export function OrdersClient({
         totalCount={filteredOrders.length}
         onClearSelection={() => setSelectedIds([])}
         onConfirmOrders={() => setShowBulkConfirmModal(true)}
-        onSendWhatsApp={executeBulkSendWhatsApp}
+        onSendWhatsApp={() => setShowBulkWhatsAppModal(true)}
         onCreatePostEx={() => setShowBulkShipmentModal(true)}
         onPrintLabels={handleBulkPrintLabels}
         onDownloadInvoices={handleBulkDownloadInvoices}
@@ -1482,7 +1527,19 @@ export function OrdersClient({
         isProcessing={isBulkProcessing}
       />
 
-      {/* 4. Bulk Result Summary Modal */}
+      {/* 4. Bulk WhatsApp Pre-Send Confirmation Modal */}
+      <BulkWhatsAppModal
+        isOpen={showBulkWhatsAppModal}
+        onClose={() => setShowBulkWhatsAppModal(false)}
+        onConfirm={(action, forceResend) => executeBulkSendWhatsApp(action, forceResend)}
+        totalSelected={selectedIds.length}
+        eligibleCount={eligibleForWhatsApp}
+        skippedCount={skippedForWhatsApp}
+        skippedReasons={skippedWhatsAppReasons}
+        isProcessing={isBulkProcessing}
+      />
+
+      {/* 5. Bulk Result Summary Modal with Retry Failed */}
       {bulkResultModal && (
         <BulkResultModal
           isOpen={Boolean(bulkResultModal)}
@@ -1490,6 +1547,8 @@ export function OrdersClient({
           title={bulkResultModal.title}
           summary={bulkResultModal.summary}
           results={bulkResultModal.results}
+          onRetryFailed={handleRetryFailedWhatsApp}
+          isRetrying={isRetryingWhatsApp}
         />
       )}
 

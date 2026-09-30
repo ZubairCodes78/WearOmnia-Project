@@ -58,16 +58,22 @@ export async function POST(req: NextRequest) {
     const value = changes?.value;
     const message = value?.messages?.[0];
 
-    // Check status updates (DELIVERED, READ)
+    // Check status updates (SENT, DELIVERED, READ, FAILED)
     const statusUpdate = value?.statuses?.[0];
     if (statusUpdate) {
       const messageId = statusUpdate.id;
       const newStatus = statusUpdate.status?.toUpperCase(); // DELIVERED, READ, FAILED
+      const errorObj = statusUpdate.errors?.[0];
+      const errorDetails = errorObj ? `Meta Error ${errorObj.code}: ${errorObj.title || errorObj.message}` : null;
 
       if (messageId && newStatus) {
         await prisma.notificationLog.updateMany({
           where: { whatsappMessageId: messageId },
-          data: { status: newStatus, updatedAt: new Date() },
+          data: {
+            status: newStatus,
+            errorDetails: errorDetails || undefined,
+            updatedAt: new Date(),
+          },
         });
       }
       return NextResponse.json({ status: 'STATUS_LOGGED' });

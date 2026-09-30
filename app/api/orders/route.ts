@@ -293,11 +293,17 @@ export async function POST(req: Request) {
       }
     }
 
-    // 8. Dispatch Step 1 & Step 2 WhatsApp Notifications & Real-Time SSE
+    // 8. Dispatch Official Phase 4 WhatsApp Order Confirmation & Real-Time SSE
     try {
-      await NotificationService.sendOrderConfirmationRequest(order);
+      const fullOrder = await prisma.order.findUnique({
+        where: { id: order.id },
+        include: { items: true },
+      });
+      if (fullOrder) {
+        await NotificationService.sendOrderConfirmation(fullOrder);
+      }
     } catch (e) {
-      console.error('[WhatsApp Trigger Failed - Fault Tolerant Catch]', e);
+      console.error('[WhatsApp Order Confirmation Trigger Failed - Fault Tolerant Catch]', e);
     }
 
     const adminNotif = await prisma.adminNotification.create({

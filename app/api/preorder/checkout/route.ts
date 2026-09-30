@@ -327,9 +327,15 @@ export async function POST(req: Request) {
       }
     }
 
-    // 15. Notifications
+    // 15. Notifications (Phase 4 Detailed Pre-Order Confirmation)
     try {
-      await NotificationService.sendPreOrderReceived(order);
+      const fullOrder = await prisma.order.findUnique({
+        where: { id: order.id },
+        include: { items: true },
+      });
+      if (fullOrder) {
+        await NotificationService.sendOrderConfirmation(fullOrder);
+      }
     } catch (e) {
       console.error('[Pre-Order WhatsApp Error - Non-fatal]', e);
     }

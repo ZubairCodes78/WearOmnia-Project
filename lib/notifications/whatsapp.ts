@@ -1,6 +1,7 @@
 import { NotificationProvider, NotificationPayload, NotificationResult } from './types';
 import { getSiteSettings } from '@/lib/settings';
 import { normalizePhone } from '@/lib/phone';
+import { buildOrderConfirmationMessage } from './whatsapp-provider';
 
 export class WhatsAppNotificationProvider implements NotificationProvider {
   name = 'WhatsApp';
@@ -33,10 +34,17 @@ export class WhatsAppNotificationProvider implements NotificationProvider {
       }
 
       case 'NEW_ORDER_CUSTOMER': {
-        const text = `Thank you for shopping with WearOMNIA.\n\n` +
-          `Your order ${payload.orderNumber} has been received successfully.\n\n` +
-          `Our team will review your order shortly.\n\n` +
-          `Thank you.`;
+        const text = buildOrderConfirmationMessage({
+          customerName: payload.customerName,
+          orderNumber: payload.orderNumber,
+          items: payload.items,
+          subtotal: payload.totalAmount || 0,
+          discountAmount: 0,
+          shippingFee: 0,
+          totalAmount: payload.totalAmount || 0,
+          shippingAddress: payload.city || 'Pakistan',
+          shippingCity: payload.city || 'Pakistan',
+        });
 
         return { text, recipientPhone };
       }

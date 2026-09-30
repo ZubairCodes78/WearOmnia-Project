@@ -15,6 +15,11 @@ export interface NotificationResult {
   whatsappUrl?: string;
   error?: string;
   simulated?: boolean;
+  metaCode?: number;
+  metaSubcode?: number;
+  isTransient?: boolean;
+  skipped?: boolean;
+  skippedReason?: string;
 }
 
 export type NotificationEventType =
@@ -55,6 +60,31 @@ export interface WhatsAppSettings {
   whatsapp_customer_notify_enabled: boolean;
   whatsapp_admin_notify_enabled: boolean;
   whatsapp_sound_enabled: boolean;
+  whatsapp_order_confirmation_template?: string;
+  whatsapp_order_status_template?: string;
+}
+
+export interface BulkRecipientResult {
+  orderId: string;
+  orderNumber: string;
+  customerName: string;
+  customerPhone: string;
+  status: 'SENT' | 'FAILED' | 'SKIPPED';
+  action: string;
+  messageId?: string;
+  error?: string;
+  skippedReason?: string;
+  skipped?: boolean;
+  isTransient?: boolean;
+}
+
+export interface BulkWhatsAppResponse {
+  success: boolean;
+  total: number;
+  sent: number;
+  failed: number;
+  skipped: number;
+  results: BulkRecipientResult[];
 }
 
 export interface NotificationProvider {
@@ -68,6 +98,8 @@ export interface INotificationProvider {
   providerType: NotificationProviderType;
   sendConfirmationRequest(order: any, settings: WhatsAppSettings): Promise<NotificationResult>;
   sendConfirmationSuccess(order: any, settings: WhatsAppSettings): Promise<NotificationResult>;
+  sendOrderConfirmation?(order: any, settings: WhatsAppSettings): Promise<NotificationResult>;
   sendAdminAlert(order: any, message: string, settings: WhatsAppSettings): Promise<NotificationResult>;
   sendStatusUpdate(order: any, newStatus: string, settings: WhatsAppSettings): Promise<NotificationResult>;
 }
+
