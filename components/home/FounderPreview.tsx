@@ -16,13 +16,13 @@ export const FounderPreview: React.FC = () => {
           {/* Founder Portrait */}
           <div className="lg:col-span-5 flex justify-center">
             <ScrollReveal variant="fade-up" className="w-full max-w-sm sm:max-w-md">
-              <div className="relative aspect-[3/4] rounded-3xl overflow-hidden border border-champagne/30 shadow-2xl shadow-black/40 group">
+              <div className="relative aspect-[1181/1332] rounded-3xl overflow-hidden border border-champagne/30 shadow-2xl shadow-black/40 group">
                 <Image
-                  src="/images/founder.webp"
+                  src="/images/founder.png"
                   alt="Virago Baji, Founder of WearOMNIA"
                   fill
                   sizes="(max-width: 768px) 90vw, 420px"
-                  quality={85}
+                  quality={90}
                   loading="lazy"
                   className="object-cover object-center group-hover:scale-102 transition-transform duration-700 ease-out"
                 />

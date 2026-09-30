@@ -25,9 +25,9 @@ export const metadata: Metadata = {
     type: 'profile',
     images: [
       {
-        url: '/images/founder.webp',
-        width: 1200,
-        height: 1500,
+        url: '/images/founder.png',
+        width: 1181,
+        height: 1332,
         alt: 'Virago Baji, Founder of WearOMNIA',
       },
     ],
@@ -62,32 +62,33 @@ export default function FounderPage() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
               {/* Left / Top on mobile: Large Founder Portrait */}
-              <div className="lg:col-span-5 flex justify-center order-1 lg:order-1">
+              <div className="lg:col-span-5 flex flex-col items-center order-1 lg:order-1">
                 <div className="w-full max-w-sm sm:max-w-md">
-                  <div className="relative aspect-[3/4] rounded-3xl overflow-hidden shadow-2xl border border-champagne/40 bg-sand/20 group">
+                  <div className="relative aspect-[1181/1332] rounded-3xl overflow-hidden shadow-2xl border-2 border-champagne/40 bg-[#06191B] group">
                     <Image
-                      src="/images/founder.webp"
+                      src="/images/founder.png"
                       alt="Virago Baji, Founder of WearOMNIA"
                       fill
                       priority
-                      sizes="(max-width: 768px) 90vw, (max-width: 1200px) 45vw, 480px"
+                      sizes="(max-width: 640px) 90vw, (max-width: 1024px) 45vw, 480px"
                       quality={90}
                       className="object-cover object-center group-hover:scale-102 transition-transform duration-700 ease-out"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#0A2528]/85 via-transparent to-transparent pointer-events-none" />
-                    
-                    {/* Portrait Badge */}
-                    <div className="absolute bottom-6 left-6 right-6">
-                      <span className="text-[10px] uppercase font-bold tracking-[0.25em] text-champagne block">
+                  </div>
+
+                  {/* Editorial Caption Card (unobstructed, below photo) */}
+                  <div className="mt-3.5 bg-[#06191B]/90 border border-champagne/25 rounded-2xl px-4 py-3 flex items-center justify-between shadow-lg">
+                    <div>
+                      <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-[0.25em] text-champagne block">
                         Founder &amp; Creative Lead
                       </span>
-                      <h3 className="font-serif text-2xl font-bold text-offwhite mt-0.5">
+                      <h3 className="font-serif text-lg sm:text-xl font-bold text-offwhite mt-0.5">
                         Virago Baji
                       </h3>
-                      <p className="text-xs text-offwhite/80 font-sans mt-0.5">
-                        WearOMNIA Modest Luxury
-                      </p>
                     </div>
+                    <span className="text-[10px] sm:text-xs text-champagne font-mono border border-champagne/30 px-2.5 py-1 rounded-full bg-champagne/10">
+                      WearOMNIA
+                    </span>
                   </div>
                 </div>
               </div>
