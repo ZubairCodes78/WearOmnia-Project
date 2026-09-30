@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import { prisma } from '@/lib/prisma';
 import { ReportsClient } from './ReportsClient';
 import { isValidActiveShipment, getCanonicalCourierStatus } from '@/lib/courier/canonical-status';
+import { getEffectiveSellingPrice } from '@/lib/pricing';
 
 export const metadata: Metadata = {
   title: 'Executive Analytics & Reports | WearOMNIA Enterprise Admin',
@@ -44,7 +45,7 @@ export default async function ReportsPage() {
   const stockValuation = products.reduce(
     (sum, p) =>
       sum +
-      p.basePrice *
+      getEffectiveSellingPrice(p) *
         (p.variants.length > 0
           ? p.variants.reduce((vSum, v) => vSum + v.stock, 0)
           : p.stockQuantity),

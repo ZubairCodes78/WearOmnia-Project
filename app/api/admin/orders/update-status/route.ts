@@ -70,6 +70,63 @@ export async function POST(req: Request) {
       include: { items: true, timeline: { orderBy: { createdAt: 'desc' } } },
     });
 
+    // Handle inventory movements on status transitions
+    if (status && status !== previousOrder.status) {
+      // 1. Order Cancelled -> Restore inventory
+      if (status === 'CANCELLED' && previousOrder.status !== 'CANCELLED') {
+        for (const item of previousOrder.items) {
+          if (item.productId && item.quantity > 0) {
+            try {
+              const updatedProd = await prisma.product.update({
+                where: { id: item.productId },
+                data: {
+                  stockQuantity: { increment: item.quantity },
+                  inStock: true,
+                },
+              });
+
+              await prisma.inventoryLog.create({
+                data: {
+                  productId: item.productId,
+                  changeQuantity: item.quantity,
+                  stockAfter: updatedProd.stockQuantity,
+                  reason: 'ORDER_CANCELLED',
+                },
+              });
+            } catch (invErr) {
+              console.error(`[Inventory Reversal Error on Cancel] item ${item.id}:`, invErr);
+            }
+          }
+        }
+      }
+      // 2. Order Un-cancelled (Reinstated from CANCELLED to active) -> Re-decrement inventory
+      else if (previousOrder.status === 'CANCELLED' && status !== 'CANCELLED') {
+        for (const item of previousOrder.items) {
+          if (item.productId && item.quantity > 0) {
+            try {
+              const updatedProd = await prisma.product.update({
+                where: { id: item.productId },
+                data: {
+                  stockQuantity: { decrement: item.quantity },
+                },
+              });
+
+              await prisma.inventoryLog.create({
+                data: {
+                  productId: item.productId,
+                  changeQuantity: -item.quantity,
+                  stockAfter: updatedProd.stockQuantity,
+                  reason: 'ORDER_REINSTATED',
+                },
+              });
+            } catch (invErr) {
+              console.error(`[Inventory Decrement on Uncancel] item ${item.id}:`, invErr);
+            }
+          }
+        }
+      }
+    }
+
     // Audit log for every change
     const changeDetails = [];
     if (status && status !== previousOrder.status) {

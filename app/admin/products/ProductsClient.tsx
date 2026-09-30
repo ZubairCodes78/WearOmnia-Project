@@ -9,6 +9,7 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import { AdminEmptyState } from '@/components/admin/AdminEmptyState';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { calculateStockValuation, getEffectiveSellingPrice, formatPKR } from '@/lib/pricing';
 
 interface ProductImage {
   id?: string;
@@ -490,12 +491,36 @@ export function ProductsClient({ initialProducts, categories = [], collections =
                       </td>
                       <td className="py-3.5 px-4 font-mono text-xs text-[#D4AF37] font-bold">{p.sku}</td>
                       <td className="py-3.5 px-4">
-                        <div className="flex flex-col">
-                          <span className="font-bold font-mono text-[#FAF8F5]">Rs. {p.basePrice.toLocaleString()}</span>
-                          {p.discountPrice && (
-                            <span className="text-xs text-rose-400 line-through font-mono">Rs. {p.discountPrice.toLocaleString()}</span>
-                          )}
-                        </div>
+                        {(() => {
+                          const val = calculateStockValuation({
+                            basePrice: p.basePrice,
+                            discountPrice: p.discountPrice,
+                            stockQuantity: p.stockQuantity,
+                          });
+                          return (
+                            <div className="flex flex-col">
+                              {val.hasDiscount ? (
+                                <>
+                                  <span className="font-bold font-mono text-emerald-400">
+                                    Rs. {val.effectiveSellingPrice.toLocaleString()}
+                                  </span>
+                                  <div className="flex items-center gap-1.5 text-[11px]">
+                                    <span className="line-through font-mono text-[#FAF8F5]/40">
+                                      Rs. {val.originalPrice.toLocaleString()}
+                                    </span>
+                                    <span className="text-[10px] text-emerald-400 font-semibold">
+                                      -Rs. {val.discountAmount.toLocaleString()}
+                                    </span>
+                                  </div>
+                                </>
+                              ) : (
+                                <span className="font-bold font-mono text-[#FAF8F5]">
+                                  Rs. {val.effectiveSellingPrice.toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
                       <td className="py-3.5 px-4">
                         <span
@@ -661,6 +686,44 @@ export function ProductsClient({ initialProducts, categories = [], collections =
                   />
                 </div>
               </div>
+
+              {/* Live Inventory Valuation Preview */}
+              {(() => {
+                const liveVal = calculateStockValuation({
+                  basePrice: parseFloat(formBasePrice) || 0,
+                  discountPrice: formDiscountPrice ? parseFloat(formDiscountPrice) : null,
+                  stockQuantity: parseInt(formStock, 10) || 0,
+                });
+                return (
+                  <div className="bg-[#0A2528] border border-[#D4AF37]/20 rounded-xl p-3.5 text-xs">
+                    <span className="text-[10px] uppercase font-bold text-[#D4AF37] block tracking-wider mb-2">
+                      Live Stock Valuation Breakdown
+                    </span>
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                      <div className="bg-[#06191B] p-2 rounded-lg border border-white/5">
+                        <span className="text-[#FAF8F5]/60 block text-[10px]">Original Price</span>
+                        <span className="font-mono font-bold text-[#FAF8F5]">Rs. {liveVal.originalPrice.toLocaleString()}</span>
+                      </div>
+                      <div className="bg-[#06191B] p-2 rounded-lg border border-white/5">
+                        <span className="text-[#FAF8F5]/60 block text-[10px]">Effective Selling Price</span>
+                        <span className="font-mono font-bold text-emerald-400">Rs. {liveVal.effectiveSellingPrice.toLocaleString()}</span>
+                      </div>
+                      <div className="bg-[#06191B] p-2 rounded-lg border border-white/5">
+                        <span className="text-[#FAF8F5]/60 block text-[10px]">Discount</span>
+                        <span className="font-mono font-bold text-[#D4AF37]">
+                          {liveVal.hasDiscount ? `Rs. ${liveVal.discountAmount.toLocaleString()}` : 'None'}
+                        </span>
+                      </div>
+                      <div className="bg-[#06191B] p-2 rounded-lg border border-emerald-500/20">
+                        <span className="text-emerald-300/80 block text-[10px]">Stock Selling Value</span>
+                        <span className="font-mono font-bold text-emerald-400">
+                          Rs. {liveVal.stockSellingValue.toLocaleString()}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })()}
 
               {/* Category, Collection & Status */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

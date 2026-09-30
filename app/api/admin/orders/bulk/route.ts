@@ -492,13 +492,15 @@ export async function POST(req: NextRequest) {
         }
 
         try {
-          // Revert product inventory if stock was deducted
-          for (const item of order.items) {
-            if (item.productId) {
-              await prisma.product.update({
-                where: { id: item.productId },
-                data: { stockQuantity: { increment: item.quantity } },
-              }).catch(() => {}); // Catch missing product gracefully
+          // Revert product inventory if stock was deducted (order was not already cancelled)
+          if (order.status !== 'CANCELLED') {
+            for (const item of order.items) {
+              if (item.productId) {
+                await prisma.product.update({
+                  where: { id: item.productId },
+                  data: { stockQuantity: { increment: item.quantity } },
+                }).catch(() => {}); // Catch missing product gracefully
+              }
             }
           }
 

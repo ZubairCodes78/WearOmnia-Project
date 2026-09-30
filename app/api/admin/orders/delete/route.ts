@@ -66,35 +66,38 @@ export async function POST(req: Request) {
     }
 
     // 3. Inventory Stock Reversal
-    // Reverse deducted inventory for all items in this order
-    for (const item of order.items) {
-      if (item.productId && item.quantity > 0) {
-        try {
-          const product = await prisma.product.findUnique({
-            where: { id: item.productId },
-            select: { id: true, stockQuantity: true },
-          });
-
-          if (product) {
-            const updatedProd = await prisma.product.update({
+    // Reverse deducted inventory for all items in this order ONLY if inventory was actually deducted
+    // (i.e. order was not already CANCELLED, which already restored inventory)
+    if (order.status !== 'CANCELLED') {
+      for (const item of order.items) {
+        if (item.productId && item.quantity > 0) {
+          try {
+            const product = await prisma.product.findUnique({
               where: { id: item.productId },
-              data: {
-                stockQuantity: { increment: item.quantity },
-                inStock: true,
-              },
+              select: { id: true, stockQuantity: true },
             });
 
-            await prisma.inventoryLog.create({
-              data: {
-                productId: item.productId,
-                changeQuantity: item.quantity,
-                stockAfter: updatedProd.stockQuantity,
-                reason: 'ORDER_DELETED',
-              },
-            });
+            if (product) {
+              const updatedProd = await prisma.product.update({
+                where: { id: item.productId },
+                data: {
+                  stockQuantity: { increment: item.quantity },
+                  inStock: true,
+                },
+              });
+
+              await prisma.inventoryLog.create({
+                data: {
+                  productId: item.productId,
+                  changeQuantity: item.quantity,
+                  stockAfter: updatedProd.stockQuantity,
+                  reason: 'ORDER_DELETED',
+                },
+              });
+            }
+          } catch (invErr) {
+            console.error(`[Inventory Reversal Error] item ${item.id}:`, invErr);
           }
-        } catch (invErr) {
-          console.error(`[Inventory Reversal Error] item ${item.id}:`, invErr);
         }
       }
     }

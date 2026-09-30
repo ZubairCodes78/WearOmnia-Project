@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { OrderStatusBadge } from '../orders/OrderStatusBadge';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { getEffectiveSellingPrice } from '@/lib/pricing';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,7 +64,7 @@ export default async function AdminDashboardPage() {
       _count: { id: true },
       _avg: { totalAmount: true },
     }),
-    prisma.product.findMany({ select: { stockQuantity: true, basePrice: true } }),
+    prisma.product.findMany({ select: { stockQuantity: true, basePrice: true, discountPrice: true } }),
     prisma.shipment.aggregate({
       where: {
         status: { in: ['DELIVERED', 'Delivered'] },
@@ -87,7 +88,7 @@ export default async function AdminDashboardPage() {
   const totalRevenue = salesAggregate._sum.totalAmount || 0;
   const validOrdersCount = salesAggregate._count.id || 0;
   const averageOrderValue = Math.round(salesAggregate._avg.totalAmount || 0);
-  const totalStockValuation = allProducts.reduce((sum, p) => sum + p.stockQuantity * p.basePrice, 0);
+  const totalStockValuation = allProducts.reduce((sum, p) => sum + p.stockQuantity * getEffectiveSellingPrice(p), 0);
   const pendingSettlementValue = unsettledAggregate._sum.codAmount || 0;
   const unsettledCount = unsettledAggregate._count.id || 0;
 

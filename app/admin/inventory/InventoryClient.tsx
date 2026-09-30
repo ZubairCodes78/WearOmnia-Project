@@ -12,7 +12,9 @@ import {
   Minus,
   FileText,
   TrendingDown,
+  TrendingUp,
   Banknote,
+  Wallet,
   CheckCircle2,
   X,
   Loader2,
@@ -22,6 +24,12 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import { AdminEmptyState } from '@/components/admin/AdminEmptyState';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import {
+  calculateStockValuation,
+  calculateInventoryTotals,
+  getEffectiveSellingPrice,
+  formatPKR,
+} from '@/lib/pricing';
 
 interface ProductVariant {
   id: string;
@@ -37,6 +45,8 @@ interface Product {
   title: string;
   sku: string;
   basePrice: number;
+  discountPrice?: number | null;
+  costPrice?: number | null;
   stockQuantity: number;
   reservedStock?: number;
   inStock: boolean;
@@ -70,10 +80,13 @@ export function InventoryClient({ initialProducts, totalLogsCount }: InventoryCl
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState<{ text: string; isError?: boolean } | null>(null);
 
-  const totalStockUnits = products.reduce((sum, p) => sum + p.stockQuantity, 0);
-  const totalValuation = products.reduce((sum, p) => sum + p.stockQuantity * p.basePrice, 0);
-  const lowStockCount = products.filter((p) => p.stockQuantity <= 5 && p.stockQuantity > 0).length;
-  const outOfStockCount = products.filter((p) => p.stockQuantity <= 0).length;
+  const inventoryMetrics = React.useMemo(() => calculateInventoryTotals(products), [products]);
+  const totalStockUnits = inventoryMetrics.totalUnits;
+  const stockSellingValue = inventoryMetrics.totalSellingValue;
+  const stockCostValue = inventoryMetrics.totalCostValue;
+  const potentialGrossProfit = inventoryMetrics.potentialGrossProfit;
+  const lowStockCount = inventoryMetrics.lowStockCount;
+  const outOfStockCount = inventoryMetrics.outOfStockCount;
 
   // Reset page when filters change
   React.useEffect(() => {
@@ -194,49 +207,77 @@ export function InventoryClient({ initialProducts, totalLogsCount }: InventoryCl
       />
 
       {/* KPI Cards Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-        <div className="bg-[#0A2528] p-5 sm:p-6 rounded-2xl border border-white/10 hover:border-[#D4AF37]/35 transition-colors flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-[#D4AF37]">Total Available Stock</span>
-            <div className="w-8 h-8 rounded-lg bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center">
-              <Boxes className="w-4 h-4" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        {/* Total Stock Units */}
+        <div className="bg-[#0A2528] p-4 sm:p-5 rounded-2xl border border-white/10 hover:border-[#D4AF37]/35 transition-colors flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-[#D4AF37]">Total Units</span>
+            <div className="w-7 h-7 rounded-lg bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center">
+              <Boxes className="w-3.5 h-3.5" />
             </div>
           </div>
-          <p className="font-serif text-2xl sm:text-3xl font-bold text-[#FAF8F5]">{totalStockUnits.toLocaleString()} Units</p>
-          <span className="text-xs text-[#FAF8F5]/60 font-medium pt-3 mt-3 border-t border-white/5">Across {products.length} Catalog Items</span>
+          <p className="font-serif text-xl sm:text-2xl font-bold text-[#FAF8F5]">{totalStockUnits.toLocaleString()} Units</p>
+          <span className="text-[11px] text-[#FAF8F5]/60 font-medium pt-2 mt-2 border-t border-white/5">Across {products.length} Products</span>
         </div>
 
-        <div className="bg-[#0A2528] p-5 sm:p-6 rounded-2xl border border-white/10 hover:border-emerald-500/35 transition-colors flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-[#D4AF37]">Catalog Valuation</span>
-            <div className="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
-              <Banknote className="w-4 h-4" />
+        {/* Stock Selling Value */}
+        <div className="bg-[#0A2528] p-4 sm:p-5 rounded-2xl border border-white/10 hover:border-emerald-500/35 transition-colors flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-400">Stock Selling Value</span>
+            <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+              <Banknote className="w-3.5 h-3.5" />
             </div>
           </div>
-          <p className="font-serif text-2xl sm:text-3xl font-bold text-emerald-400">Rs. {totalValuation.toLocaleString()}</p>
-          <span className="text-xs text-emerald-300/80 font-medium pt-3 mt-3 border-t border-white/5">Total Retail Inventory Value</span>
+          <p className="font-serif text-xl sm:text-2xl font-bold text-emerald-400">{formatPKR(stockSellingValue)}</p>
+          <span className="text-[11px] text-emerald-300/80 font-medium pt-2 mt-2 border-t border-white/5">Effective Discounted Value</span>
         </div>
 
-        <div className="bg-[#0A2528] p-5 sm:p-6 rounded-2xl border border-white/10 hover:border-amber-500/35 transition-colors flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400">Low Stock Alerts</span>
-            <div className="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center">
-              <AlertTriangle className="w-4 h-4" />
+        {/* Stock Cost Value */}
+        <div className="bg-[#0A2528] p-4 sm:p-5 rounded-2xl border border-white/10 hover:border-cyan-500/35 transition-colors flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-cyan-400">Stock Cost Value</span>
+            <div className="w-7 h-7 rounded-lg bg-cyan-500/15 text-cyan-400 flex items-center justify-center">
+              <Wallet className="w-3.5 h-3.5" />
             </div>
           </div>
-          <p className="font-serif text-2xl sm:text-3xl font-bold text-amber-400">{lowStockCount}</p>
-          <span className="text-xs text-amber-300 font-medium pt-3 mt-3 border-t border-white/5">Items with &le; 5 units remaining</span>
+          <p className="font-serif text-xl sm:text-2xl font-bold text-cyan-400">{formatPKR(stockCostValue)}</p>
+          <span className="text-[11px] text-cyan-300/80 font-medium pt-2 mt-2 border-t border-white/5">Inventory Cost Base</span>
         </div>
 
-        <div className="bg-[#0A2528] p-5 sm:p-6 rounded-2xl border border-white/10 hover:border-red-500/35 transition-colors flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
+        {/* Potential Gross Profit */}
+        <div className="bg-[#0A2528] p-4 sm:p-5 rounded-2xl border border-white/10 hover:border-[#D4AF37]/35 transition-colors flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-[#D4AF37]">Potential Profit</span>
+            <div className="w-7 h-7 rounded-lg bg-[#D4AF37]/15 text-[#D4AF37] flex items-center justify-center">
+              <TrendingUp className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <p className="font-serif text-xl sm:text-2xl font-bold text-[#D4AF37]">{formatPKR(potentialGrossProfit)}</p>
+          <span className="text-[11px] text-[#D4AF37]/80 font-medium pt-2 mt-2 border-t border-white/5">Selling Value - Cost Value</span>
+        </div>
+
+        {/* Low Stock Alerts */}
+        <div className="bg-[#0A2528] p-4 sm:p-5 rounded-2xl border border-white/10 hover:border-amber-500/35 transition-colors flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] uppercase font-bold tracking-wider text-amber-400">Low Stock</span>
+            <div className="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center">
+              <AlertTriangle className="w-3.5 h-3.5" />
+            </div>
+          </div>
+          <p className="font-serif text-xl sm:text-2xl font-bold text-amber-400">{lowStockCount}</p>
+          <span className="text-[11px] text-amber-300 font-medium pt-2 mt-2 border-t border-white/5">&le; 5 units remaining</span>
+        </div>
+
+        {/* Out of Stock */}
+        <div className="bg-[#0A2528] p-4 sm:p-5 rounded-2xl border border-white/10 hover:border-red-500/35 transition-colors flex flex-col justify-between">
+          <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] uppercase font-bold tracking-wider text-red-400">Out of Stock</span>
-            <div className="w-8 h-8 rounded-lg bg-red-500/15 text-red-400 flex items-center justify-center">
-              <TrendingDown className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-red-500/15 text-red-400 flex items-center justify-center">
+              <TrendingDown className="w-3.5 h-3.5" />
             </div>
           </div>
-          <p className="font-serif text-2xl sm:text-3xl font-bold text-red-400">{outOfStockCount}</p>
-          <span className="text-xs text-red-300 font-medium pt-3 mt-3 border-t border-white/5">Requires immediate restocking</span>
+          <p className="font-serif text-xl sm:text-2xl font-bold text-red-400">{outOfStockCount}</p>
+          <span className="text-[11px] text-red-300 font-medium pt-2 mt-2 border-t border-white/5">0 units available</span>
         </div>
       </div>
 
@@ -359,10 +400,65 @@ export function InventoryClient({ initialProducts, totalLogsCount }: InventoryCl
                         >
                           {isOutOfStock ? 'Out of Stock' : isLowStock ? `⚠️ Low Stock (${p.stockQuantity})` : `${p.stockQuantity} Units`}
                         </span>
-                        <span className="text-xs font-mono font-bold text-[#D4AF37]">
-                          Rs. {p.basePrice.toLocaleString()}
-                        </span>
+                        {(() => {
+                          const val = calculateStockValuation({
+                            basePrice: p.basePrice,
+                            discountPrice: p.discountPrice,
+                            costPrice: (p as any).costPrice,
+                            stockQuantity: p.stockQuantity,
+                          });
+                          return (
+                            <div className="text-right">
+                              {val.hasDiscount ? (
+                                <div>
+                                  <span className="text-xs font-mono font-bold text-emerald-400 block">
+                                    Rs. {val.effectiveSellingPrice.toLocaleString()}
+                                  </span>
+                                  <span className="text-[10px] font-mono text-[#FAF8F5]/40 line-through">
+                                    Rs. {val.originalPrice.toLocaleString()}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="text-xs font-mono font-bold text-[#D4AF37]">
+                                  Rs. {val.effectiveSellingPrice.toLocaleString()}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </div>
+
+                      {/* Stock Selling Value & Financial Breakdown */}
+                      {(() => {
+                        const val = calculateStockValuation({
+                          basePrice: p.basePrice,
+                          discountPrice: p.discountPrice,
+                          costPrice: (p as any).costPrice,
+                          stockQuantity: p.stockQuantity,
+                        });
+                        return (
+                          <div className="bg-[#06191B] p-2.5 rounded-xl border border-white/5 mt-2.5 grid grid-cols-2 gap-2 text-xs">
+                            <div>
+                              <span className="text-[9px] text-[#FAF8F5]/50 block uppercase tracking-wider">Stock Selling Value</span>
+                              <span className="font-mono font-bold text-emerald-400 text-xs">
+                                Rs. {val.stockSellingValue.toLocaleString()}
+                              </span>
+                              <span className="text-[9px] text-[#FAF8F5]/40 block">
+                                {val.stockQuantity} &times; Rs. {val.effectiveSellingPrice.toLocaleString()}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-[9px] text-[#FAF8F5]/50 block uppercase tracking-wider">Potential Profit</span>
+                              <span className="font-mono font-bold text-[#D4AF37] text-xs">
+                                {val.costPrice > 0 ? `Rs. ${val.potentialGrossProfit.toLocaleString()}` : `Rs. ${val.stockSellingValue.toLocaleString()}`}
+                              </span>
+                              <span className="text-[9px] text-[#FAF8F5]/40 block">
+                                {val.costPrice > 0 ? `Cost: Rs. ${val.costPrice.toLocaleString()}/ea` : 'Cost not specified'}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
                   </div>
 
