@@ -4,6 +4,7 @@ import { defaultPaymentGateway } from '@/lib/payments/cod';
 import { recordAuditLog } from '@/lib/audit';
 import { NotificationService } from '@/lib/notifications/notification-service';
 import { broadcastAdminEvent } from '@/lib/events/event-emitter';
+import { sendAdminPushNotification } from '@/lib/notifications/fcm';
 import { getSiteSettings } from '@/lib/settings';
 import { normalizePhone, validatePhone } from '@/lib/phone';
 import { generateNextOrderNumber } from '@/lib/order-number';
@@ -316,6 +317,22 @@ export async function POST(req: Request) {
       sound: true,
       timestamp: new Date().toISOString(),
     });
+
+    // Send instant FCM push notification to all active admin devices (deduplicated)
+    sendAdminPushNotification({
+      idempotencyKey: `NEW_ORDER:${order.id}`,
+      type: 'NEW_ORDER',
+      orderId: order.id,
+      title: `🛍️ New Order #${orderNumber}`,
+      body: `Rs. ${totalAmount.toLocaleString()} • ${fullName} (${city})`,
+      data: {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customerName: fullName,
+        city: city,
+        amount: String(totalAmount),
+      },
+    }).catch(err => console.error('[FCM Push Error]', err));
 
     await recordAuditLog('ORDER_PLACED', 'Order', order.id, `Order ${orderNumber} placed for Rs. ${totalAmount}`);
 

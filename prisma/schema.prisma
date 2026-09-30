@@ -24,6 +24,7 @@ model Admin {
   twoFactorSecret       String?   // Base32 TOTP secret
   twoFactorRecoveryCodes String?  // JSON string array of bcrypt-hashed recovery codes
   twoFactorEnabledAt    DateTime?
+  devices               AdminDevice[]
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 }
@@ -479,3 +480,42 @@ model PreOrderPaymentMethod {
   @@index([isActive])
   @@index([displayOrder])
 }
+
+// ─────────────────────────────────────────────────────
+// Mobile Admin Push Notifications & Device Tokens
+// ─────────────────────────────────────────────────────
+
+model AdminDevice {
+  id          String   @id @default(uuid())
+  adminId     String
+  admin       Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  fcmToken    String   @unique
+  deviceType  String?  // android, ios, web
+  deviceName  String?  // e.g. "Pixel 8 Pro", "iPhone 15"
+  deviceId    String?  // Hardware / client instance ID
+  isActive    Boolean  @default(true)
+  lastUsedAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([adminId])
+  @@index([fcmToken])
+  @@index([isActive])
+}
+
+model AdminPushNotificationLog {
+  id             String   @id @default(uuid())
+  idempotencyKey String   @unique // e.g. "NEW_ORDER:orderId"
+  type           String   // NEW_ORDER, STATUS_UPDATE
+  orderId        String?
+  title          String
+  body           String
+  tokensCount    Int      @default(0)
+  successCount   Int      @default(0)
+  failureCount   Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  @@index([idempotencyKey])
+  @@index([createdAt])
+}
+

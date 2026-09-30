@@ -21,16 +21,17 @@ export async function POST(req: Request) {
   const clientIp = getClientIp(req);
 
   try {
+    const body = await req.json().catch(() => ({}));
+    const { code, isRecoveryCode, challengeToken } = body;
+
     // 1. Verify that the temporary 2FA challenge is active and valid (5-minute window)
-    const adminId = await verify2FAChallenge();
+    const adminId = await verify2FAChallenge(challengeToken);
     if (!adminId) {
       return NextResponse.json({
         error: 'Your 2FA verification session has expired. Please log in with your password again.',
         expired: true,
       }, { status: 401 });
     }
-
-    const { code, isRecoveryCode } = await req.json();
 
     if (!code || typeof code !== 'string') {
       return NextResponse.json({ error: 'Please enter a valid 2FA verification code.' }, { status: 400 });
@@ -98,6 +99,7 @@ export async function POST(req: Request) {
       const adminData = await getAdminById(admin.id);
       return NextResponse.json({
         success: true,
+        token: admin.id,
         admin: adminData,
         message: 'Authenticated via recovery code.',
         remainingRecoveryCodesCount: recoveryResult.remainingHashedCodes.length,
@@ -139,6 +141,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
+      token: admin.id,
       admin: adminData,
     });
   } catch (error: any) {

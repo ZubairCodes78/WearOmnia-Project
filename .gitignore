@@ -50,3 +50,14 @@ Thumbs.db
 # Private Uploads
 uploads/
 public/uploads/
+
+# Mobile Admin & Android Signing Secrets
+*.keystore
+*.jks
+key.properties
+*.apk
+*.aab
+mobile-admin/build/
+mobile-admin/.dart_tool/
+mobile-admin/android/.gradle/
+mobile-admin/android/key.properties

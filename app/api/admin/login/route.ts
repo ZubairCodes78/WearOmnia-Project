@@ -60,9 +60,9 @@ export async function POST(req: Request) {
 
     // 4. Check if 2FA is enabled
     if (admin.twoFactorEnabled && admin.twoFactorSecret) {
-      // Issue short-lived (5 min) temporary 2FA challenge cookie
+      // Issue short-lived (5 min) temporary 2FA challenge cookie & token
       // DO NOT create authenticated admin session yet
-      await create2FAChallenge(admin.id);
+      const challengeToken = await create2FAChallenge(admin.id);
 
       await recordAuditLog(
         '2FA_CHALLENGE_ISSUED',
@@ -75,6 +75,7 @@ export async function POST(req: Request) {
       return NextResponse.json({
         success: false,
         requires2FA: true,
+        challengeToken,
         message: 'Two-factor authentication code required',
       });
     }
@@ -90,6 +91,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       success: true,
+      token: admin.id,
       admin: adminData,
     });
   } catch (error) {

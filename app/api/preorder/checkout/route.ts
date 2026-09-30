@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { recordAuditLog } from '@/lib/audit';
 import { NotificationService } from '@/lib/notifications/notification-service';
 import { broadcastAdminEvent } from '@/lib/events/event-emitter';
+import { sendAdminPushNotification } from '@/lib/notifications/fcm';
 import { getSiteSettings, getPreOrderSettings } from '@/lib/settings';
 import { normalizePhone, validatePhone } from '@/lib/phone';
 import { generateNextOrderNumber } from '@/lib/order-number';
@@ -349,6 +350,23 @@ export async function POST(req: Request) {
       sound: true,
       timestamp: new Date().toISOString(),
     });
+
+    // Send instant FCM push notification to all active admin devices (deduplicated)
+    sendAdminPushNotification({
+      idempotencyKey: `PRE_ORDER:${order.id}`,
+      type: 'NEW_ORDER',
+      orderId: order.id,
+      title: `⏳ Pre-Order #${orderNumber}`,
+      body: `Advance Rs. ${advanceAmount.toLocaleString()} • ${fullName} (${city})`,
+      data: {
+        orderId: order.id,
+        orderNumber: order.orderNumber,
+        customerName: fullName,
+        city: city,
+        amount: String(totalAmount),
+        isPreOrder: 'true',
+      },
+    }).catch(err => console.error('[FCM Push Error]', err));
 
     await recordAuditLog(
       'PRE_ORDER_PLACED',
