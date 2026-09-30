@@ -14,22 +14,13 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 1. Initialize local configuration & stored API endpoint
-  await AppConfig.init();
-
-  // 2. Initialize Firebase Core
   try {
-    await Firebase.initializeApp();
-    // Register background messaging callback
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    await AppConfig.init().timeout(const Duration(seconds: 3));
   } catch (e) {
-    debugPrint('[Main] Firebase initialization note: $e');
+    debugPrint('[Main] AppConfig init note: $e');
   }
 
-  // 3. Initialize Notification Service
-  final notifService = NotificationService();
-  notifService.setNavigatorKey(navigatorKey);
-  await notifService.initialize();
-
+  // 2. Launch UI immediately so Flutter can paint frame 0 without blocking on network/FCM
   runApp(
     MultiProvider(
       providers: [
@@ -38,6 +29,26 @@ void main() async {
       child: const WearOmniaAdminApp(),
     ),
   );
+
+  // 3. Initialize Firebase & Notification Service asynchronously post-launch
+  _initServicesAsync();
+}
+
+Future<void> _initServicesAsync() async {
+  try {
+    await Firebase.initializeApp();
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+  } catch (e) {
+    debugPrint('[Main] Firebase initialization note: $e');
+  }
+
+  try {
+    final notifService = NotificationService();
+    notifService.setNavigatorKey(navigatorKey);
+    await notifService.initialize();
+  } catch (e) {
+    debugPrint('[Main] Notification initialization error: $e');
+  }
 }
 
 class WearOmniaAdminApp extends StatelessWidget {

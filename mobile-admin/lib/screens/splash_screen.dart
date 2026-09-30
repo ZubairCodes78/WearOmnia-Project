@@ -62,6 +62,8 @@ class _SplashScreenState extends State<SplashScreen> {
                 'assets/images/logo.png',
                 width: 72,
                 height: 72,
+                cacheWidth: 144,
+                cacheHeight: 144,
                 fit: BoxFit.contain,
               ),
             ),

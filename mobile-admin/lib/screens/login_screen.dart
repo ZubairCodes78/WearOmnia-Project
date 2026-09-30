@@ -282,6 +282,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         'assets/images/logo.png',
                         width: 56,
                         height: 56,
+                        cacheWidth: 112,
+                        cacheHeight: 112,
                         fit: BoxFit.contain,
                       ),
                     ),

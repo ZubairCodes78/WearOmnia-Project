@@ -19,6 +19,8 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
+  static final NumberFormat _currencyFormat = NumberFormat('#,##0', 'en_US');
+  bool _isFetching = false;
   StreamSubscription<OrderNotificationPayload>? _notifSubscription;
   List<OrderModel> _recentOrders = [];
   bool _isLoading = true;
@@ -113,6 +115,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Future<void> _loadDashboardData() async {
+    if (_isFetching) return;
+    _isFetching = true;
     final auth = Provider.of<AuthService>(context, listen: false);
     final res = await auth.apiService.fetchDashboardData();
 
@@ -164,6 +168,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     } else {
       setState(() => _isLoading = false);
     }
+    _isFetching = false;
   }
 
   Future<void> _sendTestPush() async {
@@ -255,7 +260,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthService>(context);
-    final currencyFormat = NumberFormat('#,##0', 'en_US');
     final notifService = NotificationService();
 
     return Scaffold(
@@ -389,7 +393,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         Expanded(
                           child: _buildMetricCard(
                             title: 'Total Revenue',
-                            value: 'Rs. ${currencyFormat.format(_totalRevenue)}',
+                            value: 'Rs. ${_currencyFormat.format(_totalRevenue)}',
                             icon: Icons.payments_outlined,
                             color: AppColors.accent,
                             onTap: () {},
@@ -635,7 +639,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Text(
-                                    'Rs. ${currencyFormat.format(order.totalAmount)}',
+                                    'Rs. ${_currencyFormat.format(order.totalAmount)}',
                                     style: const TextStyle(
                                       color: AppColors.textPrimary,
                                       fontWeight: FontWeight.w700,

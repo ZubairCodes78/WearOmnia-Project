@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
@@ -16,7 +17,13 @@ class OrderListScreen extends StatefulWidget {
 }
 
 class _OrderListScreenState extends State<OrderListScreen> {
+  static final NumberFormat _currencyFormat = NumberFormat('#,##0', 'en_US');
+  static final DateFormat _dateFormat = DateFormat('MMM dd, hh:mm a');
+
   final TextEditingController _searchController = TextEditingController();
+  Timer? _debounceTimer;
+  int _activeRequestId = 0;
+
   List<OrderModel> _orders = [];
   bool _isLoading = true;
   String? _error;
@@ -43,13 +50,25 @@ class _OrderListScreenState extends State<OrderListScreen> {
 
   @override
   void dispose() {
+    _debounceTimer?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
+  void _onSearchChanged(String query) {
+    _debounceTimer?.cancel();
+    _debounceTimer = Timer(const Duration(milliseconds: 350), () {
+      _loadOrders();
+    });
+  }
+
   Future<void> _loadOrders() async {
+    final requestId = ++_activeRequestId;
+
     setState(() {
-      _isLoading = true;
+      if (_orders.isEmpty) {
+        _isLoading = true;
+      }
       _error = null;
     });
 
@@ -62,7 +81,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
       limit: 50,
     );
 
-    if (!mounted) return;
+    if (!mounted || requestId != _activeRequestId) return;
 
     if (res.success && res.data != null) {
       setState(() {
@@ -100,9 +119,6 @@ class _OrderListScreenState extends State<OrderListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat('#,##0', 'en_US');
-    final dateFormat = DateFormat('MMM dd, hh:mm a');
-
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -122,6 +138,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
             child: TextField(
               controller: _searchController,
               style: const TextStyle(color: AppColors.textPrimary),
+              onChanged: _onSearchChanged,
               onSubmitted: (_) => _loadOrders(),
               decoration: InputDecoration(
                 hintText: 'Search order #, customer, phone, city...',
@@ -320,14 +337,14 @@ class _OrderListScreenState extends State<OrderListScreen> {
                                                 MainAxisAlignment.spaceBetween,
                                             children: [
                                               Text(
-                                                dateFormat.format(order.createdAt),
+                                                _dateFormat.format(order.createdAt),
                                                 style: const TextStyle(
                                                   color: AppColors.textMuted,
                                                   fontSize: 12,
                                                 ),
                                               ),
                                               Text(
-                                                'Rs. ${currencyFormat.format(order.totalAmount)}',
+                                                'Rs. ${_currencyFormat.format(order.totalAmount)}',
                                                 style: const TextStyle(
                                                   color: AppColors.primary,
                                                   fontWeight: FontWeight.w800,

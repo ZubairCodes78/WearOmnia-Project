@@ -16,6 +16,9 @@ class OrderDetailScreen extends StatefulWidget {
 }
 
 class _OrderDetailScreenState extends State<OrderDetailScreen> {
+  static final DateFormat _dateFormat = DateFormat('MMM dd, yyyy • hh:mm a');
+  static final NumberFormat _currencyFormat = NumberFormat('#,##0', 'en_US');
+
   OrderModel? _order;
   bool _isLoading = true;
   String? _error;
@@ -277,8 +280,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('MMM dd, yyyy • hh:mm a');
-    final currencyFormat = NumberFormat('#,##0', 'en_US');
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -377,7 +378,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                   ),
                                   const SizedBox(height: 8),
                                   Text(
-                                    dateFormat.format(_order!.createdAt),
+                                    _dateFormat.format(_order!.createdAt),
                                     style: const TextStyle(
                                       color: AppColors.textMuted,
                                       fontSize: 13,
@@ -603,7 +604,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                                   ],
                                                   const SizedBox(height: 4),
                                                   Text(
-                                                    'Qty: ${item.quantity} × Rs. ${currencyFormat.format(item.unitPrice)}',
+                                                    'Qty: ${item.quantity} × Rs. ${_currencyFormat.format(item.unitPrice)}',
                                                     style: const TextStyle(
                                                       color: AppColors.textSecondary,
                                                       fontSize: 12,
@@ -613,7 +614,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                               ),
                                             ),
                                             Text(
-                                              'Rs. ${currencyFormat.format(item.subtotal)}',
+                                              'Rs. ${_currencyFormat.format(item.subtotal)}',
                                               style: const TextStyle(
                                                 color: AppColors.textPrimary,
                                                 fontWeight: FontWeight.w700,
@@ -674,7 +675,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                           ),
                                         ),
                                         Text(
-                                          'Rs. ${currencyFormat.format(_order!.totalAmount)}',
+                                          'Rs. ${_currencyFormat.format(_order!.totalAmount)}',
                                           style: const TextStyle(
                                             color: AppColors.primary,
                                             fontSize: 18,
@@ -773,7 +774,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                                                           ),
                                                         ),
                                                         Text(
-                                                          dateFormat
+                                                          _dateFormat
                                                               .format(t.createdAt),
                                                           style: const TextStyle(
                                                             color: AppColors
@@ -816,7 +817,6 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   }
 
   Widget _buildPriceRow(String title, double amount, {Color? color}) {
-    final currencyFormat = NumberFormat('#,##0', 'en_US');
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 3),
       child: Row(
@@ -827,7 +827,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
           Text(
-            'Rs. ${currencyFormat.format(amount)}',
+            'Rs. ${_currencyFormat.format(amount)}',
             style: TextStyle(
               color: color ?? AppColors.textPrimary,
               fontSize: 13,

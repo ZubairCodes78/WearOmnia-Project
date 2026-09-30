@@ -9,7 +9,9 @@ class AuthService extends ChangeNotifier {
   static const String _keyToken = 'wearomnia_admin_token';
   static const String _keyUser = 'wearomnia_admin_user';
 
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  final FlutterSecureStorage _storage = const FlutterSecureStorage(
+    aOptions: AndroidOptions(resetOnError: true),
+  );
 
   AdminUser? _currentUser;
   String? _token;

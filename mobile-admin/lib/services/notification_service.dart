@@ -117,7 +117,32 @@ class NotificationService {
             ?.createNotificationChannel(channel);
       }
 
-      // 2. Request Notification Permissions from FCM
+      // 2. Register Message Listeners Immediately
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        _handleForegroundMessage(message);
+      });
+
+      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+        _handleNotificationData(message.data);
+      });
+
+      _fcm.onTokenRefresh.listen((newToken) {
+        _fcmToken = newToken;
+        if (kDebugMode) {
+          print('[FCM] Token refreshed: $newToken');
+        }
+        if (_apiService != null) {
+          registerDeviceTokenWithBackend(newToken);
+        }
+      });
+
+      // 3. Handle Cold Start Notification Click (App Terminated)
+      final initialMessage = await _fcm.getInitialMessage();
+      if (initialMessage != null) {
+        _handleNotificationData(initialMessage.data);
+      }
+
+      // 4. Request Notification Permissions from FCM
       final settings = await _fcm.requestPermission(
         alert: true,
         announcement: false,
@@ -132,7 +157,17 @@ class NotificationService {
         print('[FCM] User granted permission: ${settings.authorizationStatus}');
       }
 
-      // 3. Get FCM Device Token
+      // 5. Asynchronously retrieve FCM token
+      _fetchTokenAndRegister();
+    } catch (e) {
+      if (kDebugMode) {
+        print('[FCM] Notification initialization error: $e');
+      }
+    }
+  }
+
+  Future<void> _fetchTokenAndRegister() async {
+    try {
       _fcmToken = await _fcm.getToken();
       if (kDebugMode) {
         print('[FCM] Device Token: $_fcmToken');
@@ -145,36 +180,9 @@ class NotificationService {
           await registerDeviceTokenWithBackend(_fcmToken!);
         }
       }
-
-      // 4. Handle Token Refresh
-      _fcm.onTokenRefresh.listen((newToken) {
-        _fcmToken = newToken;
-        if (kDebugMode) {
-          print('[FCM] Token refreshed: $newToken');
-        }
-        if (_apiService != null) {
-          registerDeviceTokenWithBackend(newToken);
-        }
-      });
-
-      // 5. Handle Foreground Messages (App Open & Active)
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-        _handleForegroundMessage(message);
-      });
-
-      // 6. Handle Background Notification Click (App in Background)
-      FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-        _handleNotificationData(message.data);
-      });
-
-      // 7. Handle Cold Start Notification Click (App Terminated)
-      final initialMessage = await _fcm.getInitialMessage();
-      if (initialMessage != null) {
-        _handleNotificationData(initialMessage.data);
-      }
     } catch (e) {
       if (kDebugMode) {
-        print('[FCM] Notification initialization error: $e');
+        print('[FCM] Error fetching FCM token: $e');
       }
     }
   }

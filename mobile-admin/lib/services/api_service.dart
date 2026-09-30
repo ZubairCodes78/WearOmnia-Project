@@ -83,6 +83,14 @@ class ApiService {
     return headers;
   }
 
+  static Map<String, dynamic>? _tryDecode(String body) {
+    try {
+      final decoded = jsonDecode(body);
+      if (decoded is Map<String, dynamic>) return decoded;
+    } catch (_) {}
+    return null;
+  }
+
   // 1. Admin Login
   static Future<ApiResponse<AdminUser>> login({
     required String email,
@@ -99,9 +107,9 @@ class ApiService {
         }),
       ).timeout(const Duration(seconds: 15));
 
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final json = _tryDecode(response.body);
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && json != null) {
         if (json['requires2FA'] == true) {
           return ApiResponse(
             success: false,
@@ -119,7 +127,7 @@ class ApiService {
       } else {
         return ApiResponse(
           success: false,
-          error: json['error'] as String? ?? 'Login failed',
+          error: json?['error'] as String? ?? 'Login failed (${response.statusCode})',
         );
       }
     } catch (e) {
@@ -148,9 +156,9 @@ class ApiService {
         }),
       ).timeout(const Duration(seconds: 15));
 
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final json = _tryDecode(response.body);
 
-      if (response.statusCode == 200 && json['success'] == true) {
+      if (response.statusCode == 200 && json != null && json['success'] == true) {
         final admin = AdminUser.fromJson(json['admin'] as Map<String, dynamic>);
         return ApiResponse(
           success: true,
@@ -160,7 +168,7 @@ class ApiService {
       } else {
         return ApiResponse(
           success: false,
-          error: json['error'] as String? ?? '2FA verification failed',
+          error: json?['error'] as String? ?? '2FA verification failed (${response.statusCode})',
         );
       }
     } catch (e) {
@@ -237,13 +245,16 @@ class ApiService {
           );
 
       if (response.statusCode == 200) {
-        final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final rawOrders = json['orders'] as List? ?? [];
-        final orders = rawOrders
-            .map((o) => OrderModel.fromJson(o as Map<String, dynamic>))
-            .toList();
+        final json = _tryDecode(response.body);
+        if (json != null) {
+          final rawOrders = json['orders'] as List? ?? [];
+          final orders = rawOrders
+              .map((o) => OrderModel.fromJson(o as Map<String, dynamic>))
+              .toList();
 
-        return ApiResponse(success: true, data: orders);
+          return ApiResponse(success: true, data: orders);
+        }
+        return ApiResponse(success: false, error: 'Malformed orders response from server');
       } else {
         return ApiResponse(
           success: false,
@@ -267,13 +278,16 @@ class ApiService {
           );
 
       if (response.statusCode == 200) {
-        final json = jsonDecode(response.body) as Map<String, dynamic>;
-        final order = OrderModel.fromJson(json['order'] as Map<String, dynamic>);
-        return ApiResponse(success: true, data: order);
+        final json = _tryDecode(response.body);
+        if (json != null && json['order'] != null) {
+          final order = OrderModel.fromJson(json['order'] as Map<String, dynamic>);
+          return ApiResponse(success: true, data: order);
+        }
+        return ApiResponse(success: false, error: 'Malformed order detail response');
       } else {
         return ApiResponse(
           success: false,
-          error: 'Order not found or access denied',
+          error: 'Order not found or access denied (${response.statusCode})',
         );
       }
     } catch (e) {
@@ -366,9 +380,9 @@ class ApiService {
             const Duration(seconds: 15),
           );
 
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
+      final json = _tryDecode(response.body);
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 && json != null) {
         final statsJson = json['stats'] as Map<String, dynamic>? ?? {};
         final recentOrdersList = (json['recentOrders'] as List? ?? [])
             .map((o) => OrderModel.fromJson(o as Map<String, dynamic>))
@@ -381,7 +395,7 @@ class ApiService {
             recentOrders: recentOrdersList,
           ),
         );
-      } else if (response.statusCode == 403 && json['error'] == 'DEVICE_REVOKED') {
+      } else if (response.statusCode == 403 && json?['error'] == 'DEVICE_REVOKED') {
         return ApiResponse(
           success: false,
           isRevoked: true,
@@ -390,7 +404,7 @@ class ApiService {
       } else {
         return ApiResponse(
           success: false,
-          error: json['error'] as String? ?? 'Failed to load dashboard data',
+          error: json?['error'] as String? ?? 'Failed to load dashboard data (${response.statusCode})',
         );
       }
     } catch (e) {
