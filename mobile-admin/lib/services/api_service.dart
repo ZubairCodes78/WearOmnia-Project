@@ -91,6 +91,81 @@ class ApiService {
     return null;
   }
 
+  static const Duration requestTimeout = Duration(seconds: 30);
+
+  /// Transparently follow HTTP 301, 302, 307, 308 redirects for POST requests
+  static Future<http.Response> _safePost(
+    Uri uri, {
+    Map<String, String>? headers,
+    Object? body,
+    Duration timeout = requestTimeout,
+    int maxRedirects = 3,
+  }) async {
+    var currentUri = uri;
+    for (int i = 0; i <= maxRedirects; i++) {
+      final response = await http
+          .post(currentUri, headers: headers, body: body)
+          .timeout(timeout);
+
+      if (response.statusCode == 301 ||
+          response.statusCode == 302 ||
+          response.statusCode == 307 ||
+          response.statusCode == 308) {
+        final location = response.headers['location'];
+        if (location != null && location.isNotEmpty && i < maxRedirects) {
+          final nextUri = currentUri.resolve(location);
+          if (nextUri.scheme == 'https' || nextUri.host == currentUri.host) {
+            if ((response.statusCode == 301 || response.statusCode == 308) &&
+                nextUri.host != currentUri.host) {
+              final newBase = '${nextUri.scheme}://${nextUri.host}';
+              AppConfig.setBaseUrl(newBase);
+            }
+            currentUri = nextUri;
+            continue;
+          }
+        }
+      }
+      return response;
+    }
+    throw http.ClientException('Too many redirects', uri);
+  }
+
+  /// Transparently follow HTTP 301, 302, 307, 308 redirects for GET requests
+  static Future<http.Response> _safeGet(
+    Uri uri, {
+    Map<String, String>? headers,
+    Duration timeout = requestTimeout,
+    int maxRedirects = 3,
+  }) async {
+    var currentUri = uri;
+    for (int i = 0; i <= maxRedirects; i++) {
+      final response = await http
+          .get(currentUri, headers: headers)
+          .timeout(timeout);
+
+      if (response.statusCode == 301 ||
+          response.statusCode == 302 ||
+          response.statusCode == 307 ||
+          response.statusCode == 308) {
+        final location = response.headers['location'];
+        if (location != null && location.isNotEmpty && i < maxRedirects) {
+          final nextUri = currentUri.resolve(location);
+          if (nextUri.scheme == 'https' || nextUri.host == currentUri.host) {
+            if ((response.statusCode == 301 || response.statusCode == 308) &&
+                nextUri.host != currentUri.host) {
+              final newBase = '${nextUri.scheme}://${nextUri.host}';
+              AppConfig.setBaseUrl(newBase);
+            }
+            currentUri = nextUri;
+            continue;
+          }
+        }
+      }
+      return response;
+    }
+    throw http.ClientException('Too many redirects', uri);
+  }
+
   // 1. Admin Login
   static Future<ApiResponse<AdminUser>> login({
     required String email,
@@ -98,14 +173,14 @@ class ApiService {
   }) async {
     try {
       final url = Uri.parse('${AppConfig.baseUrl}/api/admin/login');
-      final response = await http.post(
+      final response = await _safePost(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'email': email.trim(),
           'password': password,
         }),
-      ).timeout(const Duration(seconds: 15));
+      );
 
       final json = _tryDecode(response.body);
 
@@ -146,7 +221,7 @@ class ApiService {
   }) async {
     try {
       final url = Uri.parse('${AppConfig.baseUrl}/api/admin/2fa/verify');
-      final response = await http.post(
+      final response = await _safePost(
         url,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
@@ -154,7 +229,7 @@ class ApiService {
           'challengeToken': challengeToken,
           'isRecoveryCode': isRecoveryCode,
         }),
-      ).timeout(const Duration(seconds: 15));
+      );
 
       final json = _tryDecode(response.body);
 
@@ -184,7 +259,7 @@ class ApiService {
     try {
       final details = await DeviceService.getDeviceDetails();
       final url = Uri.parse('${AppConfig.baseUrl}/api/admin/devices/register');
-      final response = await http.post(
+      final response = await _safePost(
         url,
         headers: _buildHeaders(),
         body: jsonEncode({
@@ -193,11 +268,10 @@ class ApiService {
           'deviceName': details.deviceName,
           'deviceId': details.deviceId,
         }),
-      ).timeout(const Duration(seconds: 15));
+      );
 
       return response.statusCode == 200;
     } catch (e) {
-      // print('[API] Error registering device token: $e');
       return false;
     }
   }
@@ -206,11 +280,11 @@ class ApiService {
   Future<bool> unregisterDeviceToken(String fcmToken) async {
     try {
       final url = Uri.parse('${AppConfig.baseUrl}/api/admin/devices/unregister');
-      final response = await http.post(
+      final response = await _safePost(
         url,
         headers: _buildHeaders(),
         body: jsonEncode({'fcmToken': fcmToken}),
-      ).timeout(const Duration(seconds: 15));
+      );
 
       return response.statusCode == 200;
     } catch (e) {
@@ -240,9 +314,7 @@ class ApiService {
       final uri = Uri.parse('${AppConfig.baseUrl}/api/admin/orders')
           .replace(queryParameters: queryParams);
 
-      final response = await http.get(uri, headers: _buildHeaders()).timeout(
-            const Duration(seconds: 15),
-          );
+      final response = await _safeGet(uri, headers: _buildHeaders());
 
       if (response.statusCode == 200) {
         final json = _tryDecode(response.body);
@@ -273,9 +345,7 @@ class ApiService {
   Future<ApiResponse<OrderModel>> fetchOrderDetail(String orderId) async {
     try {
       final uri = Uri.parse('${AppConfig.baseUrl}/api/admin/orders/$orderId');
-      final response = await http.get(uri, headers: _buildHeaders()).timeout(
-            const Duration(seconds: 15),
-          );
+      final response = await _safeGet(uri, headers: _buildHeaders());
 
       if (response.statusCode == 200) {
         final json = _tryDecode(response.body);
@@ -314,19 +384,19 @@ class ApiService {
         bodyMap['internalAdminNote'] = internalAdminNote;
       }
 
-      final response = await http.post(
+      final response = await _safePost(
         uri,
         headers: _buildHeaders(),
         body: jsonEncode(bodyMap),
-      ).timeout(const Duration(seconds: 15));
+      );
 
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      if (response.statusCode == 200 && json['success'] == true) {
+      final json = _tryDecode(response.body);
+      if (response.statusCode == 200 && json?['success'] == true) {
         return ApiResponse(success: true, data: true);
       } else {
         return ApiResponse(
           success: false,
-          error: json['error'] as String? ?? 'Failed to update order status',
+          error: json?['error'] as String? ?? 'Failed to update order status',
         );
       }
     } catch (e) {
@@ -349,19 +419,19 @@ class ApiService {
         bodyMap['orderId'] = orderId;
       }
 
-      final response = await http.post(
+      final response = await _safePost(
         uri,
         headers: _buildHeaders(),
         body: jsonEncode(bodyMap),
-      ).timeout(const Duration(seconds: 15));
+      );
 
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      if (response.statusCode == 200 && json['success'] == true) {
+      final json = _tryDecode(response.body);
+      if (response.statusCode == 200 && json?['success'] == true) {
         return ApiResponse(success: true, data: true);
       } else {
         return ApiResponse(
           success: false,
-          error: json['error'] as String? ?? 'Failed to send test push',
+          error: json?['error'] as String? ?? 'Failed to send test push',
         );
       }
     } catch (e) {
@@ -376,9 +446,7 @@ class ApiService {
   Future<ApiResponse<DashboardData>> fetchDashboardData() async {
     try {
       final uri = Uri.parse('${AppConfig.baseUrl}/api/admin/dashboard/stats');
-      final response = await http.get(uri, headers: _buildHeaders()).timeout(
-            const Duration(seconds: 15),
-          );
+      final response = await _safeGet(uri, headers: _buildHeaders());
 
       final json = _tryDecode(response.body);
 
@@ -419,17 +487,15 @@ class ApiService {
   Future<ApiResponse<bool>> approvePayment(String orderId) async {
     try {
       final uri = Uri.parse('${AppConfig.baseUrl}/api/admin/orders/$orderId/approve-payment');
-      final response = await http.post(uri, headers: _buildHeaders()).timeout(
-            const Duration(seconds: 15),
-          );
+      final response = await _safePost(uri, headers: _buildHeaders());
 
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      if (response.statusCode == 200 && json['success'] == true) {
+      final json = _tryDecode(response.body);
+      if (response.statusCode == 200 && json?['success'] == true) {
         return ApiResponse(success: true, data: true);
       } else {
         return ApiResponse(
           success: false,
-          error: json['error'] as String? ?? 'Failed to approve payment',
+          error: json?['error'] as String? ?? 'Failed to approve payment',
         );
       }
     } catch (e) {
@@ -444,19 +510,19 @@ class ApiService {
   Future<ApiResponse<bool>> rejectPayment(String orderId, String reason) async {
     try {
       final uri = Uri.parse('${AppConfig.baseUrl}/api/admin/orders/$orderId/reject-payment');
-      final response = await http.post(
+      final response = await _safePost(
         uri,
         headers: _buildHeaders(),
         body: jsonEncode({'reason': reason}),
-      ).timeout(const Duration(seconds: 15));
+      );
 
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      if (response.statusCode == 200 && json['success'] == true) {
+      final json = _tryDecode(response.body);
+      if (response.statusCode == 200 && json?['success'] == true) {
         return ApiResponse(success: true, data: true);
       } else {
         return ApiResponse(
           success: false,
-          error: json['error'] as String? ?? 'Failed to reject payment',
+          error: json?['error'] as String? ?? 'Failed to reject payment',
         );
       }
     } catch (e) {
@@ -471,17 +537,15 @@ class ApiService {
   Future<ApiResponse<bool>> confirmOrder(String orderId) async {
     try {
       final uri = Uri.parse('${AppConfig.baseUrl}/api/admin/orders/$orderId/confirm');
-      final response = await http.post(uri, headers: _buildHeaders()).timeout(
-            const Duration(seconds: 15),
-          );
+      final response = await _safePost(uri, headers: _buildHeaders());
 
-      final json = jsonDecode(response.body) as Map<String, dynamic>;
-      if (response.statusCode == 200 && json['success'] == true) {
+      final json = _tryDecode(response.body);
+      if (response.statusCode == 200 && json?['success'] == true) {
         return ApiResponse(success: true, data: true);
       } else {
         return ApiResponse(
           success: false,
-          error: json['error'] as String? ?? 'Failed to confirm order',
+          error: json?['error'] as String? ?? 'Failed to confirm order',
         );
       }
     } catch (e) {

@@ -6,9 +6,17 @@ import 'package:wearomnia_admin/models/order.dart';
 
 void main() {
   group('WearOMNIA Admin Models and Config Tests', () {
-    test('AppConfig default URL is valid', () {
+    test('AppConfig default URL is valid and canonicalization works', () {
       expect(AppConfig.defaultBaseUrl, isNotEmpty);
+      expect(AppConfig.canonicalProductionUrl, equals('https://www.wearomnia.com'));
       expect(AppConfig.notificationChannelId, equals('wearomnia_orders'));
+
+      // Test apex wearomnia.com canonicalization
+      expect(AppConfig.canonicalizeUrl('https://wearomnia.com'), equals('https://www.wearomnia.com'));
+      expect(AppConfig.canonicalizeUrl('https://wearomnia.com/'), equals('https://www.wearomnia.com'));
+      expect(AppConfig.canonicalizeUrl('http://wearomnia.com'), equals('https://www.wearomnia.com'));
+      expect(AppConfig.canonicalizeUrl('https://www.wearomnia.com/'), equals('https://www.wearomnia.com'));
+      expect(AppConfig.canonicalizeUrl('http://10.0.2.2:3000'), equals('http://10.0.2.2:3000'));
     });
 
     test('AdminUser deserializes correctly', () {

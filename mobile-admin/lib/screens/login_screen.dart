@@ -209,7 +209,7 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               const Text(
-                'Specify the WearOMNIA Next.js server endpoint (e.g. http://10.0.2.2:3000 for emulator, local Wi-Fi IP, or production URL):',
+                'Specify the WearOMNIA Next.js server endpoint (e.g. https://www.wearomnia.com for production or http://10.0.2.2:3000 for local dev):',
                 style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
               ),
               const SizedBox(height: 12),
@@ -217,7 +217,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 controller: urlController,
                 decoration: const InputDecoration(
                   labelText: 'Server Base URL',
-                  hintText: 'https://wearomnia.com',
+                  hintText: 'https://www.wearomnia.com',
                 ),
               ),
             ],
