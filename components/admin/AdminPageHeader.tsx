@@ -58,7 +58,17 @@ export function AdminPageHeader({
           <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[#FAF8F5]">
             {title}
           </h1>
-          {badge && <div>{badge}</div>}
+          {badge && (
+            <div>
+              {typeof badge === 'string' ? (
+                <span className="inline-flex items-center h-6 px-2.5 rounded-md bg-[#D4AF37]/15 text-[#D4AF37] border border-[#D4AF37]/30 text-[10px] font-mono font-bold uppercase tracking-wider">
+                  {badge}
+                </span>
+              ) : (
+                badge
+              )}
+            </div>
+          )}
         </div>
 
         {description && (

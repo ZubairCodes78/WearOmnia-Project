@@ -41,7 +41,7 @@ export const OrderStatusBadge: React.FC<{ status: string }> = ({ status }) => {
 
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider border shadow-sm badge-3d ${colorClass}`}
+      className={`inline-flex items-center justify-center h-6 px-2.5 rounded-md text-[10px] font-mono font-bold uppercase tracking-wider border shadow-xs whitespace-nowrap select-none shrink-0 ${colorClass}`}
     >
       {label}
     </span>

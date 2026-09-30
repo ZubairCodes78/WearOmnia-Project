@@ -85,12 +85,12 @@ export function AdminPagination({
       </div>
 
       {/* Pagination Controls */}
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-1.5">
         {/* First Page */}
         <button
           onClick={() => onPageChange(1)}
           disabled={currentPage === 1}
-          className="p-1.5 rounded-lg border border-[#D4AF37]/15 text-[#FAF8F5]/70 hover:text-[#D4AF37] hover:bg-[#103A3E]/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="w-8 h-8 rounded-lg border border-[#D4AF37]/20 text-[#FAF8F5]/70 hover:text-[#D4AF37] hover:bg-[#103A3E]/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center justify-center cursor-pointer"
           title="First Page"
           aria-label="First Page"
         >
@@ -101,7 +101,7 @@ export function AdminPagination({
         <button
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
-          className="p-1.5 rounded-lg border border-[#D4AF37]/15 text-[#FAF8F5]/70 hover:text-[#D4AF37] hover:bg-[#103A3E]/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="w-8 h-8 rounded-lg border border-[#D4AF37]/20 text-[#FAF8F5]/70 hover:text-[#D4AF37] hover:bg-[#103A3E]/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center justify-center cursor-pointer"
           title="Previous Page"
           aria-label="Previous Page"
         >
@@ -123,9 +123,9 @@ export function AdminPagination({
               <button
                 key={`page-${p}`}
                 onClick={() => onPageChange(Number(p))}
-                className={`min-w-7 h-7 px-1.5 rounded-lg text-xs font-semibold transition-all ${
+                className={`min-w-8 h-8 px-2 rounded-lg text-xs font-mono font-bold transition-all flex items-center justify-center cursor-pointer ${
                   isCurrent
-                    ? 'bg-[#D4AF37] text-black font-bold shadow-sm shadow-[#D4AF37]/20'
+                    ? 'bg-[#D4AF37] text-black shadow-xs shadow-[#D4AF37]/20'
                     : 'text-[#FAF8F5]/70 hover:text-[#D4AF37] hover:bg-[#103A3E]/50'
                 }`}
               >
@@ -139,7 +139,7 @@ export function AdminPagination({
         <button
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage >= totalPages}
-          className="p-1.5 rounded-lg border border-[#D4AF37]/15 text-[#FAF8F5]/70 hover:text-[#D4AF37] hover:bg-[#103A3E]/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="w-8 h-8 rounded-lg border border-[#D4AF37]/20 text-[#FAF8F5]/70 hover:text-[#D4AF37] hover:bg-[#103A3E]/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center justify-center cursor-pointer"
           title="Next Page"
           aria-label="Next Page"
         >
@@ -150,7 +150,7 @@ export function AdminPagination({
         <button
           onClick={() => onPageChange(totalPages)}
           disabled={currentPage >= totalPages}
-          className="p-1.5 rounded-lg border border-[#D4AF37]/15 text-[#FAF8F5]/70 hover:text-[#D4AF37] hover:bg-[#103A3E]/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+          className="w-8 h-8 rounded-lg border border-[#D4AF37]/20 text-[#FAF8F5]/70 hover:text-[#D4AF37] hover:bg-[#103A3E]/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center justify-center cursor-pointer"
           title="Last Page"
           aria-label="Last Page"
         >

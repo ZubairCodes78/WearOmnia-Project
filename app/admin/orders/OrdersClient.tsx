@@ -10,28 +10,35 @@ import {
   Eye,
   FileText,
   Truck,
-  Package,
-  Trash2,
   CheckCircle2,
-  Clock,
   Send,
   Loader2,
   CheckSquare,
   Square,
-  AlertCircle,
-  ExternalLink,
-
   ArrowUpRight,
   ShieldCheck,
+  Trash2,
   RotateCcw,
+  AlertCircle,
+  HelpCircle,
+  ExternalLink,
 } from 'lucide-react';
 import { OrderStatusBadge } from './OrderStatusBadge';
-import { normalizePhone } from '@/lib/phone';
 import { DeleteOrderModal } from '@/components/admin/DeleteOrderModal';
 import { useDebounce } from '@/hooks/useDebounce';
 import { AdminPagination } from '@/components/admin/AdminPagination';
 import { AdminEmptyState } from '@/components/admin/AdminEmptyState';
 import { AdminPageHeader } from '@/components/admin/AdminPageHeader';
+import { AdminButton } from '@/components/admin/ui/AdminButton';
+import { AdminBulkActionBar } from '@/components/admin/ui/AdminBulkActionBar';
+import {
+  BulkConfirmModal,
+  BulkShipmentModal,
+  BulkStatusModal,
+  BulkResultModal,
+  BulkResultItem,
+  BulkSummary,
+} from '@/components/admin/BulkOperationsModals';
 
 interface OrderItem {
   id: string;
@@ -92,7 +99,11 @@ interface OrdersClientProps {
   initialStatus?: string;
 }
 
-export function OrdersClient({ initialOrders, initialSearch = '', initialStatus = 'ALL' }: OrdersClientProps) {
+export function OrdersClient({
+  initialOrders,
+  initialSearch = '',
+  initialStatus = 'ALL',
+}: OrdersClientProps) {
   const router = useRouter();
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [search, setSearch] = useState(initialSearch);
@@ -110,12 +121,21 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [selectedOrderForDelete, setSelectedOrderForDelete] = useState<Order | null>(null);
 
-  // In-flight mutation tracking for double-click protection
+  // In-flight single-order mutation tracking
   const [confirmingOrderIds, setConfirmingOrderIds] = useState<Set<string>>(new Set());
   const [sendingWhatsAppIds, setSendingWhatsAppIds] = useState<Set<string>>(new Set());
-  const [isBulkSending, setIsBulkSending] = useState(false);
-  const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number; sent: number; failed: number } | null>(null);
-  const [bulkResultModal, setBulkResultModal] = useState<{ sent: number; failed: number; errors: string[] } | null>(null);
+
+  // Bulk Operations State
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [bulkProcessingLabel, setBulkProcessingLabel] = useState('Processing...');
+  const [showBulkConfirmModal, setShowBulkConfirmModal] = useState(false);
+  const [showBulkShipmentModal, setShowBulkShipmentModal] = useState(false);
+  const [showBulkStatusModal, setShowBulkStatusModal] = useState(false);
+  const [bulkResultModal, setBulkResultModal] = useState<{
+    title: string;
+    summary: BulkSummary;
+    results: BulkResultItem[];
+  } | null>(null);
 
   // Helper to resolve active tracking number
   const resolveTracking = (order: Order) =>
@@ -186,7 +206,7 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
     };
   }, []);
 
-  // Compute live action queue summary counts directly from order database state
+  // Compute live action queue summary counts
   const confirmationPendingCount = orders.filter(
     (o) => o.status === 'CONFIRMED' && !o.confirmationWhatsAppSentAt
   ).length;
@@ -272,7 +292,9 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
     );
   };
 
-  // 1. Manual Order Confirmation Action (Requirement 5)
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Single Order Operations
+  // ─────────────────────────────────────────────────────────────────────────────
   const handleConfirmOrder = async (orderId: string) => {
     if (confirmingOrderIds.has(orderId)) return;
     setConfirmingOrderIds((prev) => new Set(prev).add(orderId));
@@ -309,7 +331,6 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
     }
   };
 
-  // 2. Single Order WhatsApp Lifecycle Action
   const handleSendSingleWhatsApp = async (order: Order) => {
     if (sendingWhatsAppIds.has(order.id)) return;
     setSendingWhatsAppIds((prev) => new Set(prev).add(order.id));
@@ -353,11 +374,92 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
     }
   };
 
-  // 3. Bulk Send to WhatsApp Action (Requirement 7 & 21)
-  const handleBulkSendWhatsApp = async () => {
-    if (selectedIds.length === 0 || isBulkSending) return;
-    setIsBulkSending(true);
-    setBulkProgress({ current: 0, total: selectedIds.length, sent: 0, failed: 0 });
+  const handleDeleteOrder = async (reason: string) => {
+    if (!selectedOrderForDelete) return;
+
+    const res = await fetch('/api/admin/orders/delete', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        orderId: selectedOrderForDelete.id,
+        reason,
+      }),
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || 'Failed to delete order.');
+    }
+
+    setOrders((prev) => prev.filter((o) => o.id !== selectedOrderForDelete.id));
+    setSelectedOrderForDelete(null);
+    router.refresh();
+  };
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Bulk Actions Orchestration
+  // ─────────────────────────────────────────────────────────────────────────────
+  const selectedOrders = orders.filter((o) => selectedIds.includes(o.id));
+
+  // 1. Bulk Confirm Execution
+  const executeBulkConfirm = async () => {
+    setShowBulkConfirmModal(false);
+    setIsBulkProcessing(true);
+    setBulkProcessingLabel('Confirming orders with backend validation...');
+
+    try {
+      const res = await fetch('/api/admin/orders/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'CONFIRM',
+          orderIds: selectedIds,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Bulk confirmation failed.');
+      } else {
+        const confirmedIds = new Set(
+          (data.results || [])
+            .filter((r: any) => r.success && !r.skipped)
+            .map((r: any) => r.orderId)
+        );
+
+        const now = new Date().toISOString();
+        setOrders((prev) =>
+          prev.map((o) =>
+            confirmedIds.has(o.id)
+              ? {
+                  ...o,
+                  status: 'CONFIRMED',
+                  confirmedAt: now,
+                  confirmedBy: 'Admin',
+                }
+              : o
+          )
+        );
+
+        setSelectedIds([]);
+        setBulkResultModal({
+          title: 'Bulk Order Confirmation Results',
+          summary: data.summary,
+          results: data.results,
+        });
+      }
+    } catch {
+      alert('Network error during bulk confirmation.');
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  // 2. Bulk Send WhatsApp Execution
+  const executeBulkSendWhatsApp = async () => {
+    if (selectedIds.length === 0 || isBulkProcessing) return;
+    setIsBulkProcessing(true);
+    setBulkProcessingLabel(`Sending WhatsApp messages to ${selectedIds.length} customers...`);
 
     try {
       const res = await fetch('/api/admin/orders/send-lifecycle-whatsapp', {
@@ -394,32 +496,90 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
           })
         );
 
-        // Deselect successful orders; keep failed orders selected for quick retry
         setSelectedIds((prev) => prev.filter((id) => !sentIds.has(id)));
 
-        const errors = (data.results || [])
-          .filter((r: any) => !r.success)
-          .map((r: any) => `#${r.orderNumber}: ${r.error || 'Failed'}`);
-
         setBulkResultModal({
-          sent: data.sent || 0,
-          failed: data.failed || 0,
-          errors,
+          title: 'Bulk WhatsApp Dispatch Results',
+          summary: {
+            total: selectedIds.length,
+            successful: data.sent || 0,
+            skipped: 0,
+            failed: data.failed || 0,
+          },
+          results: (data.results || []).map((r: any) => ({
+            orderId: r.orderId,
+            orderNumber: r.orderNumber,
+            success: r.success,
+            action: r.action || 'WHATSAPP',
+            message: r.error || (r.success ? 'Message delivered successfully' : 'Failed'),
+          })),
         });
       }
     } catch {
       alert('Network error executing bulk WhatsApp dispatch.');
     } finally {
-      setIsBulkSending(false);
-      setBulkProgress(null);
+      setIsBulkProcessing(false);
     }
   };
 
-  // 4. Bulk Print Labels Action (Requirement 22)
+  // 3. Bulk Create PostEx Shipments Execution
+  const executeBulkCreatePostEx = async () => {
+    setShowBulkShipmentModal(false);
+    setIsBulkProcessing(true);
+    setBulkProcessingLabel('Creating official PostEx shipments with courier API...');
+
+    try {
+      const res = await fetch('/api/admin/orders/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'CREATE_SHIPMENT',
+          orderIds: selectedIds,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Bulk shipment creation failed.');
+      } else {
+        const trackedMap = new Map<string, string>();
+        (data.results || []).forEach((r: any) => {
+          if (r.trackingNumber) {
+            trackedMap.set(r.orderId, r.trackingNumber);
+          }
+        });
+
+        setOrders((prev) =>
+          prev.map((o) => {
+            const tracking = trackedMap.get(o.id);
+            if (!tracking) return o;
+            return {
+              ...o,
+              trackingNumber: tracking,
+              courier: 'POSTEX',
+              status: o.status === 'CONFIRMED' ? 'PACKING' : o.status,
+            };
+          })
+        );
+
+        setSelectedIds([]);
+        setBulkResultModal({
+          title: 'Bulk PostEx Booking Results',
+          summary: data.summary,
+          results: data.results,
+        });
+      }
+    } catch {
+      alert('Network error during bulk shipment creation.');
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  // 4. Bulk Print Labels
   const handleBulkPrintLabels = () => {
     if (selectedIds.length === 0) return;
-    const eligibleOrders = orders.filter((o) => selectedIds.includes(o.id));
-    const trackingList = eligibleOrders
+    const trackingList = selectedOrders
       .map((o) => resolveTracking(o))
       .filter((t): t is string => Boolean(t));
 
@@ -428,174 +588,340 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
       return;
     }
 
-    const url = `/api/admin/courier/postex/label?trackingNumbers=${encodeURIComponent(trackingList.join(','))}`;
+    const url = `/api/admin/courier/postex/label?trackingNumbers=${encodeURIComponent(
+      trackingList.join(',')
+    )}`;
     window.open(url, '_blank');
   };
 
-  // Delete handler
-  const handleDeleteOrder = async (reason: string) => {
-    if (!selectedOrderForDelete) return;
-
-    const res = await fetch('/api/admin/orders/delete', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        orderId: selectedOrderForDelete.id,
-        reason,
-      }),
+  // 5. Bulk Download Invoices
+  const handleBulkDownloadInvoices = () => {
+    if (selectedIds.length === 0) return;
+    // Sequential trigger for invoice windows
+    selectedOrders.slice(0, 10).forEach((order) => {
+      window.open(`/admin/orders/${order.id}/invoice`, '_blank');
     });
+    if (selectedOrders.length > 10) {
+      alert('Opened invoices for the first 10 selected orders (browser pop-up protection).');
+    }
+  };
 
-    const data = await res.json();
-    if (!res.ok) {
-      throw new Error(data.error || 'Failed to delete order.');
+  // 6. Bulk Update Status Execution
+  const executeBulkUpdateStatus = async (targetStatus: string) => {
+    setShowBulkStatusModal(false);
+    setIsBulkProcessing(true);
+    setBulkProcessingLabel(`Updating status to ${targetStatus}...`);
+
+    try {
+      const res = await fetch('/api/admin/orders/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'UPDATE_STATUS',
+          orderIds: selectedIds,
+          targetStatus,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Bulk status update failed.');
+      } else {
+        const updatedIds = new Set(
+          (data.results || [])
+            .filter((r: any) => r.success && !r.skipped)
+            .map((r: any) => r.orderId)
+        );
+
+        setOrders((prev) =>
+          prev.map((o) =>
+            updatedIds.has(o.id)
+              ? {
+                  ...o,
+                  status: targetStatus,
+                }
+              : o
+          )
+        );
+
+        setSelectedIds([]);
+        setBulkResultModal({
+          title: 'Bulk Status Update Results',
+          summary: data.summary,
+          results: data.results,
+        });
+      }
+    } catch {
+      alert('Network error updating status in bulk.');
+    } finally {
+      setIsBulkProcessing(false);
+    }
+  };
+
+  // 7. Bulk Delete Execution
+  const executeBulkDelete = async () => {
+    if (
+      !confirm(
+        `Are you sure you want to delete ${selectedIds.length} orders? This will reverse inventory where applicable.`
+      )
+    ) {
+      return;
     }
 
-    setOrders((prev) => prev.filter((o) => o.id !== selectedOrderForDelete.id));
-    setSelectedOrderForDelete(null);
-    router.refresh();
+    setIsBulkProcessing(true);
+    setBulkProcessingLabel(`Deleting ${selectedIds.length} orders...`);
+
+    try {
+      const res = await fetch('/api/admin/orders/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'DELETE',
+          orderIds: selectedIds,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        alert(data.error || 'Bulk deletion failed.');
+      } else {
+        const deletedIds = new Set(
+          (data.results || [])
+            .filter((r: any) => r.success)
+            .map((r: any) => r.orderId)
+        );
+
+        setOrders((prev) => prev.filter((o) => !deletedIds.has(o.id)));
+        setSelectedIds([]);
+        setBulkResultModal({
+          title: 'Bulk Order Deletion Results',
+          summary: data.summary,
+          results: data.results,
+        });
+      }
+    } catch {
+      alert('Network error deleting orders in bulk.');
+    } finally {
+      setIsBulkProcessing(false);
+    }
   };
 
   const exportCSV = () => {
-    const headers = ['Order Number', 'Date', 'Customer Name', 'Phone', 'City', 'Total Amount', 'Status', 'Courier', 'Tracking'];
+    const headers = [
+      'Order Number',
+      'Date',
+      'Customer Name',
+      'Phone',
+      'City',
+      'Total Amount',
+      'Status',
+      'Courier',
+      'Tracking',
+    ];
     const rows = filteredOrders.map((o) => [
       o.orderNumber,
       new Date(o.createdAt).toLocaleDateString(),
-      o.customerName,
-      o.customerPhone,
-      o.shippingCity,
+      `"${o.customerName}"`,
+      `"${o.customerPhone}"`,
+      `"${o.shippingCity}"`,
       o.totalAmount,
       o.status,
       o.courier || '',
       resolveTracking(o) || '',
     ]);
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const csvContent =
+      'data:text/csv;charset=utf-8,' +
+      [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `wearomnia_orders_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.setAttribute(
+      'download',
+      `wearomnia_orders_${new Date().toISOString().slice(0, 10)}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
+  // Eligibility evaluation for Bulk Modals
+  const eligibleForConfirm = selectedOrders.filter(
+    (o) =>
+      o.status === 'PENDING' &&
+      (!o.isPreOrder || o.preOrderPaymentStatus === 'PAYMENT_APPROVED')
+  ).length;
+  const skippedForConfirm = selectedOrders.length - eligibleForConfirm;
+  const skippedConfirmReasons = selectedOrders
+    .filter(
+      (o) =>
+        o.status !== 'PENDING' ||
+        (o.isPreOrder && o.preOrderPaymentStatus !== 'PAYMENT_APPROVED')
+    )
+    .map((o) =>
+      o.status === 'CONFIRMED'
+        ? `#${o.orderNumber}: Already confirmed`
+        : o.isPreOrder && o.preOrderPaymentStatus !== 'PAYMENT_APPROVED'
+        ? `#${o.orderNumber}: Pre-order payment proof awaiting approval`
+        : `#${o.orderNumber}: In ${o.status} state`
+    );
+
+  const eligibleForShipment = selectedOrders.filter(
+    (o) =>
+      (o.status === 'CONFIRMED' || o.status === 'PACKING') &&
+      !resolveTracking(o) &&
+      (!o.isPreOrder || o.preOrderPaymentStatus === 'PAYMENT_APPROVED')
+  ).length;
+  const alreadyTrackedShipments = selectedOrders.filter((o) =>
+    Boolean(resolveTracking(o))
+  ).length;
+
   return (
-    <div className="space-y-6 text-[#FAF8F5]">
+    <div className="space-y-6 text-[#FAF8F5] font-sans">
       {/* ─────────────────────────────────────────────────────────────────────────────
-          1. ACTION REQUIRED SUMMARY CARDS (Requirement 29)
+          1. ACTION REQUIRED SUMMARY CARDS (Standardized Spacing & Padding)
       ───────────────────────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 font-sans">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* Card 1: Confirmation WhatsApp */}
         <button
           onClick={() =>
-            setActionQueueFilter(actionQueueFilter === 'CONFIRMATION_PENDING' ? 'ALL' : 'CONFIRMATION_PENDING')
+            setActionQueueFilter(
+              actionQueueFilter === 'CONFIRMATION_PENDING' ? 'ALL' : 'CONFIRMATION_PENDING'
+            )
           }
-          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+          className={`p-4 sm:p-5 rounded-2xl border text-left transition-all duration-150 cursor-pointer ${
             actionQueueFilter === 'CONFIRMATION_PENDING'
-              ? 'bg-[#103A3E] border-[#D4AF37] ring-1 ring-[#D4AF37] shadow-lg'
-              : 'bg-[#0A2528] border-[#D4AF37]/20 hover:border-[#D4AF37]/50'
+              ? 'bg-[#103A3E] border-[#D4AF37] ring-1 ring-[#D4AF37] shadow-lg shadow-[#D4AF37]/15'
+              : 'bg-[#0A2528] border-[#D4AF37]/20 hover:border-[#D4AF37]/50 hover:bg-[#0A2528]/80'
           }`}
         >
           <div className="flex items-center justify-between text-xs text-[#D4AF37] font-bold uppercase tracking-wider mb-2">
             <span>Confirmation WhatsApp</span>
-            <Send className="w-3.5 h-3.5" />
+            <div className="w-7 h-7 rounded-lg bg-[#06191B] text-[#D4AF37] border border-[#D4AF37]/30 flex items-center justify-center shrink-0">
+              <Send className="w-3.5 h-3.5" />
+            </div>
           </div>
           <div className="font-mono text-2xl font-black text-[#FAF8F5]">
             {confirmationPendingCount}
           </div>
-          <p className="text-[11px] text-[#FAF8F5]/60 mt-1">Confirmed orders awaiting message</p>
+          <p className="text-[11px] text-[#FAF8F5]/60 mt-1 truncate">
+            Confirmed orders awaiting message
+          </p>
         </button>
 
         {/* Card 2: Tracking WhatsApp */}
         <button
           onClick={() =>
-            setActionQueueFilter(actionQueueFilter === 'TRACKING_PENDING' ? 'ALL' : 'TRACKING_PENDING')
+            setActionQueueFilter(
+              actionQueueFilter === 'TRACKING_PENDING' ? 'ALL' : 'TRACKING_PENDING'
+            )
           }
-          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+          className={`p-4 sm:p-5 rounded-2xl border text-left transition-all duration-150 cursor-pointer ${
             actionQueueFilter === 'TRACKING_PENDING'
-              ? 'bg-[#103A3E] border-[#D4AF37] ring-1 ring-[#D4AF37] shadow-lg'
-              : 'bg-[#0A2528] border-[#D4AF37]/20 hover:border-[#D4AF37]/50'
+              ? 'bg-[#103A3E] border-[#D4AF37] ring-1 ring-[#D4AF37] shadow-lg shadow-[#D4AF37]/15'
+              : 'bg-[#0A2528] border-[#D4AF37]/20 hover:border-[#D4AF37]/50 hover:bg-[#0A2528]/80'
           }`}
         >
           <div className="flex items-center justify-between text-xs text-sky-400 font-bold uppercase tracking-wider mb-2">
             <span>Tracking WhatsApp</span>
-            <Truck className="w-3.5 h-3.5" />
+            <div className="w-7 h-7 rounded-lg bg-[#06191B] text-sky-400 border border-sky-400/30 flex items-center justify-center shrink-0">
+              <Truck className="w-3.5 h-3.5" />
+            </div>
           </div>
           <div className="font-mono text-2xl font-black text-[#FAF8F5]">
             {trackingPendingCount}
           </div>
-          <p className="text-[11px] text-[#FAF8F5]/60 mt-1">Dispatched orders awaiting tracking</p>
+          <p className="text-[11px] text-[#FAF8F5]/60 mt-1 truncate">
+            Dispatched orders awaiting tracking
+          </p>
         </button>
 
         {/* Card 3: Delivered WhatsApp */}
         <button
           onClick={() =>
-            setActionQueueFilter(actionQueueFilter === 'DELIVERED_PENDING' ? 'ALL' : 'DELIVERED_PENDING')
+            setActionQueueFilter(
+              actionQueueFilter === 'DELIVERED_PENDING' ? 'ALL' : 'DELIVERED_PENDING'
+            )
           }
-          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+          className={`p-4 sm:p-5 rounded-2xl border text-left transition-all duration-150 cursor-pointer ${
             actionQueueFilter === 'DELIVERED_PENDING'
-              ? 'bg-[#103A3E] border-[#D4AF37] ring-1 ring-[#D4AF37] shadow-lg'
-              : 'bg-[#0A2528] border-[#D4AF37]/20 hover:border-[#D4AF37]/50'
+              ? 'bg-[#103A3E] border-[#D4AF37] ring-1 ring-[#D4AF37] shadow-lg shadow-[#D4AF37]/15'
+              : 'bg-[#0A2528] border-[#D4AF37]/20 hover:border-[#D4AF37]/50 hover:bg-[#0A2528]/80'
           }`}
         >
           <div className="flex items-center justify-between text-xs text-emerald-400 font-bold uppercase tracking-wider mb-2">
             <span>Delivered WhatsApp</span>
-            <CheckCircle2 className="w-3.5 h-3.5" />
+            <div className="w-7 h-7 rounded-lg bg-[#06191B] text-emerald-400 border border-emerald-400/30 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+            </div>
           </div>
           <div className="font-mono text-2xl font-black text-[#FAF8F5]">
             {deliveredPendingCount}
           </div>
-          <p className="text-[11px] text-[#FAF8F5]/60 mt-1">Delivered orders awaiting review ask</p>
+          <p className="text-[11px] text-[#FAF8F5]/60 mt-1 truncate">
+            Delivered orders awaiting review ask
+          </p>
         </button>
 
         {/* Card 4: Labels Ready */}
         <button
           onClick={() =>
-            setActionQueueFilter(actionQueueFilter === 'LABELS_READY' ? 'ALL' : 'LABELS_READY')
+            setActionQueueFilter(
+              actionQueueFilter === 'LABELS_READY' ? 'ALL' : 'LABELS_READY'
+            )
           }
-          className={`p-4 rounded-2xl border text-left transition-all cursor-pointer ${
+          className={`p-4 sm:p-5 rounded-2xl border text-left transition-all duration-150 cursor-pointer ${
             actionQueueFilter === 'LABELS_READY'
-              ? 'bg-[#103A3E] border-[#D4AF37] ring-1 ring-[#D4AF37] shadow-lg'
-              : 'bg-[#0A2528] border-[#D4AF37]/20 hover:border-[#D4AF37]/50'
+              ? 'bg-[#103A3E] border-[#D4AF37] ring-1 ring-[#D4AF37] shadow-lg shadow-[#D4AF37]/15'
+              : 'bg-[#0A2528] border-[#D4AF37]/20 hover:border-[#D4AF37]/50 hover:bg-[#0A2528]/80'
           }`}
         >
           <div className="flex items-center justify-between text-xs text-amber-300 font-bold uppercase tracking-wider mb-2">
             <span>Labels Ready</span>
-            <Printer className="w-3.5 h-3.5" />
+            <div className="w-7 h-7 rounded-lg bg-[#06191B] text-amber-300 border border-amber-300/30 flex items-center justify-center shrink-0">
+              <Printer className="w-3.5 h-3.5" />
+            </div>
           </div>
           <div className="font-mono text-2xl font-black text-[#FAF8F5]">
             {labelsReadyCount}
           </div>
-          <p className="text-[11px] text-[#FAF8F5]/60 mt-1">Orders with official PostEx AWB</p>
+          <p className="text-[11px] text-[#FAF8F5]/60 mt-1 truncate">
+            Orders with official PostEx AWB
+          </p>
         </button>
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────────────────
-          2. PAGE HEADER & SEARCH BAR
+          2. STANDARDIZED PAGE HEADER & EXPORT ACTION
       ───────────────────────────────────────────────────────────────────────────── */}
       <AdminPageHeader
         badge="Lifecycle Operating System"
         title={`Orders & Shipments (${filteredOrders.length})`}
-        description="State-driven lifecycle queue with manual confirmation, sequential WhatsApp automation, and bulk courier tools."
+        description="State-driven lifecycle queue with manual confirmation, sequential WhatsApp automation, and bulk courier operations."
         actions={
-          <button
+          <AdminButton
+            size="md"
+            variant="primary"
             onClick={exportCSV}
-            className="w-full sm:w-auto bg-[#D4AF37] text-black px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-white transition-colors shadow-sm flex items-center justify-center gap-2 shrink-0 cursor-pointer"
+            leftIcon={<Download className="w-4 h-4" />}
           >
-            <Download className="w-4 h-4" /> Export CSV
-          </button>
+            Export CSV
+          </AdminButton>
         }
       />
 
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          3. SEARCH & STATUS FILTERS ROW (Consistent 40px Height)
+      ───────────────────────────────────────────────────────────────────────────── */}
       <div className="bg-[#0A2528] p-3.5 sm:p-4 rounded-2xl border border-[#D4AF37]/20 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-md">
-        <div className="relative w-full sm:w-80">
-          <Search className="w-4 h-4 text-[#D4AF37] absolute left-3.5 top-3.5" />
+        <div className="relative w-full sm:w-96">
+          <Search className="w-4 h-4 text-[#D4AF37] absolute left-3.5 top-3" />
           <input
             type="text"
             placeholder="Search by Order #, phone, name, tracking..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-[#06191B] rounded-xl text-xs text-[#FAF8F5] placeholder-[#FAF8F5]/40 border border-[#D4AF37]/25 focus:outline-none focus:ring-1 focus:ring-[#D4AF37] font-sans"
+            className="w-full h-10 pl-10 pr-4 bg-[#06191B] rounded-xl text-xs text-[#FAF8F5] placeholder-[#FAF8F5]/40 border border-[#D4AF37]/25 focus:outline-none focus:ring-1 focus:ring-[#D4AF37] font-sans"
           />
         </div>
 
@@ -603,7 +929,7 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="w-full sm:w-auto px-4 py-2.5 bg-[#06191B] rounded-xl text-xs text-[#D4AF37] border border-[#D4AF37]/30 focus:outline-none font-bold uppercase tracking-wider cursor-pointer"
+            className="w-full sm:w-auto h-10 px-4 bg-[#06191B] rounded-xl text-xs text-[#D4AF37] border border-[#D4AF37]/30 focus:outline-none font-bold uppercase tracking-wider cursor-pointer"
           >
             <option value="ALL">All Statuses</option>
             <option value="PRE_ORDER">✨ Pre-Orders (All)</option>
@@ -621,57 +947,7 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
       </div>
 
       {/* ─────────────────────────────────────────────────────────────────────────────
-          3. BULK SELECTION ACTION TOOLBAR (Requirement 7 & 21)
-      ───────────────────────────────────────────────────────────────────────────── */}
-      {selectedIds.length > 0 && (
-        <div className="bg-[#103A3E] border border-[#D4AF37]/50 rounded-2xl p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xl animate-in fade-in duration-200">
-          <div className="flex items-center gap-3">
-            <span className="w-6 h-6 rounded-full bg-[#D4AF37] text-black font-mono font-bold text-xs flex items-center justify-center">
-              {selectedIds.length}
-            </span>
-            <span className="text-xs font-bold text-[#FAF8F5] uppercase tracking-wider">
-              Orders Selected
-            </span>
-            <button
-              onClick={() => setSelectedIds([])}
-              className="text-xs text-[#FAF8F5]/60 hover:text-[#FAF8F5] underline cursor-pointer ml-2"
-            >
-              Clear
-            </button>
-          </div>
-
-          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
-            <button
-              onClick={handleBulkSendWhatsApp}
-              disabled={isBulkSending}
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer disabled:opacity-50"
-            >
-              {isBulkSending ? (
-                <>
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  <span>Processing...</span>
-                </>
-              ) : (
-                <>
-                  <Send className="w-3.5 h-3.5" />
-                  <span>Send To WhatsApp ({selectedIds.length})</span>
-                </>
-              )}
-            </button>
-
-            <button
-              onClick={handleBulkPrintLabels}
-              className="px-4 py-2 rounded-xl bg-[#D4AF37] hover:bg-white text-black text-xs font-extrabold uppercase tracking-wider flex items-center gap-2 shadow-md cursor-pointer"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Print Labels</span>
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* ─────────────────────────────────────────────────────────────────────────────
-          4. ORDERS TABLE (Requirement 4)
+          4. ORDERS TABLE (Desktop/Tablet) + MOBILE CARDS (Mobile)
       ───────────────────────────────────────────────────────────────────────────── */}
       <div className="bg-[#0A2528] rounded-2xl border border-[#D4AF37]/20 overflow-hidden shadow-xl">
         {filteredOrders.length === 0 ? (
@@ -682,278 +958,463 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
               icon={FileText}
               action={
                 search || statusFilter !== 'ALL' || actionQueueFilter !== 'ALL' ? (
-                  <button
+                  <AdminButton
+                    size="sm"
+                    variant="secondary"
                     onClick={() => {
                       setSearch('');
                       setStatusFilter('ALL');
                       setActionQueueFilter('ALL');
                     }}
-                    className="px-4 py-2 bg-[#0D3337] hover:bg-[#103A3E] text-[#D4AF37] border border-[#D4AF37]/30 rounded-xl text-xs font-bold uppercase tracking-wider transition-colors cursor-pointer"
                   >
                     Reset Filters
-                  </button>
+                  </AdminButton>
                 ) : undefined
               }
             />
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs font-sans">
-              <thead className="bg-[#06191B]/80 text-[#D4AF37] font-mono text-[10px] uppercase tracking-wider border-b border-[#D4AF37]/20">
-                <tr>
-                  <th className="p-3.5 w-10 text-center">
-                    <button
-                      onClick={toggleSelectAll}
-                      className="cursor-pointer text-[#D4AF37]"
-                      title="Select / Deselect all"
-                    >
-                      {selectedIds.length === filteredOrders.length && filteredOrders.length > 0 ? (
-                        <CheckSquare className="w-4 h-4 text-[#D4AF37]" />
-                      ) : (
-                        <Square className="w-4 h-4 text-[#D4AF37]/60" />
-                      )}
-                    </button>
-                  </th>
-                  <th className="p-3.5">Order #</th>
-                  <th className="p-3.5">Date</th>
-                  <th className="p-3.5">Customer</th>
-                  <th className="p-3.5">City</th>
-                  <th className="p-3.5">Total &amp; Financials</th>
-                  <th className="p-3.5">Order Status</th>
-                  <th className="p-3.5">Tracking / Courier</th>
-                  <th className="p-3.5">WhatsApp State</th>
-                  <th className="p-3.5">Next Action</th>
-                  <th className="p-3.5 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#D4AF37]/10">
-                {paginatedOrders.map((order) => {
-                  const tracking = resolveTracking(order);
-                  const nextAction = getNextLifecycleAction(order);
-                  const isSelected = selectedIds.includes(order.id);
-                  const isConfirming = confirmingOrderIds.has(order.id);
-                  const isSendingWa = sendingWhatsAppIds.has(order.id);
+          <>
+            {/* Desktop / Tablet Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-left text-xs font-sans">
+                <thead className="bg-[#06191B]/80 text-[#D4AF37] font-mono text-[10px] uppercase tracking-wider border-b border-[#D4AF37]/20">
+                  <tr>
+                    <th className="p-3.5 w-10 text-center">
+                      <button
+                        onClick={toggleSelectAll}
+                        className="cursor-pointer text-[#D4AF37]"
+                        title="Select / Deselect all"
+                      >
+                        {selectedIds.length === filteredOrders.length &&
+                        filteredOrders.length > 0 ? (
+                          <CheckSquare className="w-4 h-4 text-[#D4AF37]" />
+                        ) : (
+                          <Square className="w-4 h-4 text-[#D4AF37]/60" />
+                        )}
+                      </button>
+                    </th>
+                    <th className="p-3.5 w-36">Order #</th>
+                    <th className="p-3.5 w-24">Date</th>
+                    <th className="p-3.5 min-w-[160px]">Customer</th>
+                    <th className="p-3.5 w-28">City</th>
+                    <th className="p-3.5 w-32">Total &amp; Financials</th>
+                    <th className="p-3.5 w-36">Order Status</th>
+                    <th className="p-3.5 w-36">Tracking / Courier</th>
+                    <th className="p-3.5 w-32">WhatsApp State</th>
+                    <th className="p-3.5 w-36">Next Action</th>
+                    <th className="p-3.5 w-28 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#D4AF37]/10">
+                  {paginatedOrders.map((order) => {
+                    const tracking = resolveTracking(order);
+                    const nextAction = getNextLifecycleAction(order);
+                    const isSelected = selectedIds.includes(order.id);
+                    const isConfirming = confirmingOrderIds.has(order.id);
+                    const isSendingWa = sendingWhatsAppIds.has(order.id);
 
-                  return (
-                    <tr
-                      key={order.id}
-                      className={`hover:bg-[#103A3E]/30 transition-colors ${
-                        isSelected ? 'bg-[#103A3E]/50' : ''
-                      }`}
-                    >
-                      {/* Checkbox */}
-                      <td className="p-3.5 text-center">
+                    return (
+                      <tr
+                        key={order.id}
+                        className={`hover:bg-[#103A3E]/30 transition-colors ${
+                          isSelected ? 'bg-[#103A3E]/50' : ''
+                        }`}
+                      >
+                        {/* Checkbox */}
+                        <td className="p-3.5 text-center">
+                          <button
+                            onClick={() => toggleSelectOne(order.id)}
+                            className="cursor-pointer text-[#D4AF37]"
+                          >
+                            {isSelected ? (
+                              <CheckSquare className="w-4 h-4 text-[#D4AF37]" />
+                            ) : (
+                              <Square className="w-4 h-4 text-[#D4AF37]/40" />
+                            )}
+                          </button>
+                        </td>
+
+                        {/* Order Number */}
+                        <td className="p-3.5 font-mono font-bold text-[#D4AF37]">
+                          <div className="flex flex-col gap-1 items-start">
+                            <Link
+                              href={`/admin/orders/${order.id}`}
+                              className="hover:underline flex items-center gap-1"
+                            >
+                              {order.orderNumber}
+                              <ArrowUpRight className="w-3 h-3 opacity-60" />
+                            </Link>
+                            {order.isPreOrder && (
+                              <span className="bg-amber-400 text-teal-950 text-[9px] font-black px-1.5 py-0.5 rounded tracking-wider uppercase border border-amber-300">
+                                PRE-ORDER
+                              </span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Date */}
+                        <td className="p-3.5 text-[#FAF8F5]/70 font-mono text-[11px] whitespace-nowrap">
+                          {new Date(order.createdAt).toLocaleDateString()}
+                        </td>
+
+                        {/* Customer */}
+                        <td className="p-3.5">
+                          <span className="font-semibold text-[#FAF8F5] block truncate max-w-[150px]">
+                            {order.customerName}
+                          </span>
+                          <span className="text-[#FAF8F5]/60 text-[11px] font-mono block">
+                            {order.customerPhone}
+                          </span>
+                        </td>
+
+                        {/* City */}
+                        <td className="p-3.5 text-[#FAF8F5]/80 whitespace-nowrap">
+                          {order.shippingCity}
+                        </td>
+
+                        {/* Total */}
+                        <td className="p-3.5 font-mono font-bold text-[#D4AF37] whitespace-nowrap">
+                          <div>Rs. {order.totalAmount.toLocaleString()}</div>
+                          {order.isPreOrder && (
+                            <div className="text-[10px] font-sans font-medium text-emerald-400 mt-0.5">
+                              50% Adv: Rs. {(order.preOrderAdvanceAmount || 0).toLocaleString()}
+                            </div>
+                          )}
+                        </td>
+
+                        {/* Status */}
+                        <td className="p-3.5">
+                          <div className="space-y-1">
+                            <OrderStatusBadge status={order.status} />
+                            {order.isPreOrder && (
+                              <div>
+                                {order.preOrderPaymentStatus === 'PAYMENT_APPROVED' ? (
+                                  <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-700/50 text-[9px] font-bold px-1.5 py-0.5 rounded inline-block">
+                                    ✓ Proof Approved
+                                  </span>
+                                ) : order.preOrderPaymentStatus === 'PAYMENT_REJECTED' ? (
+                                  <span className="bg-red-950/80 text-red-400 border border-red-700/50 text-[9px] font-bold px-1.5 py-0.5 rounded inline-block">
+                                    ✕ Proof Rejected
+                                  </span>
+                                ) : (
+                                  <span className="bg-amber-950/80 text-amber-300 border border-amber-600/50 text-[9px] font-bold px-1.5 py-0.5 rounded inline-block animate-pulse">
+                                    ⏳ Verify Proof
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Tracking / Courier */}
+                        <td className="p-3.5 font-mono">
+                          {tracking ? (
+                            <div className="space-y-0.5">
+                              <span className="text-emerald-400 font-bold block truncate max-w-[130px]">
+                                {tracking}
+                              </span>
+                              <span className="text-[9.5px] uppercase font-bold text-[#D4AF37]/80">
+                                {order.courier || 'PostEx'}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-[#FAF8F5]/30 text-[11px]">—</span>
+                          )}
+                        </td>
+
+                        {/* WhatsApp State Column */}
+                        <td className="p-3.5 font-mono text-[10px]">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1">
+                              <span className="text-[#FAF8F5]/50">Conf:</span>
+                              {order.confirmationWhatsAppSentAt ? (
+                                <span className="text-emerald-400 font-bold">✓ Sent</span>
+                              ) : (
+                                <span className="text-amber-400/80">Pending</span>
+                              )}
+                            </div>
+                            {tracking && (
+                              <div className="flex items-center gap-1">
+                                <span className="text-[#FAF8F5]/50">Track:</span>
+                                {order.trackingWhatsAppSentAt ? (
+                                  <span className="text-emerald-400 font-bold">✓ Sent</span>
+                                ) : (
+                                  <span className="text-sky-400">Ready</span>
+                                )}
+                              </div>
+                            )}
+                            {(order.status === 'DELIVERED' ||
+                              order.shipments?.some((s) => s.status === 'DELIVERED')) && (
+                              <div className="flex items-center gap-1">
+                                <span className="text-[#FAF8F5]/50">Deliv:</span>
+                                {order.deliveredWhatsAppSentAt ? (
+                                  <span className="text-emerald-400 font-bold">✓ Sent</span>
+                                ) : (
+                                  <span className="text-emerald-300">Ready</span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Next Valid Action Column */}
+                        <td className="p-3.5 whitespace-nowrap">
+                          {nextAction === 'VERIFY_PAYMENT' ? (
+                            <Link
+                              href={`/admin/orders/${order.id}`}
+                              className="inline-flex items-center gap-1 h-8 px-2.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-600/50 text-[10px] font-bold uppercase tracking-wider hover:bg-amber-900 transition-colors"
+                            >
+                              Review Proof
+                            </Link>
+                          ) : nextAction === 'CONFIRM_ORDER' ? (
+                            <AdminButton
+                              size="sm"
+                              variant="primary"
+                              onClick={() => handleConfirmOrder(order.id)}
+                              isLoading={isConfirming}
+                              leftIcon={<ShieldCheck className="w-3.5 h-3.5" />}
+                            >
+                              Confirm
+                            </AdminButton>
+                          ) : nextAction === 'SEND_CONFIRMATION' ? (
+                            <AdminButton
+                              size="sm"
+                              variant="success"
+                              onClick={() => handleSendSingleWhatsApp(order)}
+                              isLoading={isSendingWa}
+                              leftIcon={<Send className="w-3.5 h-3.5" />}
+                            >
+                              Send Conf
+                            </AdminButton>
+                          ) : nextAction === 'SEND_TRACKING' ? (
+                            <AdminButton
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => handleSendSingleWhatsApp(order)}
+                              isLoading={isSendingWa}
+                              leftIcon={<Truck className="w-3.5 h-3.5 text-sky-400" />}
+                            >
+                              Send Track
+                            </AdminButton>
+                          ) : nextAction === 'SEND_DELIVERED' ? (
+                            <AdminButton
+                              size="sm"
+                              variant="secondary"
+                              onClick={() => handleSendSingleWhatsApp(order)}
+                              isLoading={isSendingWa}
+                              leftIcon={<CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />}
+                            >
+                              Send Deliv
+                            </AdminButton>
+                          ) : (
+                            <span className="text-emerald-400 font-bold text-[10px] flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> All Sent
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Action Menu (Uniform 32px Height Group) */}
+                        <td className="p-3.5 text-right whitespace-nowrap">
+                          <div className="flex items-center justify-end gap-1.5">
+                            <Link
+                              href={`/admin/orders/${order.id}`}
+                              className="w-8 h-8 rounded-lg bg-[#103A3E] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black transition-colors flex items-center justify-center border border-[#D4AF37]/20"
+                              title="View Order Details"
+                              aria-label="View Order Details"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                            </Link>
+
+                            {tracking && (
+                              <a
+                                href={`/api/admin/courier/postex/label?trackingNumber=${encodeURIComponent(
+                                  tracking
+                                )}`}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="w-8 h-8 rounded-lg bg-[#D4AF37] text-black hover:bg-white transition-colors flex items-center justify-center shadow-xs"
+                                title="Print Official PostEx AWB Label"
+                                aria-label="Print Label"
+                              >
+                                <Printer className="w-3.5 h-3.5" />
+                              </a>
+                            )}
+
+                            <button
+                              onClick={() => setSelectedOrderForDelete(order)}
+                              className="w-8 h-8 rounded-lg bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/50 transition-colors flex items-center justify-center cursor-pointer"
+                              title="Delete Order"
+                              aria-label="Delete Order"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Cards View (< 768px Viewport) */}
+            <div className="block md:hidden divide-y divide-[#D4AF37]/15">
+              {paginatedOrders.map((order) => {
+                const tracking = resolveTracking(order);
+                const nextAction = getNextLifecycleAction(order);
+                const isSelected = selectedIds.includes(order.id);
+                const isConfirming = confirmingOrderIds.has(order.id);
+                const isSendingWa = sendingWhatsAppIds.has(order.id);
+
+                return (
+                  <div
+                    key={order.id}
+                    className={`p-4 space-y-3 ${isSelected ? 'bg-[#103A3E]/40' : ''}`}
+                  >
+                    {/* Top Row: Checkbox, Order #, Status */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
                         <button
                           onClick={() => toggleSelectOne(order.id)}
-                          className="cursor-pointer text-[#D4AF37]"
+                          className="text-[#D4AF37] cursor-pointer"
                         >
                           {isSelected ? (
                             <CheckSquare className="w-4 h-4 text-[#D4AF37]" />
                           ) : (
-                            <Square className="w-4 h-4 text-[#D4AF37]/40" />
+                            <Square className="w-4 h-4 text-[#D4AF37]/50" />
                           )}
                         </button>
-                      </td>
-
-                      {/* Order Number */}
-                      <td className="p-3.5 font-mono font-bold text-[#D4AF37]">
-                        <div className="flex flex-col gap-1 items-start">
-                          <Link href={`/admin/orders/${order.id}`} className="hover:underline flex items-center gap-1">
-                            {order.orderNumber}
-                            <ArrowUpRight className="w-3 h-3 opacity-60" />
-                          </Link>
-                          {order.isPreOrder && (
-                            <span className="bg-amber-400 text-teal-950 text-[9px] font-black px-1.5 py-0.5 rounded tracking-wider uppercase border border-amber-300">
-                              PRE-ORDER
-                            </span>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Date */}
-                      <td className="p-3.5 text-[#FAF8F5]/70 font-mono text-[11px] whitespace-nowrap">
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </td>
-
-                      {/* Customer */}
-                      <td className="p-3.5">
-                        <span className="font-semibold text-[#FAF8F5] block">{order.customerName}</span>
-                        <span className="text-[#FAF8F5]/60 text-[11px] font-mono">{order.customerPhone}</span>
-                      </td>
-
-                      {/* City */}
-                      <td className="p-3.5 text-[#FAF8F5]/80">{order.shippingCity}</td>
-
-                      {/* Total */}
-                      <td className="p-3.5 font-mono font-bold text-[#D4AF37]">
-                        <div>Rs. {order.totalAmount.toLocaleString()}</div>
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="font-mono font-bold text-[#D4AF37] text-sm hover:underline"
+                        >
+                          {order.orderNumber}
+                        </Link>
                         {order.isPreOrder && (
-                          <div className="text-[10px] font-sans font-medium text-emerald-400 mt-0.5">
-                            50% Adv: Rs. {(order.preOrderAdvanceAmount || 0).toLocaleString()}
-                          </div>
+                          <span className="bg-amber-400 text-teal-950 text-[9px] font-black px-1.5 py-0.5 rounded uppercase">
+                            PRE-ORDER
+                          </span>
                         )}
-                      </td>
+                      </div>
 
-                      {/* Status */}
-                      <td className="p-3.5">
-                        <OrderStatusBadge status={order.status} />
-                        {order.isPreOrder && (
-                          <div className="mt-1">
-                            {order.preOrderPaymentStatus === 'PAYMENT_APPROVED' ? (
-                              <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-700/50 text-[9px] font-bold px-1.5 py-0.5 rounded inline-block">
-                                ✓ Proof Approved
-                              </span>
-                            ) : order.preOrderPaymentStatus === 'PAYMENT_REJECTED' ? (
-                              <span className="bg-red-950/80 text-red-400 border border-red-700/50 text-[9px] font-bold px-1.5 py-0.5 rounded inline-block">
-                                ✕ Proof Rejected
-                              </span>
-                            ) : (
-                              <span className="bg-amber-950/80 text-amber-300 border border-amber-600/50 text-[9px] font-bold px-1.5 py-0.5 rounded inline-block animate-pulse">
-                                ⏳ Verify Proof
-                              </span>
-                            )}
-                          </div>
-                        )}
-                      </td>
+                      <OrderStatusBadge status={order.status} />
+                    </div>
 
-                      {/* Tracking / Courier */}
-                      <td className="p-3.5 font-mono">
-                        {tracking ? (
-                          <div className="space-y-0.5">
-                            <span className="text-emerald-400 font-bold block">{tracking}</span>
-                            <span className="text-[9.5px] uppercase font-bold text-[#D4AF37]/80">
-                              {order.courier || 'PostEx'}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-[#FAF8F5]/30 text-[11px]">—</span>
-                        )}
-                      </td>
+                    {/* Middle Row: Customer Info & Financials */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <span className="text-[#FAF8F5]/60 text-[10px] uppercase font-bold block">
+                          Customer
+                        </span>
+                        <span className="font-semibold text-[#FAF8F5] block truncate">
+                          {order.customerName}
+                        </span>
+                        <span className="font-mono text-[#FAF8F5]/60 text-[11px]">
+                          {order.customerPhone}
+                        </span>
+                      </div>
 
-                      {/* WhatsApp State Column */}
-                      <td className="p-3.5 font-mono text-[10px]">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1">
-                            <span className="text-[#FAF8F5]/50">Conf:</span>
-                            {order.confirmationWhatsAppSentAt ? (
-                              <span className="text-emerald-400 font-bold">✓ Sent</span>
-                            ) : (
-                              <span className="text-amber-400/80">Pending</span>
-                            )}
-                          </div>
-                          {tracking && (
-                            <div className="flex items-center gap-1">
-                              <span className="text-[#FAF8F5]/50">Track:</span>
-                              {order.trackingWhatsAppSentAt ? (
-                                <span className="text-emerald-400 font-bold">✓ Sent</span>
-                              ) : (
-                                <span className="text-sky-400">Ready</span>
-                              )}
-                            </div>
-                          )}
-                          {(order.status === 'DELIVERED' || order.shipments?.some((s) => s.status === 'DELIVERED')) && (
-                            <div className="flex items-center gap-1">
-                              <span className="text-[#FAF8F5]/50">Deliv:</span>
-                              {order.deliveredWhatsAppSentAt ? (
-                                <span className="text-emerald-400 font-bold">✓ Sent</span>
-                              ) : (
-                                <span className="text-emerald-300">Ready</span>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </td>
+                      <div className="text-right">
+                        <span className="text-[#FAF8F5]/60 text-[10px] uppercase font-bold block">
+                          Total Amount
+                        </span>
+                        <span className="font-mono font-bold text-[#D4AF37] text-sm">
+                          Rs. {order.totalAmount.toLocaleString()}
+                        </span>
+                        <span className="text-[#FAF8F5]/60 text-[11px] block">
+                          {order.shippingCity}
+                        </span>
+                      </div>
+                    </div>
 
-                      {/* Next Valid Action Column */}
-                      <td className="p-3.5 whitespace-nowrap">
+                    {/* Tracking Row if Booked */}
+                    {tracking && (
+                      <div className="p-2 rounded-lg bg-[#06191B] border border-[#D4AF37]/20 flex items-center justify-between text-xs">
+                        <span className="text-[#FAF8F5]/60 font-mono text-[11px]">PostEx AWB:</span>
+                        <span className="font-mono font-bold text-emerald-400">{tracking}</span>
+                      </div>
+                    )}
+
+                    {/* Bottom Row: Next Lifecycle Action + Icon Controls */}
+                    <div className="pt-2 border-t border-[#D4AF37]/10 flex items-center justify-between gap-2">
+                      <div>
                         {nextAction === 'VERIFY_PAYMENT' ? (
                           <Link
                             href={`/admin/orders/${order.id}`}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-600/50 text-[10px] font-bold uppercase tracking-wider hover:bg-amber-900"
+                            className="inline-flex items-center gap-1 h-8 px-2.5 rounded-lg bg-amber-950/80 text-amber-300 border border-amber-600/50 text-[10px] font-bold uppercase tracking-wider"
                           >
                             Review Proof
                           </Link>
                         ) : nextAction === 'CONFIRM_ORDER' ? (
-                          <button
+                          <AdminButton
+                            size="sm"
+                            variant="primary"
                             onClick={() => handleConfirmOrder(order.id)}
-                            disabled={isConfirming}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#D4AF37] text-black text-[10px] font-black uppercase tracking-wider hover:bg-white transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                            isLoading={isConfirming}
                           >
-                            {isConfirming ? <Loader2 className="w-3 h-3 animate-spin" /> : <ShieldCheck className="w-3 h-3" />}
                             Confirm Order
-                          </button>
+                          </AdminButton>
                         ) : nextAction === 'SEND_CONFIRMATION' ? (
-                          <button
+                          <AdminButton
+                            size="sm"
+                            variant="success"
                             onClick={() => handleSendSingleWhatsApp(order)}
-                            disabled={isSendingWa}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-bold uppercase tracking-wider transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                            isLoading={isSendingWa}
                           >
-                            {isSendingWa ? <Loader2 className="w-3 h-3 animate-spin" /> : <Send className="w-3 h-3" />}
-                            Send Confirmation
-                          </button>
+                            Send WhatsApp Conf
+                          </AdminButton>
                         ) : nextAction === 'SEND_TRACKING' ? (
-                          <button
+                          <AdminButton
+                            size="sm"
+                            variant="secondary"
                             onClick={() => handleSendSingleWhatsApp(order)}
-                            disabled={isSendingWa}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-sky-600 hover:bg-sky-500 text-white text-[10px] font-bold uppercase tracking-wider transition-all shadow-xs cursor-pointer disabled:opacity-50"
+                            isLoading={isSendingWa}
                           >
-                            {isSendingWa ? <Loader2 className="w-3 h-3 animate-spin" /> : <Truck className="w-3 h-3" />}
                             Send Tracking
-                          </button>
-                        ) : nextAction === 'SEND_DELIVERED' ? (
-                          <button
-                            onClick={() => handleSendSingleWhatsApp(order)}
-                            disabled={isSendingWa}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-teal-600 hover:bg-teal-500 text-white text-[10px] font-bold uppercase tracking-wider transition-all shadow-xs cursor-pointer disabled:opacity-50"
-                          >
-                            {isSendingWa ? <Loader2 className="w-3 h-3 animate-spin" /> : <CheckCircle2 className="w-3 h-3" />}
-                            Send Delivered
-                          </button>
+                          </AdminButton>
                         ) : (
-                          <span className="text-emerald-400 font-bold text-[10px] flex items-center gap-1">
-                            <CheckCircle2 className="w-3 h-3" /> All Sent
+                          <span className="text-emerald-400 text-xs font-bold flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5" /> All Lifecycle Complete
                           </span>
                         )}
-                      </td>
+                      </div>
 
-                      {/* Action Menu */}
-                      <td className="p-3.5 text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Link
-                            href={`/admin/orders/${order.id}`}
-                            className="p-1.5 rounded-lg bg-[#103A3E] text-[#D4AF37] hover:bg-[#D4AF37] hover:text-black transition-colors"
-                            title="View Order Details"
+                      <div className="flex items-center gap-1.5">
+                        <Link
+                          href={`/admin/orders/${order.id}`}
+                          className="w-8 h-8 rounded-lg bg-[#103A3E] text-[#D4AF37] flex items-center justify-center"
+                          title="View"
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </Link>
+                        {tracking && (
+                          <a
+                            href={`/api/admin/courier/postex/label?trackingNumber=${encodeURIComponent(
+                              tracking
+                            )}`}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="w-8 h-8 rounded-lg bg-[#D4AF37] text-black flex items-center justify-center"
+                            title="Label"
                           >
-                            <Eye className="w-3.5 h-3.5" />
-                          </Link>
-
-                          {tracking && (
-                            <a
-                              href={`/api/admin/courier/postex/label?trackingNumber=${encodeURIComponent(tracking)}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="p-1.5 rounded-lg bg-[#D4AF37] text-black hover:bg-white transition-colors"
-                              title="Print Official PostEx AWB Label"
-                            >
-                              <Printer className="w-3.5 h-3.5" />
-                            </a>
-                          )}
-
-                          <button
-                            onClick={() => setSelectedOrderForDelete(order)}
-                            className="p-1.5 rounded-lg bg-rose-950/60 hover:bg-rose-900 text-rose-300 border border-rose-800/50 transition-colors cursor-pointer"
-                            title="Delete Order"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                            <Printer className="w-3.5 h-3.5" />
+                          </a>
+                        )}
+                        <button
+                          onClick={() => setSelectedOrderForDelete(order)}
+                          className="w-8 h-8 rounded-lg bg-rose-950/60 text-rose-300 flex items-center justify-center"
+                          title="Delete"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
         )}
 
         {filteredOrders.length > 0 && (
@@ -970,43 +1431,69 @@ export function OrdersClient({ initialOrders, initialSearch = '', initialStatus 
         )}
       </div>
 
-      {/* Bulk Result Summary Modal */}
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          5. STICKY BULK ACTIONS BAR (Section 13)
+      ───────────────────────────────────────────────────────────────────────────── */}
+      <AdminBulkActionBar
+        selectedCount={selectedIds.length}
+        totalCount={filteredOrders.length}
+        onClearSelection={() => setSelectedIds([])}
+        onConfirmOrders={() => setShowBulkConfirmModal(true)}
+        onSendWhatsApp={executeBulkSendWhatsApp}
+        onCreatePostEx={() => setShowBulkShipmentModal(true)}
+        onPrintLabels={handleBulkPrintLabels}
+        onDownloadInvoices={handleBulkDownloadInvoices}
+        onUpdateStatus={() => setShowBulkStatusModal(true)}
+        onDeleteOrders={executeBulkDelete}
+        isProcessing={isBulkProcessing}
+        processingLabel={bulkProcessingLabel}
+      />
+
+      {/* ─────────────────────────────────────────────────────────────────────────────
+          6. BULK ACTION CONFIRMATION & RESULT MODALS
+      ───────────────────────────────────────────────────────────────────────────── */}
+      {/* 1. Bulk Confirm Confirmation Modal */}
+      <BulkConfirmModal
+        isOpen={showBulkConfirmModal}
+        onClose={() => setShowBulkConfirmModal(false)}
+        onConfirm={executeBulkConfirm}
+        eligibleCount={eligibleForConfirm}
+        skippedCount={skippedForConfirm}
+        skippedReasons={skippedConfirmReasons}
+        isProcessing={isBulkProcessing}
+      />
+
+      {/* 2. Bulk Create PostEx Shipments Modal */}
+      <BulkShipmentModal
+        isOpen={showBulkShipmentModal}
+        onClose={() => setShowBulkShipmentModal(false)}
+        onConfirm={executeBulkCreatePostEx}
+        eligibleCount={eligibleForShipment}
+        alreadyTrackedCount={alreadyTrackedShipments}
+        isProcessing={isBulkProcessing}
+      />
+
+      {/* 3. Bulk Update Status Modal */}
+      <BulkStatusModal
+        isOpen={showBulkStatusModal}
+        onClose={() => setShowBulkStatusModal(false)}
+        onConfirm={executeBulkUpdateStatus}
+        selectedCount={selectedIds.length}
+        isProcessing={isBulkProcessing}
+      />
+
+      {/* 4. Bulk Result Summary Modal */}
       {bulkResultModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
-          <div className="max-w-md w-full bg-[#0A2528] rounded-2xl border border-[#D4AF37]/30 p-6 space-y-4 shadow-2xl">
-            <h3 className="font-serif text-xl font-bold text-[#FAF8F5]">
-              Bulk WhatsApp Results
-            </h3>
-            <div className="grid grid-cols-2 gap-3 text-center">
-              <div className="p-3 rounded-xl bg-emerald-950/60 border border-emerald-700/50">
-                <span className="font-mono text-2xl font-bold text-emerald-400">{bulkResultModal.sent}</span>
-                <span className="block text-[11px] text-emerald-300 uppercase font-bold mt-1">Sent Successfully</span>
-              </div>
-              <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-700/50">
-                <span className="font-mono text-2xl font-bold text-rose-400">{bulkResultModal.failed}</span>
-                <span className="block text-[11px] text-rose-300 uppercase font-bold mt-1">Failed</span>
-              </div>
-            </div>
-
-            {bulkResultModal.errors.length > 0 && (
-              <div className="space-y-1.5 max-h-40 overflow-y-auto p-2 bg-[#06191B] rounded-xl text-xs text-rose-300 font-mono">
-                {bulkResultModal.errors.map((err, idx) => (
-                  <p key={idx}>{err}</p>
-                ))}
-              </div>
-            )}
-
-            <button
-              onClick={() => setBulkResultModal(null)}
-              className="w-full py-2.5 rounded-xl bg-[#D4AF37] text-black font-extrabold text-xs uppercase tracking-wider hover:bg-white transition-all cursor-pointer"
-            >
-              Done
-            </button>
-          </div>
-        </div>
+        <BulkResultModal
+          isOpen={Boolean(bulkResultModal)}
+          onClose={() => setBulkResultModal(null)}
+          title={bulkResultModal.title}
+          summary={bulkResultModal.summary}
+          results={bulkResultModal.results}
+        />
       )}
 
-      {/* Delete Confirmation Modal */}
+      {/* 5. Delete Order Confirmation Modal */}
       <DeleteOrderModal
         isOpen={Boolean(selectedOrderForDelete)}
         onClose={() => setSelectedOrderForDelete(null)}
