@@ -10,8 +10,15 @@ import 'payment_proof_viewer.dart';
 
 class OrderDetailScreen extends StatefulWidget {
   final String orderId;
+  final OrderModel? initialOrder;
+  final bool autoFetch;
 
-  const OrderDetailScreen({super.key, required this.orderId});
+  const OrderDetailScreen({
+    super.key,
+    required this.orderId,
+    this.initialOrder,
+    this.autoFetch = true,
+  });
 
   @override
   State<OrderDetailScreen> createState() => _OrderDetailScreenState();
@@ -29,14 +36,24 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchDetail();
+    if (widget.initialOrder != null) {
+      _order = widget.initialOrder;
+      _isLoading = false;
+      if (widget.autoFetch) {
+        _fetchDetail(silent: true);
+      }
+    } else {
+      _fetchDetail();
+    }
   }
 
-  Future<void> _fetchDetail() async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
+  Future<void> _fetchDetail({bool silent = false}) async {
+    if (!silent) {
+      setState(() {
+        _isLoading = true;
+        _error = null;
+      });
+    }
 
     final auth = Provider.of<AuthService>(context, listen: false);
     final res = await auth.apiService.fetchOrderDetail(widget.orderId);
@@ -48,7 +65,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         _order = res.data;
         _isLoading = false;
       });
-    } else {
+    } else if (!silent) {
       setState(() {
         _error = res.error ?? 'Failed to load order details';
         _isLoading = false;
@@ -599,26 +616,51 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     );
   }
 
-  Widget _buildDetailRow(String label, String value) {
+  String _formatPaymentStatus(String status) {
+    switch (status.toUpperCase()) {
+      case 'PAYMENT_REVIEW_PENDING':
+        return 'PAYMENT REVIEW';
+      case 'UNDER_REVIEW':
+        return 'UNDER REVIEW';
+      case 'PAYMENT_APPROVED':
+        return 'APPROVED';
+      case 'PAYMENT_REJECTED':
+        return 'REJECTED';
+      default:
+        return status.replaceAll('_', ' ');
+    }
+  }
+
+  Widget _buildDetailRow(String label, String value, {Color? valueColor}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(color: AppColors.textMuted, fontSize: 13)),
-          Flexible(
+          Expanded(
+            flex: 5,
+            child: Text(
+              label,
+              style: const TextStyle(color: AppColors.textMuted, fontSize: 12.5),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            flex: 6,
             child: Text(
               value,
               textAlign: TextAlign.right,
-              style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: valueColor ?? AppColors.textPrimary,
+                fontSize: 12.5,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
       ),
     );
-  }
-
-  @override
+  }  @override
   Widget build(BuildContext context) {
     final auth = Provider.of<AuthService>(context, listen: false);
 
@@ -662,49 +704,57 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                       onRefresh: _fetchDetail,
                       color: AppColors.primary,
                       backgroundColor: AppColors.surface,
-                      child: SingleChildScrollView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 100),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            // 1. ORDER STATUS HEADER CARD
-                            _buildStatusHeaderCard(),
-                            const SizedBox(height: 14),
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          final isTablet = constraints.maxWidth >= 600;
+                          final horizontalPadding = isTablet ? 24.0 : 16.0;
+                          final bottomPadding = 120.0 + MediaQuery.paddingOf(context).bottom;
 
-                            // 2. PRE-ORDER PAYMENT PROOF SECTION (CRITICAL)
-                            if (_order!.isPreOrder) ...[
-                              _buildPaymentProofCard(),
-                              const SizedBox(height: 14),
-                            ],
+                          return SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            padding: EdgeInsets.fromLTRB(horizontalPadding, 16, horizontalPadding, bottomPadding),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                // 1. ORDER STATUS HEADER CARD
+                                _buildStatusHeaderCard(),
+                                const SizedBox(height: 16),
 
-                            // 3. POSTEX SHIPPING & TRACKING CARD
-                            _buildPostExShippingCard(auth),
-                            const SizedBox(height: 14),
+                                // 2. PRE-ORDER PAYMENT PROOF SECTION (CRITICAL)
+                                if (_order!.isPreOrder) ...[
+                                  _buildPaymentProofCard(),
+                                  const SizedBox(height: 16),
+                                ],
 
-                            // 4. WHATSAPP LIFECYCLE COMMUNICATION CARD
-                            _buildWhatsAppCard(),
-                            const SizedBox(height: 14),
+                                // 3. POSTEX SHIPPING & TRACKING CARD
+                                _buildPostExShippingCard(auth),
+                                const SizedBox(height: 16),
 
-                            // 5. CUSTOMER INFORMATION & STATS CARD
-                            _buildCustomerCard(),
-                            const SizedBox(height: 14),
+                                // 4. WHATSAPP LIFECYCLE COMMUNICATION CARD
+                                _buildWhatsAppCard(),
+                                const SizedBox(height: 16),
 
-                            // 6. ORDER ITEMS CARD
-                            _buildItemsCard(),
-                            const SizedBox(height: 14),
+                                // 5. CUSTOMER INFORMATION & STATS CARD
+                                _buildCustomerCard(),
+                                const SizedBox(height: 16),
 
-                            // 7. FINANCIAL & PAYMENT SUMMARY CARD
-                            _buildFinancialSummaryCard(),
-                            const SizedBox(height: 14),
+                                // 6. ORDER ITEMS CARD
+                                _buildItemsCard(),
+                                const SizedBox(height: 16),
 
-                            // 8. ACTIVITY TIMELINE
-                            if (_order!.timeline.isNotEmpty) ...[
-                              _buildTimelineCard(),
-                              const SizedBox(height: 14),
-                            ],
-                          ],
-                        ),
+                                // 7. FINANCIAL & PAYMENT SUMMARY CARD
+                                _buildFinancialSummaryCard(),
+                                const SizedBox(height: 16),
+
+                                // 8. ACTIVITY TIMELINE
+                                if (_order!.timeline.isNotEmpty) ...[
+                                  _buildTimelineCard(),
+                                  const SizedBox(height: 16),
+                                ],
+                              ],
+                            ),
+                          );
+                        },
                       ),
                     ),
       // STICKY BOTTOM ACTION BAR (One-thumb fast operations)
@@ -725,51 +775,60 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Text(
-                    '#${_order!.orderNumber}',
-                    style: const TextStyle(
-                      color: AppColors.textPrimary,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  if (_order!.isPreOrder)
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.accent.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
-                      ),
-                      child: const Text(
-                        'PRE-ORDER',
-                        style: TextStyle(color: AppColors.accent, fontSize: 10, fontWeight: FontWeight.w800),
-                      ),
-                    )
-                  else
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(
-                        color: AppColors.textMuted.withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text(
-                        'COD',
-                        style: TextStyle(color: AppColors.textSecondary, fontSize: 10, fontWeight: FontWeight.w700),
+              Expanded(
+                child: Wrap(
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: 8,
+                  runSpacing: 4,
+                  children: [
+                    Text(
+                      '#${_order!.orderNumber}',
+                      style: const TextStyle(
+                        color: AppColors.textPrimary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
                       ),
                     ),
-                ],
+                    if (_order!.isPreOrder)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: AppColors.accent.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                          border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+                        ),
+                        child: const Text(
+                          'PRE-ORDER',
+                          style: TextStyle(
+                            color: AppColors.accent,
+                            fontSize: 9.5,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                        decoration: BoxDecoration(
+                          color: AppColors.textMuted.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: const Text(
+                          'COD',
+                          style: TextStyle(color: AppColors.textSecondary, fontSize: 9.5, fontWeight: FontWeight.w700),
+                        ),
+                      ),
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4.5),
                 decoration: BoxDecoration(
                   color: _getStatusColor(_order!.status).withValues(alpha: 0.18),
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(16),
                   border: Border.all(
                     color: _getStatusColor(_order!.status).withValues(alpha: 0.4),
                   ),
@@ -779,7 +838,8 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   style: TextStyle(
                     color: _getStatusColor(_order!.status),
                     fontWeight: FontWeight.w700,
-                    fontSize: 12,
+                    fontSize: 11,
+                    letterSpacing: 0.3,
                   ),
                 ),
               ),
@@ -788,30 +848,95 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           const SizedBox(height: 6),
           Text(
             _dateFormat.format(_order!.createdAt),
-            style: const TextStyle(color: AppColors.textMuted, fontSize: 12),
+            style: const TextStyle(color: AppColors.textMuted, fontSize: 11.5),
           ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton.icon(
-                  onPressed: _showStatusUpdateDialog,
-                  icon: const Icon(Icons.edit_note, size: 18),
-                  label: const Text('Update Status'),
-                ),
-              ),
-              if (_order!.status == 'PENDING') ...[
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
-                    onPressed: _handleConfirmOrder,
-                    icon: const Icon(Icons.check_circle, size: 18),
-                    label: const Text('Confirm Order'),
+          const SizedBox(height: 14),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final isNarrow = constraints.maxWidth < 340;
+              if (_order!.status == 'PENDING' && isNarrow) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      height: 40,
+                      child: ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.success,
+                          foregroundColor: Colors.white,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: _handleConfirmOrder,
+                        icon: const Icon(Icons.check_circle, size: 17),
+                        label: const Text('Confirm Order', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 40,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: _showStatusUpdateDialog,
+                        icon: const Icon(Icons.edit_note, size: 17),
+                        label: const Text('Update Status', style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                  ],
+                );
+              }
+
+              return Row(
+                children: [
+                  if (_order!.status == 'PENDING') ...[
+                    Expanded(
+                      child: SizedBox(
+                        height: 40,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.success,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: _handleConfirmOrder,
+                          icon: const Icon(Icons.check_circle, size: 16),
+                          label: const Text(
+                            'Confirm Order',
+                            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: SizedBox(
+                      height: 40,
+                      child: OutlinedButton.icon(
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        onPressed: _showStatusUpdateDialog,
+                        icon: const Icon(Icons.edit_note, size: 16),
+                        label: const Text(
+                          'Update Status',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
-              ],
-            ],
+                ],
+              );
+            },
           ),
         ],
       ),
@@ -840,31 +965,35 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.shield_outlined, color: AppColors.primary, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Pre-Order Payment Proof',
-                    style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
+              const Icon(Icons.shield_outlined, color: AppColors.primary, size: 18),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Pre-Order Payment Proof',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
                   ),
-                ],
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3.5),
                 decoration: BoxDecoration(
-                  color: _getPaymentStatusColor(status).withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(12),
+                  color: _getPaymentStatusColor(status).withValues(alpha: 0.18),
+                  borderRadius: BorderRadius.circular(10),
                   border: Border.all(color: _getPaymentStatusColor(status).withValues(alpha: 0.4)),
                 ),
                 child: Text(
-                  status.replaceAll('_', ' '),
+                  _formatPaymentStatus(status),
                   style: TextStyle(
                     color: _getPaymentStatusColor(status),
-                    fontSize: 11,
+                    fontSize: 10.5,
                     fontWeight: FontWeight.w700,
+                    letterSpacing: 0.3,
                   ),
                 ),
               ),
@@ -880,44 +1009,79 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           if (_order!.preOrderPaymentVerifiedBy != null)
             _buildDetailRow('Verified By', _order!.preOrderPaymentVerifiedBy!),
           if (_order!.preOrderPaymentRejectionReason != null)
-            _buildDetailRow('Rejection Reason', _order!.preOrderPaymentRejectionReason!),
-          const SizedBox(height: 12),
-          // Action Buttons: View Screenshot, Approve, Reject
-          Row(
+            _buildDetailRow('Rejection Reason', _order!.preOrderPaymentRejectionReason!, valueColor: AppColors.error),
+          const SizedBox(height: 14),
+          // Action Buttons: View Proof on top, Approve & Reject side by side
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (hasProof) ...[
-                Expanded(
+              if (hasProof)
+                SizedBox(
+                  height: 42,
                   child: ElevatedButton.icon(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.surfaceVariant,
                       foregroundColor: AppColors.textPrimary,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     onPressed: _openPaymentProofViewer,
                     icon: const Icon(Icons.image_search, size: 18, color: AppColors.primary),
-                    label: const Text('View Proof'),
+                    label: const Text(
+                      'View Payment Proof',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
-              ],
-              if (status == 'PAYMENT_REVIEW_PENDING' || status == 'UNDER_REVIEW') ...[
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
-                    onPressed: _handleApprovePayment,
-                    icon: const Icon(Icons.check, size: 18),
-                    label: const Text('Approve'),
-                  ),
+              if (hasProof && (status == 'PAYMENT_REVIEW_PENDING' || status == 'UNDER_REVIEW'))
+                const SizedBox(height: 10),
+              if (status == 'PAYMENT_REVIEW_PENDING' || status == 'UNDER_REVIEW')
+                Row(
+                  children: [
+                    Expanded(
+                      child: SizedBox(
+                        height: 42,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.success,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: _handleApprovePayment,
+                          icon: const Icon(Icons.check_circle_outline, size: 18),
+                          label: const Text(
+                            'Approve',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: SizedBox(
+                        height: 42,
+                        child: ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.error,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: _handleRejectPayment,
+                          icon: const Icon(Icons.cancel_outlined, size: 18),
+                          label: const Text(
+                            'Reject',
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                    onPressed: _handleRejectPayment,
-                    icon: const Icon(Icons.close, size: 18),
-                    label: const Text('Reject'),
-                  ),
-                ),
-              ],
             ],
           ),
         ],
@@ -940,19 +1104,18 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.local_shipping_outlined, color: AppColors.primary, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'PostEx Courier & Shipping',
-                    style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                ],
+              const Icon(Icons.local_shipping_outlined, color: AppColors.primary, size: 18),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'PostEx Courier',
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w700),
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
-              if (hasTracking)
+              if (hasTracking) ...[
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
@@ -962,9 +1125,10 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                   ),
                   child: const Text(
                     'DISPATCHED',
-                    style: TextStyle(color: AppColors.success, fontSize: 10, fontWeight: FontWeight.w700),
+                    style: TextStyle(color: AppColors.success, fontSize: 9.5, fontWeight: FontWeight.w700),
                   ),
                 ),
+              ],
             ],
           ),
           const Divider(color: AppColors.border, height: 22),
@@ -974,76 +1138,116 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text('Tracking Number', style: TextStyle(color: AppColors.textMuted, fontSize: 13)),
-                  Row(
-                    children: [
-                      Text(
-                        _order!.trackingNumber!,
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
+                  const Text('Tracking Number', style: TextStyle(color: AppColors.textMuted, fontSize: 12.5)),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _order!.trackingNumber!,
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 13.5,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                            maxLines: 1,
+                          ),
                         ),
-                      ),
-                      const SizedBox(width: 6),
-                      const Icon(Icons.copy, size: 14, color: AppColors.textMuted),
-                    ],
+                        const SizedBox(width: 6),
+                        const Icon(Icons.copy, size: 14, color: AppColors.textMuted),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
             const SizedBox(height: 8),
             _buildDetailRow('Courier Partner', _order!.courier ?? 'PostEx'),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             // Actions: Print Label, Share Label, Track Live
             Row(
               children: [
                 Expanded(
-                  child: ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
+                  child: SizedBox(
+                    height: 40,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.primary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      ),
+                      onPressed: () => LabelService.printLabel(
+                        context: context,
+                        apiService: auth.apiService,
+                        orderId: _order!.id,
+                        trackingNumber: _order!.trackingNumber,
+                      ),
+                      icon: const Icon(Icons.print, size: 17),
+                      label: const Text(
+                        'Print Label',
+                        style: TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                    onPressed: () => LabelService.printLabel(
+                  ),
+                ),
+                const SizedBox(width: 8),
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: IconButton.filledTonal(
+                    style: IconButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: () => LabelService.shareLabel(
                       context: context,
                       apiService: auth.apiService,
                       orderId: _order!.id,
                       trackingNumber: _order!.trackingNumber,
                     ),
-                    icon: const Icon(Icons.print, size: 18),
-                    label: const Text('Print Label'),
+                    icon: const Icon(Icons.share, size: 17),
+                    tooltip: 'Share Official PDF',
                   ),
                 ),
                 const SizedBox(width: 8),
-                IconButton.filledTonal(
-                  onPressed: () => LabelService.shareLabel(
-                    context: context,
-                    apiService: auth.apiService,
-                    orderId: _order!.id,
-                    trackingNumber: _order!.trackingNumber,
+                SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: IconButton.filledTonal(
+                    style: IconButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                    onPressed: _handleTrackPostExShipment,
+                    icon: const Icon(Icons.my_location, size: 17),
+                    tooltip: 'Track PostEx Live',
                   ),
-                  icon: const Icon(Icons.share, size: 18),
-                  tooltip: 'Share Official PDF',
-                ),
-                const SizedBox(width: 8),
-                IconButton.filledTonal(
-                  onPressed: _handleTrackPostExShipment,
-                  icon: const Icon(Icons.my_location, size: 18),
-                  tooltip: 'Track PostEx Live',
                 ),
               ],
             ),
           ] else ...[
             const Text(
               'No PostEx shipment booked yet.',
-              style: TextStyle(color: AppColors.textMuted, fontSize: 13),
+              style: TextStyle(color: AppColors.textMuted, fontSize: 12.5),
             ),
             const SizedBox(height: 12),
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primary),
-              onPressed: _handleCreatePostExShipment,
-              icon: const Icon(Icons.local_shipping, size: 18),
-              label: const Text('Book PostEx Shipment'),
+            SizedBox(
+              height: 40,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primary,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: _handleCreatePostExShipment,
+                icon: const Icon(Icons.local_shipping, size: 18),
+                label: const Text('Book PostEx Shipment', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+              ),
             ),
           ],
         ],
@@ -1069,11 +1273,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
         children: [
           const Row(
             children: [
-              Icon(Icons.chat_bubble_outline, color: Color(0xFF25D366), size: 20),
+              Icon(Icons.chat_bubble_outline, color: Color(0xFF25D366), size: 18),
               SizedBox(width: 8),
-              Text(
-                'Customer WhatsApp Updates',
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
+              Expanded(
+                child: Text(
+                  'Customer WhatsApp',
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 15, fontWeight: FontWeight.w700),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -1086,7 +1294,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             onSend: () => _handleSendWhatsApp('CONFIRMATION'),
             canSend: _order!.status == 'CONFIRMED',
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           // Tracking WhatsApp Row
           _buildWhatsAppActionRow(
             title: 'Tracking Info',
@@ -1095,7 +1303,7 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             onSend: () => _handleSendWhatsApp('TRACKING'),
             canSend: _order!.trackingNumber != null && _order!.trackingNumber!.isNotEmpty,
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
           // Delivery WhatsApp Row
           _buildWhatsAppActionRow(
             title: 'Delivery Confirmation',
@@ -1119,32 +1327,43 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(color: AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600)),
-            Text(
-              isSent && sentAt != null
-                  ? 'Sent ${_dateFormat.format(sentAt)}'
-                  : canSend
-                      ? 'Ready to send'
-                      : 'Unavailable for current state',
-              style: TextStyle(
-                color: isSent ? AppColors.success : AppColors.textMuted,
-                fontSize: 11,
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title, style: const TextStyle(color: AppColors.textPrimary, fontSize: 12.5, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 1.5),
+              Text(
+                isSent && sentAt != null
+                    ? 'Sent ${_dateFormat.format(sentAt)}'
+                    : canSend
+                        ? 'Ready to send'
+                        : 'Unavailable for current state',
+                style: TextStyle(
+                  color: isSent ? AppColors.success : AppColors.textMuted,
+                  fontSize: 11,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-          ],
-        ),
-        ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: isSent ? AppColors.surfaceVariant : const Color(0xFF25D366),
-            foregroundColor: isSent ? AppColors.textSecondary : Colors.white,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-            minimumSize: Size.zero,
+            ],
           ),
-          onPressed: canSend ? onSend : null,
-          child: Text(isSent ? 'Resend' : 'Send', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          height: 32,
+          child: ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: isSent ? AppColors.surfaceVariant : const Color(0xFF25D366),
+              foregroundColor: isSent ? AppColors.textSecondary : Colors.white,
+              minimumSize: const Size(64, 32),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: canSend ? onSend : null,
+            child: Text(isSent ? 'Resend' : 'Send', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+          ),
         ),
       ],
     );
@@ -1167,15 +1386,21 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.person_outline, color: AppColors.primary, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Customer Details',
-                    style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                ],
+              const Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.person_outline, color: AppColors.primary, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Customer Details',
+                        style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               if (cust?.isVIP == true)
                 Container(
@@ -1230,27 +1455,33 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           if (cust != null) ...[
             const Divider(color: AppColors.border, height: 20),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                Column(
-                  children: [
-                    const Text('Total Orders', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${cust.ordersCount}',
-                      style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w800),
-                    ),
-                  ],
+                Expanded(
+                  child: Column(
+                    children: [
+                      const Text('Total Orders', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${cust.ordersCount}',
+                        style: const TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w800),
+                      ),
+                    ],
+                  ),
                 ),
-                Column(
-                  children: [
-                    const Text('Lifetime Spent', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Rs. ${_currencyFormat.format(cust.totalSpent)}',
-                      style: const TextStyle(color: AppColors.primary, fontSize: 16, fontWeight: FontWeight.w800),
-                    ),
-                  ],
+                Container(width: 1, height: 28, color: AppColors.border),
+                Expanded(
+                  child: Column(
+                    children: [
+                      const Text('Lifetime Spent', style: TextStyle(color: AppColors.textMuted, fontSize: 11)),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Rs. ${_currencyFormat.format(cust.totalSpent)}',
+                        style: const TextStyle(color: AppColors.primary, fontSize: 15, fontWeight: FontWeight.w800),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -1275,15 +1506,21 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Row(
-                children: [
-                  Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    'Ordered Items',
-                    style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                ],
+              const Expanded(
+                child: Row(
+                  children: [
+                    Icon(Icons.inventory_2_outlined, color: AppColors.primary, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Ordered Items',
+                        style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
               Text(
                 '${_order!.items.length} item${_order!.items.length > 1 ? 's' : ''}',
@@ -1357,9 +1594,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             children: [
               Icon(Icons.receipt_long_outlined, color: AppColors.primary, size: 20),
               SizedBox(width: 8),
-              Text(
-                'Financial & Payment Summary',
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
+              Expanded(
+                child: Text(
+                  'Financial & Payment Summary',
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -1375,7 +1616,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Total Amount', style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w800)),
+              const Expanded(
+                child: Text(
+                  'Total Amount',
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w800),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 8),
               Text(
                 'Rs. ${_currencyFormat.format(_order!.totalAmount)}',
                 style: const TextStyle(color: AppColors.primary, fontSize: 18, fontWeight: FontWeight.w800),
@@ -1411,9 +1660,13 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
             children: [
               Icon(Icons.history, color: AppColors.primary, size: 20),
               SizedBox(width: 8),
-              Text(
-                'Activity & Audit Timeline',
-                style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
+              Expanded(
+                child: Text(
+                  'Activity & Audit Timeline',
+                  style: TextStyle(color: AppColors.textPrimary, fontSize: 16, fontWeight: FontWeight.w700),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             ],
           ),
@@ -1437,8 +1690,11 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        Wrap(
+                          alignment: WrapAlignment.spaceBetween,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 8,
+                          runSpacing: 2,
                           children: [
                             Text(
                               t.status,
@@ -1472,105 +1728,140 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
     final isPreOrderPending = _order!.isPreOrder &&
         (_order!.preOrderPaymentStatus == 'PAYMENT_REVIEW_PENDING' || _order!.preOrderPaymentStatus == 'UNDER_REVIEW');
 
-    return SafeArea(
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-        decoration: BoxDecoration(
-          color: AppColors.surface,
-          border: const Border(top: BorderSide(color: AppColors.border)),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 10,
-              offset: const Offset(0, -3),
-            ),
-          ],
-        ),
-        child: _isActionProcessing
-            ? const SizedBox(
-                height: 48,
-                child: Center(
-                  child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2.5),
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: const Border(top: BorderSide(color: AppColors.border)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.35),
+            blurRadius: 10,
+            offset: const Offset(0, -3),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+          child: _isActionProcessing
+              ? const SizedBox(
+                  height: 48,
+                  child: Center(
+                    child: CircularProgressIndicator(color: AppColors.primary, strokeWidth: 2.5),
+                  ),
+                )
+              : SizedBox(
+                  height: 48,
+                  child: Row(
+                    children: [
+                      if (isPreOrderPending) ...[
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: _openPaymentProofViewer,
+                            icon: const Icon(Icons.shield_outlined, size: 20),
+                            label: const Text(
+                              'Review Payment Proof',
+                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ] else if (_order!.status == 'PENDING') ...[
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.success,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: _handleConfirmOrder,
+                            icon: const Icon(Icons.check_circle, size: 20),
+                            label: const Text(
+                              'Confirm Order',
+                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ] else if (!hasTracking && (_order!.status == 'CONFIRMED' || _order!.status == 'PACKING')) ...[
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: _handleCreatePostExShipment,
+                            icon: const Icon(Icons.local_shipping, size: 20),
+                            label: const Text(
+                              'Book PostEx Shipment',
+                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ] else if (hasTracking) ...[
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: () => LabelService.printLabel(
+                              context: context,
+                              apiService: auth.apiService,
+                              orderId: _order!.id,
+                              trackingNumber: _order!.trackingNumber,
+                            ),
+                            icon: const Icon(Icons.print, size: 20),
+                            label: const Text(
+                              'Print PostEx Label',
+                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ] else ...[
+                        Expanded(
+                          child: OutlinedButton.icon(
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            ),
+                            onPressed: _showStatusUpdateDialog,
+                            icon: const Icon(Icons.edit_note, size: 20),
+                            label: const Text(
+                              'Update Status',
+                              style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13.5),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-              )
-            : Row(
-                children: [
-                  if (isPreOrderPending) ...[
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: _openPaymentProofViewer,
-                        icon: const Icon(Icons.shield_outlined, size: 20),
-                        label: const Text('Review Payment Proof', style: TextStyle(fontWeight: FontWeight.w700)),
-                      ),
-                    ),
-                  ] else if (_order!.status == 'PENDING') ...[
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.success,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: _handleConfirmOrder,
-                        icon: const Icon(Icons.check_circle, size: 20),
-                        label: const Text('Confirm Order', style: TextStyle(fontWeight: FontWeight.w700)),
-                      ),
-                    ),
-                  ] else if (!hasTracking && (_order!.status == 'CONFIRMED' || _order!.status == 'PACKING')) ...[
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: _handleCreatePostExShipment,
-                        icon: const Icon(Icons.local_shipping, size: 20),
-                        label: const Text('Book PostEx Shipment', style: TextStyle(fontWeight: FontWeight.w700)),
-                      ),
-                    ),
-                  ] else if (hasTracking) ...[
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: () => LabelService.printLabel(
-                          context: context,
-                          apiService: auth.apiService,
-                          orderId: _order!.id,
-                          trackingNumber: _order!.trackingNumber,
-                        ),
-                        icon: const Icon(Icons.print, size: 20),
-                        label: const Text('Print PostEx Label', style: TextStyle(fontWeight: FontWeight.w700)),
-                      ),
-                    ),
-                  ] else ...[
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        ),
-                        onPressed: _showStatusUpdateDialog,
-                        icon: const Icon(Icons.edit_note, size: 20),
-                        label: const Text('Update Status', style: TextStyle(fontWeight: FontWeight.w700)),
-                      ),
-                    ),
-                  ],
-                ],
-              ),
+        ),
       ),
     );
   }
@@ -1581,7 +1872,15 @@ class _OrderDetailScreenState extends State<OrderDetailScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(title, style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(color: AppColors.textSecondary, fontSize: 13),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
           Text(
             'Rs. ${_currencyFormat.format(amount)}',
             style: TextStyle(color: color ?? AppColors.textPrimary, fontSize: 13, fontWeight: FontWeight.w600),

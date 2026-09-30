@@ -632,7 +632,7 @@ class _OrderListScreenState extends State<OrderListScreen> {
             } else {
               Navigator.of(context).push(
                 MaterialPageRoute(
-                  builder: (_) => OrderDetailScreen(orderId: order.id),
+                  builder: (_) => OrderDetailScreen(orderId: order.id, initialOrder: order),
                 ),
               ).then((_) => _loadOrders());
             }

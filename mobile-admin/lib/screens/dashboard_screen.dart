@@ -764,7 +764,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               borderRadius: BorderRadius.circular(14),
               onTap: () {
                 Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => OrderDetailScreen(orderId: order.id)),
+                  MaterialPageRoute(builder: (_) => OrderDetailScreen(orderId: order.id, initialOrder: order)),
                 ).then((_) => _loadDashboardData());
               },
               child: Container(
