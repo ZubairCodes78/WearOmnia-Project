@@ -13,6 +13,7 @@ import { ToastProvider } from '@/components/layout/ToastProvider';
 import { FlyToCartProvider } from '@/components/cart/FlyToCartProvider';
 import { getPublicSiteSettings } from '@/lib/settings';
 import { getCampaignPhase } from '@/lib/preorder';
+import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics';
 
 // ─── Fonts via next/font (self-hosted, no render-blocking external requests) ──
 const plusJakartaSans = Plus_Jakarta_Sans({
@@ -142,6 +143,7 @@ export default async function RootLayout({
           />
         </head>
         <body className={`bg-offwhite text-charcoal antialiased ${fontVars}`} suppressHydrationWarning>
+          <GoogleAnalytics />
           <SettingsProvider initialSettings={initialSettings}>
             <CartProvider>
               <WishlistProvider>
@@ -171,6 +173,7 @@ export default async function RootLayout({
         className={`bg-offwhite text-charcoal flex flex-col min-h-screen antialiased ${fontVars}`}
         suppressHydrationWarning
       >
+        <GoogleAnalytics />
         <SettingsProvider initialSettings={initialSettings}>
           <CartProvider>
             <WishlistProvider>
