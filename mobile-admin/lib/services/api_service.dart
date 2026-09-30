@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../config/app_config.dart';
 import '../models/order.dart';
 import '../models/admin_user.dart';
+import '../models/admin_notification.dart';
 import 'device_service.dart';
 
 class ApiResponse<T> {
@@ -25,29 +27,62 @@ class ApiResponse<T> {
 
 class DashboardStats {
   final int todayOrders;
+  final double todayRevenue;
+  final double totalRevenue;
   final int pendingOrders;
+  final int newOrders;
+  final int awaitingConfirmation;
   final int confirmedOrders;
   final int preOrders;
   final int pendingPayments;
-  final double totalRevenue;
+  final int paymentProofsAwaitingReview;
+  final int readyForShipment;
+  final int shipmentsCreated;
+  final int dispatchedOrders;
+  final int deliveredOrders;
+  final int cancelledOrders;
+  final int rtoOrders;
+  final double codPendingAmount;
 
   DashboardStats({
     required this.todayOrders,
+    required this.todayRevenue,
+    required this.totalRevenue,
     required this.pendingOrders,
+    required this.newOrders,
+    required this.awaitingConfirmation,
     required this.confirmedOrders,
     required this.preOrders,
     required this.pendingPayments,
-    required this.totalRevenue,
+    required this.paymentProofsAwaitingReview,
+    required this.readyForShipment,
+    required this.shipmentsCreated,
+    required this.dispatchedOrders,
+    required this.deliveredOrders,
+    required this.cancelledOrders,
+    required this.rtoOrders,
+    required this.codPendingAmount,
   });
 
   factory DashboardStats.fromJson(Map<String, dynamic> json) {
     return DashboardStats(
       todayOrders: (json['todayOrders'] as num?)?.toInt() ?? 0,
+      todayRevenue: (json['todayRevenue'] as num?)?.toDouble() ?? 0.0,
+      totalRevenue: (json['totalRevenue'] as num?)?.toDouble() ?? 0.0,
       pendingOrders: (json['pendingOrders'] as num?)?.toInt() ?? 0,
+      newOrders: (json['newOrders'] as num?)?.toInt() ?? (json['pendingOrders'] as num?)?.toInt() ?? 0,
+      awaitingConfirmation: (json['awaitingConfirmation'] as num?)?.toInt() ?? 0,
       confirmedOrders: (json['confirmedOrders'] as num?)?.toInt() ?? 0,
       preOrders: (json['preOrders'] as num?)?.toInt() ?? 0,
       pendingPayments: (json['pendingPayments'] as num?)?.toInt() ?? 0,
-      totalRevenue: (json['totalRevenue'] as num?)?.toDouble() ?? 0.0,
+      paymentProofsAwaitingReview: (json['paymentProofsAwaitingReview'] as num?)?.toInt() ?? (json['pendingPayments'] as num?)?.toInt() ?? 0,
+      readyForShipment: (json['readyForShipment'] as num?)?.toInt() ?? 0,
+      shipmentsCreated: (json['shipmentsCreated'] as num?)?.toInt() ?? 0,
+      dispatchedOrders: (json['dispatchedOrders'] as num?)?.toInt() ?? 0,
+      deliveredOrders: (json['deliveredOrders'] as num?)?.toInt() ?? 0,
+      cancelledOrders: (json['cancelledOrders'] as num?)?.toInt() ?? 0,
+      rtoOrders: (json['rtoOrders'] as num?)?.toInt() ?? 0,
+      codPendingAmount: (json['codPendingAmount'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }
@@ -55,8 +90,13 @@ class DashboardStats {
 class DashboardData {
   final DashboardStats stats;
   final List<OrderModel> recentOrders;
+  final List<AdminNotificationModel> recentNotifications;
 
-  DashboardData({required this.stats, required this.recentOrders});
+  DashboardData({
+    required this.stats,
+    required this.recentOrders,
+    this.recentNotifications = const [],
+  });
 }
 
 class ApiService {
@@ -292,10 +332,17 @@ class ApiService {
     }
   }
 
-  // 5. Fetch Orders
+  // 5. Fetch Orders with server-side pagination, filters & sorting
   Future<ApiResponse<List<OrderModel>>> fetchOrders({
     String? status,
     String? search,
+    String? paymentStatus,
+    bool? isPreOrder,
+    String? shipmentStatus,
+    String? startDate,
+    String? endDate,
+    String? sortBy,
+    String? sortOrder,
     int page = 1,
     int limit = 30,
   }) async {
@@ -309,6 +356,27 @@ class ApiService {
       }
       if (search != null && search.isNotEmpty) {
         queryParams['search'] = search;
+      }
+      if (paymentStatus != null && paymentStatus.isNotEmpty && paymentStatus != 'ALL') {
+        queryParams['paymentStatus'] = paymentStatus;
+      }
+      if (isPreOrder != null) {
+        queryParams['isPreOrder'] = isPreOrder ? 'true' : 'false';
+      }
+      if (shipmentStatus != null && shipmentStatus.isNotEmpty && shipmentStatus != 'ALL') {
+        queryParams['shipmentStatus'] = shipmentStatus;
+      }
+      if (startDate != null && startDate.isNotEmpty) {
+        queryParams['startDate'] = startDate;
+      }
+      if (endDate != null && endDate.isNotEmpty) {
+        queryParams['endDate'] = endDate;
+      }
+      if (sortBy != null && sortBy.isNotEmpty) {
+        queryParams['sortBy'] = sortBy;
+      }
+      if (sortOrder != null && sortOrder.isNotEmpty) {
+        queryParams['sortOrder'] = sortOrder;
       }
 
       final uri = Uri.parse('${AppConfig.baseUrl}/api/admin/orders')
@@ -456,11 +524,16 @@ class ApiService {
             .map((o) => OrderModel.fromJson(o as Map<String, dynamic>))
             .toList();
 
+        final recentNotifsList = (json['recentNotifications'] as List? ?? [])
+            .map((n) => AdminNotificationModel.fromJson(n as Map<String, dynamic>))
+            .toList();
+
         return ApiResponse(
           success: true,
           data: DashboardData(
             stats: DashboardStats.fromJson(statsJson),
             recentOrders: recentOrdersList,
+            recentNotifications: recentNotifsList,
           ),
         );
       } else if (response.statusCode == 403 && json?['error'] == 'DEVICE_REVOKED') {
@@ -552,6 +625,178 @@ class ApiService {
       return ApiResponse(
         success: false,
         error: 'Network error: ${e.toString()}',
+      );
+    }
+  }
+
+  // 13. Create PostEx Shipment
+  Future<ApiResponse<Map<String, dynamic>>> createPostExShipment(String orderId) async {
+    try {
+      final uri = Uri.parse('${AppConfig.baseUrl}/api/admin/courier/shipments');
+      final response = await _safePost(
+        uri,
+        headers: _buildHeaders(),
+        body: jsonEncode({
+          'orderId': orderId,
+          'providerName': 'POSTEX',
+        }),
+      );
+
+      final json = _tryDecode(response.body);
+      if (response.statusCode == 200 && json?['success'] == true) {
+        return ApiResponse(
+          success: true,
+          data: json?['shipment'] as Map<String, dynamic>? ?? {},
+        );
+      } else if (json?['alreadyExists'] == true) {
+        return ApiResponse(
+          success: true,
+          data: json?['shipment'] as Map<String, dynamic>? ?? {},
+          error: json?['error'] as String? ?? 'PostEx shipment already exists.',
+        );
+      } else {
+        return ApiResponse(
+          success: false,
+          error: json?['error'] as String? ?? 'Failed to create PostEx shipment (${response.statusCode})',
+        );
+      }
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        error: 'Network error: ${e.toString()}',
+      );
+    }
+  }
+
+  // 14. Track PostEx Shipment
+  Future<ApiResponse<Map<String, dynamic>>> trackPostExShipment({
+    String? orderId,
+    String? trackingNumber,
+  }) async {
+    try {
+      final uri = Uri.parse('${AppConfig.baseUrl}/api/admin/courier/postex/track');
+      final bodyMap = <String, dynamic>{};
+      if (orderId != null) bodyMap['orderId'] = orderId;
+      if (trackingNumber != null) bodyMap['trackingNumber'] = trackingNumber;
+
+      final response = await _safePost(
+        uri,
+        headers: _buildHeaders(),
+        body: jsonEncode(bodyMap),
+      );
+
+      final json = _tryDecode(response.body);
+      if (response.statusCode == 200 && json?['success'] == true) {
+        return ApiResponse(
+          success: true,
+          data: json?['tracking'] as Map<String, dynamic>? ?? {},
+        );
+      } else {
+        return ApiResponse(
+          success: false,
+          error: json?['error'] as String? ?? 'Tracking details could not be retrieved',
+        );
+      }
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        error: 'Network error: ${e.toString()}',
+      );
+    }
+  }
+
+  // 15. Fetch Official PostEx Label PDF Bytes
+  Future<ApiResponse<Uint8List>> fetchOfficialLabelBytes({
+    String? orderId,
+    String? trackingNumber,
+    List<String>? orderIds,
+  }) async {
+    try {
+      final queryParams = <String, String>{};
+      if (orderIds != null && orderIds.isNotEmpty) {
+        queryParams['orderIds'] = orderIds.join(',');
+      } else if (orderId != null && orderId.isNotEmpty) {
+        queryParams['orderId'] = orderId;
+      } else if (trackingNumber != null && trackingNumber.isNotEmpty) {
+        queryParams['trackingNumber'] = trackingNumber;
+      }
+
+      final uri = Uri.parse('${AppConfig.baseUrl}/api/admin/courier/postex/label')
+          .replace(queryParameters: queryParams);
+
+      final response = await _safeGet(uri, headers: _buildHeaders());
+
+      if (response.statusCode == 200) {
+        return ApiResponse(success: true, data: response.bodyBytes);
+      } else {
+        return ApiResponse(
+          success: false,
+          error: 'Official PostEx PDF label not available (${response.statusCode}): ${response.body}',
+        );
+      }
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        error: 'Network error fetching label: ${e.toString()}',
+      );
+    }
+  }
+
+  // 16. Fetch Private Payment Proof Image Bytes
+  Future<ApiResponse<Uint8List>> fetchPaymentProofBytes(String orderId) async {
+    try {
+      final uri = Uri.parse('${AppConfig.baseUrl}/api/admin/orders/$orderId/screenshot');
+      final response = await _safeGet(uri, headers: _buildHeaders());
+
+      if (response.statusCode == 200) {
+        return ApiResponse(success: true, data: response.bodyBytes);
+      } else {
+        return ApiResponse(
+          success: false,
+          error: 'Payment proof screenshot not found or access denied (${response.statusCode})',
+        );
+      }
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        error: 'Network error fetching payment proof: ${e.toString()}',
+      );
+    }
+  }
+
+  // 17. Send Lifecycle WhatsApp Message
+  Future<ApiResponse<Map<String, dynamic>>> sendLifecycleWhatsApp({
+    required List<String> orderIds,
+    String? expectedAction,
+  }) async {
+    try {
+      final uri = Uri.parse('${AppConfig.baseUrl}/api/admin/orders/send-lifecycle-whatsapp');
+      final bodyMap = <String, dynamic>{
+        'orderIds': orderIds,
+      };
+      if (expectedAction != null) {
+        bodyMap['expectedAction'] = expectedAction;
+      }
+
+      final response = await _safePost(
+        uri,
+        headers: _buildHeaders(),
+        body: jsonEncode(bodyMap),
+      );
+
+      final json = _tryDecode(response.body);
+      if (response.statusCode == 200 && json != null) {
+        return ApiResponse(success: true, data: json);
+      } else {
+        return ApiResponse(
+          success: false,
+          error: json?['error'] as String? ?? 'Failed to send WhatsApp message (${response.statusCode})',
+        );
+      }
+    } catch (e) {
+      return ApiResponse(
+        success: false,
+        error: 'Network error sending WhatsApp: ${e.toString()}',
       );
     }
   }

@@ -12,6 +12,14 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const status = searchParams.get('status');
     const search = searchParams.get('search')?.trim();
+    const paymentStatus = searchParams.get('paymentStatus');
+    const isPreOrderParam = searchParams.get('isPreOrder');
+    const shipmentStatus = searchParams.get('shipmentStatus');
+    const startDate = searchParams.get('startDate');
+    const endDate = searchParams.get('endDate');
+    const sortBy = searchParams.get('sortBy') || 'createdAt';
+    const sortOrder = (searchParams.get('sortOrder') || 'desc').toLowerCase() === 'asc' ? 'asc' : 'desc';
+
     const page = Math.max(1, parseInt(searchParams.get('page') || '1', 10));
     const limit = Math.min(100, Math.max(1, parseInt(searchParams.get('limit') || '20', 10)));
     const skip = (page - 1) * limit;
@@ -22,6 +30,34 @@ export async function GET(req: Request) {
       where.status = status;
     }
 
+    if (paymentStatus && paymentStatus !== 'ALL') {
+      where.preOrderPaymentStatus = paymentStatus;
+    }
+
+    if (isPreOrderParam === 'true') {
+      where.isPreOrder = true;
+    } else if (isPreOrderParam === 'false') {
+      where.isPreOrder = false;
+    }
+
+    if (shipmentStatus === 'SHIPPED') {
+      where.trackingNumber = { not: null };
+    } else if (shipmentStatus === 'UNSHIPPED') {
+      where.trackingNumber = null;
+    }
+
+    if (startDate || endDate) {
+      where.createdAt = {};
+      if (startDate) {
+        where.createdAt.gte = new Date(startDate);
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setHours(23, 59, 59, 999);
+        where.createdAt.lte = end;
+      }
+    }
+
     if (search) {
       where.OR = [
         { orderNumber: { contains: search, mode: 'insensitive' } },
@@ -29,13 +65,18 @@ export async function GET(req: Request) {
         { customerPhone: { contains: search, mode: 'insensitive' } },
         { customerEmail: { contains: search, mode: 'insensitive' } },
         { shippingCity: { contains: search, mode: 'insensitive' } },
+        { trackingNumber: { contains: search, mode: 'insensitive' } },
       ];
     }
+
+    const orderByField = ['createdAt', 'totalAmount', 'orderNumber'].includes(sortBy)
+      ? sortBy
+      : 'createdAt';
 
     const [orders, total] = await Promise.all([
       prisma.order.findMany({
         where,
-        orderBy: { createdAt: 'desc' },
+        orderBy: { [orderByField]: sortOrder },
         skip,
         take: limit,
         include: {

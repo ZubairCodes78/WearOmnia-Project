@@ -74,15 +74,74 @@ class OrderTimelineItem {
   }
 }
 
+class ShipmentItem {
+  final String id;
+  final String provider;
+  final String? trackingNumber;
+  final String? orderRefNumber;
+  final String status;
+  final String? labelUrl;
+  final String? trackingUrl;
+  final double codAmount;
+  final String? settlementStatus;
+  final DateTime? pickupDate;
+  final DateTime? deliveryDate;
+  final DateTime? returnDate;
+  final String? returnReason;
+  final DateTime createdAt;
+
+  ShipmentItem({
+    required this.id,
+    required this.provider,
+    this.trackingNumber,
+    this.orderRefNumber,
+    required this.status,
+    this.labelUrl,
+    this.trackingUrl,
+    required this.codAmount,
+    this.settlementStatus,
+    this.pickupDate,
+    this.deliveryDate,
+    this.returnDate,
+    this.returnReason,
+    required this.createdAt,
+  });
+
+  factory ShipmentItem.fromJson(Map<String, dynamic> json) {
+    return ShipmentItem(
+      id: json['id'] as String? ?? '',
+      provider: json['provider'] as String? ?? 'POSTEX',
+      trackingNumber: json['trackingNumber'] as String?,
+      orderRefNumber: json['orderRefNumber'] as String?,
+      status: json['status'] as String? ?? 'Booked',
+      labelUrl: json['labelUrl'] as String?,
+      trackingUrl: json['trackingUrl'] as String?,
+      codAmount: (json['codAmount'] as num?)?.toDouble() ?? 0.0,
+      settlementStatus: json['settlementStatus'] as String?,
+      pickupDate: json['pickupDate'] != null ? DateTime.tryParse(json['pickupDate'] as String) : null,
+      deliveryDate: json['deliveryDate'] != null ? DateTime.tryParse(json['deliveryDate'] as String) : null,
+      returnDate: json['returnDate'] != null ? DateTime.tryParse(json['returnDate'] as String) : null,
+      returnReason: json['returnReason'] as String?,
+      createdAt: json['createdAt'] != null
+          ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
+          : DateTime.now(),
+    );
+  }
+}
+
 class CustomerSummary {
   final String id;
   final String fullName;
   final String phone;
   final String? whatsapp;
   final String? email;
+  final String? address;
+  final String? city;
+  final String? province;
   final int ordersCount;
   final double totalSpent;
   final bool isVIP;
+  final String? customerNotes;
 
   CustomerSummary({
     required this.id,
@@ -90,9 +149,13 @@ class CustomerSummary {
     required this.phone,
     this.whatsapp,
     this.email,
+    this.address,
+    this.city,
+    this.province,
     required this.ordersCount,
     required this.totalSpent,
     required this.isVIP,
+    this.customerNotes,
   });
 
   factory CustomerSummary.fromJson(Map<String, dynamic> json) {
@@ -102,9 +165,13 @@ class CustomerSummary {
       phone: json['phone'] as String? ?? '',
       whatsapp: json['whatsapp'] as String?,
       email: json['email'] as String?,
+      address: json['address'] as String?,
+      city: json['city'] as String?,
+      province: json['province'] as String?,
       ordersCount: (json['ordersCount'] as num?)?.toInt() ?? 0,
       totalSpent: (json['totalSpent'] as num?)?.toDouble() ?? 0.0,
       isVIP: json['isVIP'] as bool? ?? false,
+      customerNotes: json['customerNotes'] as String?,
     );
   }
 }
@@ -132,15 +199,33 @@ class OrderModel {
   final String status;
   final String? trackingNumber;
   final String? courier;
+  final String? couponCode;
   final bool isPreOrder;
   final String? preOrderPaymentStatus;
+  final String? preOrderPaymentMethodName;
+  final String? preOrderPaymentScreenshotUrl;
   final double? preOrderAdvanceAmount;
   final double? preOrderRemainingAmount;
+  final DateTime? preOrderPaymentVerifiedAt;
+  final String? preOrderPaymentVerifiedBy;
+  final String? preOrderPaymentRejectionReason;
+  final DateTime? preOrderPaymentRejectedAt;
+  final String? preOrderPaymentRejectedBy;
+  final DateTime? confirmedAt;
+  final String? confirmedBy;
+  final DateTime? confirmationWhatsAppSentAt;
+  final String? confirmationWhatsAppMessageId;
+  final DateTime? trackingWhatsAppSentAt;
+  final String? trackingWhatsAppMessageId;
+  final DateTime? deliveredWhatsAppSentAt;
+  final String? deliveredWhatsAppMessageId;
+  final DateTime? deliveredAt;
   final bool isReadByAdmin;
   final DateTime createdAt;
   final DateTime updatedAt;
   final List<OrderItem> items;
   final List<OrderTimelineItem> timeline;
+  final List<ShipmentItem> shipments;
   final CustomerSummary? customer;
 
   OrderModel({
@@ -166,15 +251,33 @@ class OrderModel {
     required this.status,
     this.trackingNumber,
     this.courier,
+    this.couponCode,
     required this.isPreOrder,
     this.preOrderPaymentStatus,
+    this.preOrderPaymentMethodName,
+    this.preOrderPaymentScreenshotUrl,
     this.preOrderAdvanceAmount,
     this.preOrderRemainingAmount,
+    this.preOrderPaymentVerifiedAt,
+    this.preOrderPaymentVerifiedBy,
+    this.preOrderPaymentRejectionReason,
+    this.preOrderPaymentRejectedAt,
+    this.preOrderPaymentRejectedBy,
+    this.confirmedAt,
+    this.confirmedBy,
+    this.confirmationWhatsAppSentAt,
+    this.confirmationWhatsAppMessageId,
+    this.trackingWhatsAppSentAt,
+    this.trackingWhatsAppMessageId,
+    this.deliveredWhatsAppSentAt,
+    this.deliveredWhatsAppMessageId,
+    this.deliveredAt,
     required this.isReadByAdmin,
     required this.createdAt,
     required this.updatedAt,
     this.items = const [],
     this.timeline = const [],
+    this.shipments = const [],
     this.customer,
   });
 
@@ -190,6 +293,13 @@ class OrderModel {
     if (json['timeline'] != null && json['timeline'] is List) {
       timelineList = (json['timeline'] as List)
           .map((t) => OrderTimelineItem.fromJson(t as Map<String, dynamic>))
+          .toList();
+    }
+
+    List<ShipmentItem> shipmentsList = [];
+    if (json['shipments'] != null && json['shipments'] is List) {
+      shipmentsList = (json['shipments'] as List)
+          .map((s) => ShipmentItem.fromJson(s as Map<String, dynamic>))
           .toList();
     }
 
@@ -221,10 +331,41 @@ class OrderModel {
       status: json['status'] as String? ?? 'PENDING',
       trackingNumber: json['trackingNumber'] as String?,
       courier: json['courier'] as String?,
+      couponCode: json['couponCode'] as String?,
       isPreOrder: json['isPreOrder'] as bool? ?? false,
       preOrderPaymentStatus: json['preOrderPaymentStatus'] as String?,
+      preOrderPaymentMethodName: json['preOrderPaymentMethodName'] as String?,
+      preOrderPaymentScreenshotUrl: json['preOrderPaymentScreenshotUrl'] as String?,
       preOrderAdvanceAmount: (json['preOrderAdvanceAmount'] as num?)?.toDouble(),
       preOrderRemainingAmount: (json['preOrderRemainingAmount'] as num?)?.toDouble(),
+      preOrderPaymentVerifiedAt: json['preOrderPaymentVerifiedAt'] != null
+          ? DateTime.tryParse(json['preOrderPaymentVerifiedAt'] as String)
+          : null,
+      preOrderPaymentVerifiedBy: json['preOrderPaymentVerifiedBy'] as String?,
+      preOrderPaymentRejectionReason: json['preOrderPaymentRejectionReason'] as String?,
+      preOrderPaymentRejectedAt: json['preOrderPaymentRejectedAt'] != null
+          ? DateTime.tryParse(json['preOrderPaymentRejectedAt'] as String)
+          : null,
+      preOrderPaymentRejectedBy: json['preOrderPaymentRejectedBy'] as String?,
+      confirmedAt: json['confirmedAt'] != null
+          ? DateTime.tryParse(json['confirmedAt'] as String)
+          : null,
+      confirmedBy: json['confirmedBy'] as String?,
+      confirmationWhatsAppSentAt: json['confirmationWhatsAppSentAt'] != null
+          ? DateTime.tryParse(json['confirmationWhatsAppSentAt'] as String)
+          : null,
+      confirmationWhatsAppMessageId: json['confirmationWhatsAppMessageId'] as String?,
+      trackingWhatsAppSentAt: json['trackingWhatsAppSentAt'] != null
+          ? DateTime.tryParse(json['trackingWhatsAppSentAt'] as String)
+          : null,
+      trackingWhatsAppMessageId: json['trackingWhatsAppMessageId'] as String?,
+      deliveredWhatsAppSentAt: json['deliveredWhatsAppSentAt'] != null
+          ? DateTime.tryParse(json['deliveredWhatsAppSentAt'] as String)
+          : null,
+      deliveredWhatsAppMessageId: json['deliveredWhatsAppMessageId'] as String?,
+      deliveredAt: json['deliveredAt'] != null
+          ? DateTime.tryParse(json['deliveredAt'] as String)
+          : null,
       isReadByAdmin: json['isReadByAdmin'] as bool? ?? false,
       createdAt: json['createdAt'] != null
           ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
@@ -234,6 +375,7 @@ class OrderModel {
           : DateTime.now(),
       items: itemsList,
       timeline: timelineList,
+      shipments: shipmentsList,
       customer: cust,
     );
   }

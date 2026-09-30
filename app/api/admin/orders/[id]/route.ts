@@ -35,9 +35,13 @@ export async function GET(
             phone: true,
             whatsapp: true,
             email: true,
+            address: true,
+            city: true,
+            province: true,
             ordersCount: true,
             totalSpent: true,
             isVIP: true,
+            customerNotes: true,
           },
         },
         timeline: {
