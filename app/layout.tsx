@@ -50,6 +50,8 @@ function isComingSoonMode(): boolean {
   return envComingSoon && phase === 'BEFORE_LAUNCH';
 }
 
+import { generateSiteSchema, PRODUCTION_DOMAIN, getCanonicalUrl } from '@/lib/seo';
+
 // ─── Metadata ────────────────────────────────────────────────────────────────
 export const metadata: Metadata = {
   title: {
@@ -66,10 +68,17 @@ export const metadata: Metadata = {
     'Pakistani Fashion',
     'Stitched Clothing',
     'Modest Fashion',
+    'Modest Clothing Pakistan',
     'Cash On Delivery Pakistan',
+    'Pakistani Pret Wear',
+    'Kaftan Pakistan',
+    'Unstitched & Stitched Suits',
   ],
   authors: [{ name: 'WearOMNIA' }],
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://wearomnia.com'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || PRODUCTION_DOMAIN),
+  alternates: {
+    canonical: getCanonicalUrl('/'),
+  },
   icons: {
     icon: [
       { url: '/favicon.ico', sizes: 'any' },
@@ -85,7 +94,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'en_PK',
-    url: '/',
+    url: PRODUCTION_DOMAIN,
     siteName: 'WearOMNIA',
     title: isComingSoonMode()
       ? 'WearOMNIA — Coming Soon'
@@ -95,7 +104,7 @@ export const metadata: Metadata = {
       : 'WearOMNIA offers simple, modest and stylish stitched clothing for women. Modern Pakistani fashion with nationwide Cash On Delivery.',
     images: [
       {
-        url: '/images/hero-1.jpg',
+        url: `${PRODUCTION_DOMAIN}/images/hero-1.jpg`,
         width: 1200,
         height: 630,
         alt: 'WearOMNIA modest fashion collection',
@@ -110,26 +119,23 @@ export const metadata: Metadata = {
     description: isComingSoonMode()
       ? 'WearOMNIA — premium modest fashion for Pakistani women. Coming soon.'
       : 'WearOMNIA offers simple, modest and stylish stitched clothing for women. Modern Pakistani fashion with nationwide Cash On Delivery.',
-    images: ['/images/hero-1.jpg'],
+    images: [`${PRODUCTION_DOMAIN}/images/hero-1.jpg`],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-video-preview': -1,
+      'max-image-preview': 'large',
+      'max-snippet': -1,
+    },
   },
 };
 
-// ─── JSON-LD Org Schema ──────────────────────────────────────────────────────
-const orgSchema = {
-  '@context': 'https://schema.org',
-  '@type': 'Organization',
-  name: 'WearOMNIA',
-  url: 'https://wearomnia.com',
-  logo: 'https://wearomnia.com/logo.png',
-  description: 'World-class luxury fashion e-commerce platform defining Pakistani haute couture.',
-  contactPoint: {
-    '@type': 'ContactPoint',
-    telephone: '+92-318-0633323',
-    contactType: 'customer service',
-    areaServed: 'PK',
-    availableLanguage: ['English', 'Urdu'],
-  },
-};
+// ─── JSON-LD Org & WebSite Schemas ───────────────────────────────────────────
+const siteSchemas = generateSiteSchema();
 
 // ─── Root Layout ─────────────────────────────────────────────────────────────
 export default async function RootLayout({
@@ -144,10 +150,13 @@ export default async function RootLayout({
     return (
       <html lang="en" suppressHydrationWarning>
         <head>
-          <script
-            type="application/ld+json"
-            dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
-          />
+          {siteSchemas.map((schema, idx) => (
+            <script
+              key={idx}
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+            />
+          ))}
         </head>
         <body className={`bg-offwhite text-charcoal antialiased ${fontVars}`} suppressHydrationWarning>
           <GoogleAnalytics />
@@ -171,10 +180,13 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(orgSchema) }}
-        />
+        {siteSchemas.map((schema, idx) => (
+          <script
+            key={idx}
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+          />
+        ))}
       </head>
       <body
         className={`bg-offwhite text-charcoal flex flex-col min-h-screen antialiased ${fontVars}`}

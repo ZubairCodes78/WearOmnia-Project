@@ -1,9 +1,36 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { Banknote, ShieldCheck } from 'lucide-react';
+import { PRODUCTION_DOMAIN, generateBreadcrumbSchema } from '@/lib/seo';
+
+const CANONICAL_URL = `${PRODUCTION_DOMAIN}/policies/refund`;
+
+export const metadata: Metadata = {
+  title: 'Refund & Financial Guidelines | WearOMNIA Cash On Delivery',
+  description:
+    'Information on WearOMNIA refund processing for Cash On Delivery orders via online bank transfer, EasyPaisa, or JazzCash.',
+  alternates: {
+    canonical: CANONICAL_URL,
+  },
+  openGraph: {
+    title: 'Refund & Financial Guidelines | WearOMNIA',
+    description: 'Clear, transparent Cash On Delivery terms and refund guidelines.',
+    url: CANONICAL_URL,
+  },
+};
 
 export default function RefundPolicyPage() {
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: 'Home', url: '/' },
+    { name: 'Refund Policy', url: '/policies/refund' },
+  ]);
+
   return (
     <div className="editorial-page">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <div className="editorial-container max-w-4xl">
         <div className="editorial-header">
           <span className="editorial-kicker">

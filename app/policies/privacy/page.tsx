@@ -1,8 +1,35 @@
 import React from 'react';
+import type { Metadata } from 'next';
+import { PRODUCTION_DOMAIN, generateBreadcrumbSchema } from '@/lib/seo';
+
+const CANONICAL_URL = `${PRODUCTION_DOMAIN}/policies/privacy`;
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy | Guest Checkout & Data Protection | WearOMNIA',
+  description:
+    'WearOMNIA data protection policy. How we safeguard customer contact details for Cash On Delivery dispatch without storing passwords or selling personal data.',
+  alternates: {
+    canonical: CANONICAL_URL,
+  },
+  openGraph: {
+    title: 'Privacy Policy | WearOMNIA',
+    description: 'Data protection policies for WearOMNIA customer orders across Pakistan.',
+    url: CANONICAL_URL,
+  },
+};
 
 export default function PrivacyPolicyPage() {
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: 'Home', url: '/' },
+    { name: 'Privacy Policy', url: '/policies/privacy' },
+  ]);
+
   return (
     <div className="editorial-page">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <div className="editorial-container max-w-4xl">
         <div className="editorial-header">
           <span className="editorial-kicker">Data Protection</span>

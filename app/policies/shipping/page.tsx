@@ -1,6 +1,25 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { Truck, Clock, ShieldCheck, MapPin } from 'lucide-react';
 import { getPublicSiteSettings } from '@/lib/settings';
+import { PRODUCTION_DOMAIN, generateBreadcrumbSchema } from '@/lib/seo';
+
+const CANONICAL_URL = `${PRODUCTION_DOMAIN}/policies/shipping`;
+
+export const metadata: Metadata = {
+  title: 'Shipping & Delivery Policy | WearOMNIA Pakistan',
+  description:
+    'WearOMNIA nationwide shipping guidelines: 2-4 day delivery timeline across Lahore, Karachi, Islamabad, and 200+ cities with reliable Cash On Delivery.',
+  alternates: {
+    canonical: CANONICAL_URL,
+  },
+  openGraph: {
+    title: 'Shipping & Delivery Policy | WearOMNIA Pakistan',
+    description:
+      'Nationwide courier dispatch timelines, tracking, and Cash On Delivery terms.',
+    url: CANONICAL_URL,
+  },
+};
 
 export const dynamic = 'force-dynamic';
 
@@ -10,8 +29,17 @@ export default async function ShippingPolicyPage() {
     ? `Rs. ${settings.freeShippingThreshold.toLocaleString()} or above`
     : 'all orders';
 
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: 'Home', url: '/' },
+    { name: 'Shipping Policy', url: '/policies/shipping' },
+  ]);
+
   return (
     <div className="editorial-page">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <div className="editorial-container max-w-4xl">
         <div className="editorial-header">
           <span className="editorial-kicker">

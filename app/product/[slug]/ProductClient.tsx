@@ -201,7 +201,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                   >
                     <Image
                       src={img.url}
-                      alt="thumb"
+                      alt={`${product.title} - View ${i + 1}`}
                       fill
                       sizes="(max-width: 640px) 64px, 80px"
                       loading="lazy"

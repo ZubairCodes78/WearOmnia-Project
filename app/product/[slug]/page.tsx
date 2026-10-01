@@ -2,7 +2,7 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { ProductClient } from './ProductClient';
-import { generateProductMetadata, generateProductSchema } from '@/lib/seo';
+import { generateProductMetadata, generateProductSchema, generateBreadcrumbSchema } from '@/lib/seo';
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -93,13 +93,33 @@ export default async function ProductPage({ params }: ProductPageProps) {
     variants: Array.isArray(p.variants) ? p.variants : [],
   }));
 
-  const jsonLd = generateProductSchema(sanitizedProduct);
+  const productSchema = generateProductSchema(sanitizedProduct);
+
+  const breadcrumbs = [
+    { name: 'Home', url: '/' },
+    { name: 'Shop', url: '/shop' },
+  ];
+  if (product.category?.name && product.category?.slug) {
+    breadcrumbs.push({
+      name: product.category.name,
+      url: `/shop?category=${product.category.slug}`,
+    });
+  }
+  breadcrumbs.push({
+    name: product.title,
+    url: `/product/${product.slug}`,
+  });
+  const breadcrumbSchema = generateBreadcrumbSchema(breadcrumbs);
 
   return (
     <>
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
       />
       <ProductClient
         product={sanitizedProduct}

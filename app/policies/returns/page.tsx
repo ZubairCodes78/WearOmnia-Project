@@ -1,9 +1,36 @@
 import React from 'react';
+import type { Metadata } from 'next';
 import { RotateCcw, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { PRODUCTION_DOMAIN, generateBreadcrumbSchema } from '@/lib/seo';
+
+const CANONICAL_URL = `${PRODUCTION_DOMAIN}/policies/returns`;
+
+export const metadata: Metadata = {
+  title: 'Returns & Exchange Policy | 7-Day Window | WearOMNIA',
+  description:
+    'WearOMNIA 7-day hassle-free return and exchange policy. Quick size exchanges and defect replacements on all modest wear and pret orders across Pakistan.',
+  alternates: {
+    canonical: CANONICAL_URL,
+  },
+  openGraph: {
+    title: 'Returns & Exchange Policy | WearOMNIA',
+    description: '7-day nationwide exchange window for size alterations or garment exchanges.',
+    url: CANONICAL_URL,
+  },
+};
 
 export default function ReturnsPolicyPage() {
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: 'Home', url: '/' },
+    { name: 'Returns Policy', url: '/policies/returns' },
+  ]);
+
   return (
     <div className="editorial-page">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <div className="editorial-container max-w-4xl">
         <div className="editorial-header">
           <span className="editorial-kicker">

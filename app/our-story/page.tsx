@@ -14,16 +14,77 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { PageTransition } from '@/components/layout/PageTransition';
+import { PRODUCTION_DOMAIN, generateBreadcrumbSchema } from '@/lib/seo';
+
+const CANONICAL_URL = `${PRODUCTION_DOMAIN}/our-story`;
 
 export const metadata: Metadata = {
   title: 'Our Story & Craftsmanship Heritage | WearOMNIA Modest Couture',
   description:
     'Discover the journey of WearOMNIA. Handcrafted in Pakistan with pure raw silks, delicate organzas, and artisanal embroidery designed for timeless modest elegance.',
+  alternates: {
+    canonical: CANONICAL_URL,
+  },
+  openGraph: {
+    title: 'Our Story & Craftsmanship Heritage | WearOMNIA Modest Couture',
+    description:
+      'Discover the journey of WearOMNIA. Handcrafted in Pakistan with pure raw silks, delicate organzas, and artisanal embroidery designed for timeless modest elegance.',
+    url: CANONICAL_URL,
+    siteName: 'WearOMNIA',
+    type: 'website',
+    images: [
+      {
+        url: `${PRODUCTION_DOMAIN}/images/our-story-atelier.webp`,
+        width: 1200,
+        height: 630,
+        alt: 'WearOMNIA Modest Fashion Craftsmanship & Story',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Our Story & Craftsmanship Heritage | WearOMNIA Modest Couture',
+    description:
+      'Discover the journey of WearOMNIA. Handcrafted in Pakistan with pure raw silks, delicate organzas, and artisanal embroidery designed for timeless modest elegance.',
+    images: [`${PRODUCTION_DOMAIN}/images/our-story-atelier.webp`],
+  },
 };
 
 export default function OurStoryPage() {
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: 'Home', url: '/' },
+    { name: 'Our Story', url: '/our-story' },
+  ]);
+
+  const aboutSchema = {
+    '@context': 'https://schema.org',
+    '@type': 'AboutPage',
+    '@id': `${CANONICAL_URL}#aboutpage`,
+    url: CANONICAL_URL,
+    name: 'Our Story & Craftsmanship Heritage | WearOMNIA Modest Couture',
+    description:
+      'Discover the journey of WearOMNIA. Handcrafted in Pakistan with pure raw silks, delicate organzas, and artisanal embroidery designed for timeless modest elegance.',
+    inLanguage: 'en',
+    isPartOf: {
+      '@type': 'WebSite',
+      '@id': `${PRODUCTION_DOMAIN}/#website`,
+    },
+    about: {
+      '@type': 'Organization',
+      '@id': `${PRODUCTION_DOMAIN}/#organization`,
+    },
+  };
+
   return (
     <PageTransition>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutSchema) }}
+      />
       <div className="bg-offwhite min-h-screen">
         {/* Editorial Hero Header */}
         <section className="relative bg-[#0A2528] text-offwhite py-20 sm:py-28 overflow-hidden border-b border-champagne/25">

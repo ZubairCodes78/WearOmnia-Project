@@ -13,6 +13,15 @@ function isComingSoonMode(): boolean {
 
 export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
+  const host = req.headers.get('host') || '';
+
+  // ── Canonical Domain Redirection (301 Permanent: apex -> www) ───────────────
+  if (host === 'wearomnia.com') {
+    const canonicalUrl = req.nextUrl.clone();
+    canonicalUrl.host = 'www.wearomnia.com';
+    canonicalUrl.protocol = 'https:';
+    return NextResponse.redirect(canonicalUrl, { status: 301 });
+  }
 
   // Allow access to admin login page
   if (pathname === '/admin/login') {

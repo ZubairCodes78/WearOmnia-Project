@@ -2,10 +2,31 @@ import React from 'react';
 import { prisma } from '@/lib/prisma';
 import { Ruler, Info } from 'lucide-react';
 import type { Metadata } from 'next';
+import { PRODUCTION_DOMAIN, generateBreadcrumbSchema } from '@/lib/seo';
+
+const CANONICAL_URL = `${PRODUCTION_DOMAIN}/size-guide`;
 
 export const metadata: Metadata = {
-  title: 'Size Guide',
-  description: 'Find your perfect size with our comprehensive measurement guide for pret, unstitched, kaftans, and more.',
+  title: 'Size Guide & Measurement Charts | WearOMNIA Modest Pret & Unstitched',
+  description:
+    'Find your ideal fit with WearOMNIA size charts. Accurate chest, waist, hip, and length measurements for modest coords, luxury pret, and unstitched collections.',
+  alternates: {
+    canonical: CANONICAL_URL,
+  },
+  openGraph: {
+    title: 'Size Guide & Measurement Charts | WearOMNIA',
+    description:
+      'Accurate sizing references for modest pret, luxury co-ord sets, and Pakistani stitched silhouettes.',
+    url: CANONICAL_URL,
+    siteName: 'WearOMNIA',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Size Guide & Measurement Charts | WearOMNIA',
+    description:
+      'Find your perfect modest fit with WearOMNIA chest, waist, and length measurement charts.',
+  },
 };
 
 export const dynamic = 'force-dynamic';
@@ -16,8 +37,17 @@ export default async function SizeGuidePage() {
     orderBy: { displayOrder: 'asc' },
   });
 
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: 'Home', url: '/' },
+    { name: 'Size Guide', url: '/size-guide' },
+  ]);
+
   return (
     <div className="editorial-page">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
       <div className="editorial-container max-w-4xl">
         {/* Header */}
         <div className="editorial-header">

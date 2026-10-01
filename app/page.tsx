@@ -61,6 +61,8 @@ export default async function HomePage() {
       {/* Pre-Order Launch Experience Overlay (Active 29 Sep – 20 Oct 2026, Once Per Visitor) */}
       <PreOrderLaunchOverlay />
 
+      <h1 className="sr-only">WearOMNIA — Contemporary Modest Clothing &amp; Luxury Modest Fashion in Pakistan</h1>
+
       <div className="space-y-20 sm:space-y-24 lg:space-y-28 bg-offwhite pb-16">
         {/* Editorial Hero Slider */}
         <HeroSlider />

@@ -13,36 +13,64 @@ import {
 } from 'lucide-react';
 import { PageTransition } from '@/components/layout/PageTransition';
 
+import { PRODUCTION_DOMAIN, getCanonicalUrl, generateFounderSchema, generateBreadcrumbSchema } from '@/lib/seo';
+
 export const metadata: Metadata = {
-  title: 'Virago Baji — Founder & Vision | WearOMNIA Modest Fashion',
+  title: 'Virago Baji — Founder & Creative Vision | WearOMNIA',
   description:
     'Meet Virago Baji, founder of WearOMNIA. Discover the story and philosophy behind modern modest fashion, purposeful silhouettes, and enduring craftsmanship.',
+  alternates: {
+    canonical: getCanonicalUrl('/founder'),
+  },
   openGraph: {
-    title: 'Virago Baji — Founder & Vision | WearOMNIA',
+    title: 'Virago Baji — Founder & Creative Vision | WearOMNIA',
     description:
       'WearOMNIA began with a simple vision — to make modest fashion feel modern, refined, and effortless.',
-    url: 'https://wearomnia.com/founder',
+    url: getCanonicalUrl('/founder'),
     type: 'profile',
+    siteName: 'WearOMNIA',
+    locale: 'en_PK',
     images: [
       {
-        url: '/images/founder.png',
+        url: `${PRODUCTION_DOMAIN}/images/founder.png`,
         width: 1181,
         height: 1332,
         alt: 'Virago Baji, Founder of WearOMNIA',
       },
     ],
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Virago Baji — Founder & Creative Vision | WearOMNIA',
+    description:
+      'Meet Virago Baji, founder of WearOMNIA. Discover the story and philosophy behind modern modest fashion.',
+    images: [`${PRODUCTION_DOMAIN}/images/founder.png`],
+  },
 };
 
 export default function FounderPage() {
   const instagramUrl = 'https://www.instagram.com/life_on_camerae/';
+  const founderSchema = generateFounderSchema();
+  const breadcrumbSchema = generateBreadcrumbSchema([
+    { name: 'Home', url: '/' },
+    { name: 'The Founder', url: '/founder' },
+  ]);
 
   return (
-    <PageTransition>
-      <div className="bg-offwhite min-h-screen text-charcoal">
-        {/* Breadcrumb Navigation */}
-        <div className="bg-[#0A2528] border-b border-champagne/20 py-3">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(founderSchema) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
+      />
+      <PageTransition>
+        <div className="bg-offwhite min-h-screen text-charcoal">
+          {/* Breadcrumb Navigation */}
+          <div className="bg-[#0A2528] border-b border-champagne/20 py-3">
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <nav className="flex items-center gap-2 text-xs uppercase tracking-widest text-champagne/80 font-sans" aria-label="Breadcrumb">
               <Link href="/" className="hover:text-offwhite transition-colors">
                 Home
@@ -312,5 +340,6 @@ export default function FounderPage() {
         </section>
       </div>
     </PageTransition>
+    </>
   );
 }

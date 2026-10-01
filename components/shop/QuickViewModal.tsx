@@ -125,7 +125,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
                             className={`relative w-14 h-18 sm:w-16 sm:h-20 rounded-lg overflow-hidden border-2 shrink-0 transition-all ${selectedImage === i ? 'border-teal shadow-md scale-105' : 'border-transparent opacity-70'
                               }`}
                           >
-                            <Image src={img.url} alt="thumbnail" fill className="object-cover" />
+                            <Image src={img.url} alt={`${product.title} - View ${i + 1}`} fill className="object-cover" />
                           </button>
                         ))}
                       </div>
