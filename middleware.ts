@@ -15,6 +15,11 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const host = req.headers.get('host') || '';
 
+  // ── Google Search Console Verification Bypass (Strictly No Redirects) ─────
+  if (pathname === '/google6aabd54b56273003.html') {
+    return NextResponse.next();
+  }
+
   // ── Canonical Domain Redirection (301 Permanent: apex -> www) ───────────────
   if (host === 'wearomnia.com') {
     const canonicalUrl = req.nextUrl.clone();
