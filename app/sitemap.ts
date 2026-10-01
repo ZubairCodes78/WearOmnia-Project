@@ -2,10 +2,10 @@ import { MetadataRoute } from 'next';
 import { prisma } from '@/lib/prisma';
 import { PRODUCTION_DOMAIN } from '@/lib/seo';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || PRODUCTION_DOMAIN;
+  const baseUrl = PRODUCTION_DOMAIN;
 
   let products: { slug: string; updatedAt: Date }[] = [];
 

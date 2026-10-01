@@ -1,8 +1,10 @@
 import { MetadataRoute } from 'next';
 import { PRODUCTION_DOMAIN } from '@/lib/seo';
 
+export const revalidate = 86400;
+
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || PRODUCTION_DOMAIN;
+  const baseUrl = PRODUCTION_DOMAIN;
 
   return {
     rules: [

@@ -75,7 +75,7 @@ export const metadata: Metadata = {
     'Unstitched & Stitched Suits',
   ],
   authors: [{ name: 'WearOMNIA' }],
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || PRODUCTION_DOMAIN),
+  metadataBase: new URL(PRODUCTION_DOMAIN),
   alternates: {
     canonical: getCanonicalUrl('/'),
   },
