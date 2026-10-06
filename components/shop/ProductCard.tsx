@@ -8,6 +8,7 @@ import { Heart, ShoppingBag, Check, Loader2 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useFlyToCart } from '@/components/cart/FlyToCartProvider';
+import { getEffectiveSellingPrice, calculateDiscountPercent } from '@/lib/pricing';
 
 export interface ProductCardProps {
   id: string;
@@ -60,11 +61,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const secondaryImage = hasSecondaryImage ? images[1].url : null;
 
   const inWishlist = isInWishlist(id);
-  const activePrice = discountPrice || basePrice;
-
-  const discountPercent = discountPrice
-    ? Math.round(((basePrice - discountPrice) / basePrice) * 100)
-    : 0;
+  const activePrice = getEffectiveSellingPrice({ basePrice, discountPrice });
+  const discountPercent = calculateDiscountPercent(basePrice, activePrice);
 
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -140,24 +138,27 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           </Link>
 
           {/* 3D Minimal Badges */}
-          <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10">
-            {isPreOrder ? (
-              <span className="badge-3d bg-amber-600/90 text-white text-[9px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full border border-amber-300/40 shadow-sm">
+          <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 items-start">
+            {isPreOrder && (
+              <span className="badge-3d bg-amber-600/95 text-white text-[9px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full border border-amber-300/40 shadow-sm">
                 Pre-Order
               </span>
-            ) : !inStock || stockQuantity <= 0 ? (
+            )}
+            {!inStock || stockQuantity <= 0 ? (
               <span className="badge-3d bg-charcoal/90 backdrop-blur-md text-offwhite text-[9px] uppercase font-bold tracking-widest px-2.5 py-1 rounded-full border border-white/20">
                 Out of Stock
               </span>
-            ) : discountPercent > 0 ? (
-              <span className="badge-3d bg-champagne text-teal-950 text-[9px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full border border-white/40 shadow-sm">
-                -{discountPercent}% OFF
+            ) : null}
+            {discountPercent > 0 && (
+              <span className="badge-3d bg-teal-900 text-champagne text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border border-champagne/40 shadow-md">
+                {discountPercent}% OFF
               </span>
-            ) : isNewArrival ? (
+            )}
+            {!isPreOrder && inStock && stockQuantity > 0 && discountPercent === 0 && isNewArrival && (
               <span className="badge-3d bg-teal text-champagne text-[9px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full border border-champagne/40 shadow-sm">
                 New Arrival
               </span>
-            ) : null}
+            )}
           </div>
 
           {/* Wishlist Heart with Scale Animation */}
@@ -200,14 +201,19 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             </h3>
           </Link>
 
-          <div className="flex items-baseline gap-2 pt-0.5">
+          <div className="flex items-center gap-2 pt-0.5 flex-wrap">
             <span className="font-sans font-black text-sm sm:text-base text-teal">
               Rs. {activePrice.toLocaleString()}
             </span>
-            {discountPrice && (
-              <span className="text-xs text-charcoal-muted line-through font-medium">
-                Rs. {basePrice.toLocaleString()}
-              </span>
+            {discountPercent > 0 && (
+              <>
+                <span className="text-xs text-charcoal-muted line-through font-medium">
+                  Rs. {basePrice.toLocaleString()}
+                </span>
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-champagne-100 text-teal-900 border border-champagne/50">
+                  {discountPercent}% OFF
+                </span>
+              </>
             )}
           </div>
         </div>

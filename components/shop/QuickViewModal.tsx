@@ -8,6 +8,7 @@ import { X, ShoppingBag, Zap, Check, ShieldCheck, Truck, Ruler } from 'lucide-re
 import { useCart } from '@/context/CartContext';
 import { SizeGuideModal } from './SizeGuideModal';
 import { useFlyToCart } from '@/components/cart/FlyToCartProvider';
+import { getEffectiveSellingPrice, calculateDiscountPercent } from '@/lib/pricing';
 
 interface QuickViewModalProps {
   product: {
@@ -46,7 +47,8 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
   const currentSize = selectedSize || sizes[0] || 'Standard';
   const currentColor = selectedColor || colors[0] || 'Default';
 
-  const activePrice = product.discountPrice || product.basePrice;
+  const activePrice = getEffectiveSellingPrice({ basePrice: product.basePrice, discountPrice: product.discountPrice });
+  const discountPercent = calculateDiscountPercent(product.basePrice, activePrice);
 
   const handleAddToCart = () => {
     const currentImgSrc = product.images[selectedImage]?.url || product.images[0]?.url || '';
@@ -115,6 +117,13 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
                         fill
                         className="object-cover"
                       />
+                      {discountPercent > 0 && (
+                        <div className="absolute top-3 left-3 z-10">
+                          <span className="badge-3d bg-teal-900 text-champagne text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border border-champagne/40 shadow-md">
+                            {discountPercent}% OFF
+                          </span>
+                        </div>
+                      )}
                     </div>
                     {product.images.length > 1 && (
                       <div className="flex gap-2 mt-3 overflow-x-auto pb-1">
@@ -122,7 +131,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
                           <button
                             key={i}
                             onClick={() => setSelectedImage(i)}
-                            className={`relative w-14 h-18 sm:w-16 sm:h-20 rounded-lg overflow-hidden border-2 shrink-0 transition-all ${selectedImage === i ? 'border-teal shadow-md scale-105' : 'border-transparent opacity-70'
+                            className={`relative w-14 sm:w-16 aspect-[3/4] rounded-lg overflow-hidden border-2 shrink-0 transition-all ${selectedImage === i ? 'border-teal shadow-md scale-105' : 'border-transparent opacity-70'
                               }`}
                           >
                             <Image src={img.url} alt={`${product.title} - View ${i + 1}`} fill className="object-cover" />
@@ -140,14 +149,19 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
                       </span>
                       <h2 className="font-serif text-2xl font-bold text-teal mt-1">{product.title}</h2>
 
-                      <div className="flex items-baseline gap-3 mt-2">
+                      <div className="flex items-center gap-3 mt-2 flex-wrap">
                         <span className="font-serif text-2xl font-bold text-teal">
                           Rs. {activePrice.toLocaleString()}
                         </span>
-                        {product.discountPrice && (
-                          <span className="text-sm text-charcoal-muted line-through">
-                            Rs. {product.basePrice.toLocaleString()}
-                          </span>
+                        {discountPercent > 0 && (
+                          <>
+                            <span className="text-sm text-charcoal-muted line-through font-medium">
+                              Rs. {product.basePrice.toLocaleString()}
+                            </span>
+                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider bg-teal text-champagne border border-champagne/40 shadow-xs">
+                              {discountPercent}% OFF
+                            </span>
+                          </>
                         )}
                       </div>
 

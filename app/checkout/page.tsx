@@ -25,6 +25,7 @@ import {
 } from 'lucide-react';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { normalizePhone, validatePhone } from '@/lib/phone';
+import { calculateDiscountPercent } from '@/lib/pricing';
 
 const PROVINCES = [
   'Punjab',
@@ -887,24 +888,41 @@ export default function CheckoutPage() {
 
                 {/* Items List with Interactive Quantity Adjusters */}
                 <div className="space-y-4 max-h-64 sm:max-h-72 overflow-y-auto pr-1">
-                  {cart.map((item) => (
+                  {cart.map((item) => {
+                    const itemDiscount = calculateDiscountPercent(item.basePrice, item.price);
+                    return (
                     <div key={item.id} className="flex items-center gap-3 bg-sand/40 p-2.5 rounded-2xl border border-sand/80">
-                      <div className="relative w-14 h-18 rounded-xl overflow-hidden shrink-0 bg-sand border border-sand">
-                        <Image src={item.image} alt={item.title} fill className="object-cover" />
+                      {/* Product Thumbnail - 4:5 aspect ratio preserved, compact 56px mobile / 64px desktop */}
+                      <div className="relative w-14 sm:w-16 aspect-[4/5] rounded-xl overflow-hidden shrink-0 bg-sand/80 border border-sand">
+                        <Image
+                          src={item.image || '/images/kaftan-1.jpg'}
+                          alt={item.title}
+                          fill
+                          sizes="(max-width: 640px) 56px, 64px"
+                          className="object-cover"
+                        />
+                        {itemDiscount > 0 && (
+                          <span className="absolute top-1 left-1 z-10 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-teal-900 text-champagne border border-champagne/40">
+                            {itemDiscount}% OFF
+                          </span>
+                        )}
                       </div>
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h4 className="font-serif text-xs font-bold text-teal truncate">{item.title}</h4>
+                          <h4 className="font-serif text-xs font-bold text-teal line-clamp-2 leading-snug">
+                            {item.title}
+                          </h4>
                           {item.isPreOrder && (
                             <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-amber-500/20 text-amber-900 shrink-0">
                               Pre-Order
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-charcoal-muted">
+                        <p className="text-[11px] text-charcoal-muted mt-0.5">
                           Size: {item.size} | Color: {item.color}
                         </p>
-                        <div className="flex items-center justify-between mt-1">
+                        <div className="flex items-center justify-between mt-1.5">
                           {/* Quantity Selector */}
                           <div className="flex items-center border border-sand rounded-lg bg-sand text-[11px]">
                             <button
@@ -930,19 +948,31 @@ export default function CheckoutPage() {
                           <button
                             type="button"
                             onClick={() => removeFromCart(item.id)}
-                            className="text-[10px] text-red-600 hover:underline"
+                            className="text-[10px] text-red-600 hover:underline cursor-pointer"
                           >
                             Remove
                           </button>
                         </div>
                       </div>
+
                       <div className="text-right shrink-0">
                         <p className="text-xs font-bold text-teal">
                           Rs. {(item.price * item.quantity).toLocaleString()}
                         </p>
+                        {itemDiscount > 0 && (
+                          <div className="flex flex-col items-end mt-0.5">
+                            <span className="text-[10px] text-charcoal-muted line-through">
+                              Rs. {(item.basePrice * item.quantity).toLocaleString()}
+                            </span>
+                            <span className="text-[9px] font-extrabold uppercase px-1 py-0.2 rounded bg-champagne-200 text-teal">
+                              {itemDiscount}% OFF
+                            </span>
+                          </div>
+                        )}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Coupon Code Drawer */}

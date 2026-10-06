@@ -26,8 +26,6 @@ import { WhyWearOmnia } from '@/components/home/WhyWearOmnia';
 import { NewsletterSection } from '@/components/home/NewsletterSection';
 import { PageTransition } from '@/components/layout/PageTransition';
 
-import { PreOrderLaunchOverlay } from '@/components/home/PreOrderLaunchOverlay';
-
 async function getLaunchProducts() {
   try {
     return await prisma.product.findMany({
@@ -58,9 +56,6 @@ export default async function HomePage() {
 
   return (
     <PageTransition>
-      {/* Pre-Order Launch Experience Overlay (Active 29 Sep – 20 Oct 2026, Once Per Visitor) */}
-      <PreOrderLaunchOverlay />
-
       <h1 className="sr-only">WearOMNIA — Contemporary Modest Clothing &amp; Luxury Modest Fashion in Pakistan</h1>
 
       <div className="space-y-20 sm:space-y-24 lg:space-y-28 bg-offwhite pb-16">

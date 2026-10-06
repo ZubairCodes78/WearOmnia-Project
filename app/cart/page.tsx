@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, ShieldCheck, Tag, ArrowLeft, CheckCircle2, Heart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useSettings } from '@/context/SettingsContext';
+import { calculateDiscountPercent } from '@/lib/pricing';
 
 export default function CartPage() {
   const {
@@ -155,11 +156,18 @@ export default function CartPage() {
 
               <div className="editorial-surface overflow-hidden">
                 <div className="divide-y divide-sand">
-                  {cart.map((item) => (
+                  {cart.map((item) => {
+                    const itemDiscount = calculateDiscountPercent(item.basePrice, item.price);
+                    return (
                     <div key={item.id} className="p-6 flex flex-col sm:flex-row gap-6 items-start sm:items-center justify-between">
                       <div className="flex gap-4 items-center">
                         <div className="relative w-20 h-28 rounded-xl overflow-hidden bg-sand shrink-0 border border-sand">
                           <Image src={item.image} alt={item.title} fill className="object-cover" />
+                          {itemDiscount > 0 && (
+                            <span className="absolute top-1.5 left-1.5 z-10 text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-teal-900 text-champagne border border-champagne/40 shadow-xs">
+                              {itemDiscount}% OFF
+                            </span>
+                          )}
                         </div>
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
@@ -174,9 +182,21 @@ export default function CartPage() {
                             Size: <span className="font-semibold text-teal">{item.size}</span> • Color: <span className="font-semibold text-teal">{item.color}</span>
                           </p>
                           <p className="text-xs font-mono text-champagne-700">SKU: {item.sku}</p>
-                          <p className="font-serif font-bold text-teal text-sm sm:hidden mt-2">
-                            Rs. {(item.price * item.quantity).toLocaleString()}
-                          </p>
+                          <div className="flex items-center gap-2 mt-2 sm:hidden flex-wrap">
+                            <span className="font-serif font-bold text-teal text-sm">
+                              Rs. {(item.price * item.quantity).toLocaleString()}
+                            </span>
+                            {itemDiscount > 0 && (
+                              <>
+                                <span className="text-xs text-charcoal-muted line-through">
+                                  Rs. {(item.basePrice * item.quantity).toLocaleString()}
+                                </span>
+                                <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-champagne-200 text-teal">
+                                  {itemDiscount}% OFF
+                                </span>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
 
@@ -202,9 +222,21 @@ export default function CartPage() {
                           </button>
                         </div>
 
-                        <span className="font-serif font-bold text-teal text-lg hidden sm:block">
-                          Rs. {(item.price * item.quantity).toLocaleString()}
-                        </span>
+                        <div className="text-right">
+                          <span className="font-serif font-bold text-teal text-lg hidden sm:block">
+                            Rs. {(item.price * item.quantity).toLocaleString()}
+                          </span>
+                          {itemDiscount > 0 && (
+                            <div className="hidden sm:flex items-center justify-end gap-1.5 mt-0.5">
+                              <span className="text-xs text-charcoal-muted line-through">
+                                Rs. {(item.basePrice * item.quantity).toLocaleString()}
+                              </span>
+                              <span className="text-[10px] font-extrabold uppercase px-1.5 py-0.2 rounded bg-champagne-200 text-teal">
+                                {itemDiscount}% OFF
+                              </span>
+                            </div>
+                          )}
+                        </div>
 
                         <button
                           onClick={() => removeFromCart(item.id)}
@@ -215,7 +247,8 @@ export default function CartPage() {
                         </button>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

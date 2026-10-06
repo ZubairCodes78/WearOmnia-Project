@@ -27,6 +27,7 @@ import { ProductCard } from '@/components/shop/ProductCard';
 import { SizeGuideModal } from '@/components/shop/SizeGuideModal';
 import { ProductImageZoom } from '@/components/shop/ProductImageZoom';
 import { useSettings } from '@/context/SettingsContext';
+import { getEffectiveSellingPrice, calculateDiscountPercent } from '@/lib/pricing';
 
 interface ProductClientProps {
   product: any;
@@ -69,10 +70,8 @@ export const ProductClient: React.FC<ProductClientProps> = ({
   const basePrice = typeof product?.basePrice === 'number'
     ? product.basePrice
     : (Number(product?.basePrice) || 0);
-  const discountPrice = typeof product?.discountPrice === 'number'
-    ? product.discountPrice
-    : (product?.discountPrice ? Number(product.discountPrice) : null);
-  const activePrice = (discountPrice !== null && discountPrice > 0) ? discountPrice : basePrice;
+  const activePrice = getEffectiveSellingPrice({ basePrice, discountPrice: product?.discountPrice });
+  const discountPercent = calculateDiscountPercent(basePrice, activePrice);
   const isWish = isInWishlist(product?.id || '');
   const isPreOrder = Boolean(product?.isPreOrder);
 
@@ -241,13 +240,13 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                     <span className="font-sans text-3xl sm:text-4xl font-black text-teal">
                       Rs. {activePrice.toLocaleString()}
                     </span>
-                    {product.discountPrice && (
+                    {discountPercent > 0 && (
                       <>
                         <span className="text-sm sm:text-base text-charcoal-muted line-through font-medium">
-                          Rs. {product.basePrice.toLocaleString()}
+                          Rs. {basePrice.toLocaleString()}
                         </span>
-                        <span className="badge-3d bg-champagne text-teal-950 text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border border-champagne/40">
-                          SAVE Rs. {(product.basePrice - product.discountPrice).toLocaleString()}
+                        <span className="badge-3d bg-teal text-champagne text-xs sm:text-sm font-black uppercase tracking-wider px-3 py-1 rounded-full border border-champagne/40 shadow-sm">
+                          {discountPercent}% OFF
                         </span>
                       </>
                     )}
@@ -726,8 +725,13 @@ export const ProductClient: React.FC<ProductClientProps> = ({
             <span className="font-serif text-sm font-bold text-teal block truncate">{product?.title || 'WearOMNIA'}</span>
             <div className="flex items-baseline gap-2 flex-wrap">
               <span className="font-serif text-xs font-bold text-champagne-700">Rs. {activePrice.toLocaleString()}</span>
-              {discountPrice && (
-                <span className="text-[10px] text-charcoal-muted line-through">Rs. {basePrice.toLocaleString()}</span>
+              {discountPercent > 0 && (
+                <>
+                  <span className="text-[10px] text-charcoal-muted line-through">Rs. {basePrice.toLocaleString()}</span>
+                  <span className="text-[10px] font-extrabold text-teal bg-champagne-200 px-1.5 py-0.5 rounded border border-champagne/40">
+                    {discountPercent}% OFF
+                  </span>
+                </>
               )}
               {isPreOrder && (
                 <span className="bg-amber-600 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded">PRE-ORDER</span>

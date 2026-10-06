@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, Tag, Lock, ShieldCheck, CheckCircle2, Heart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useSettings } from '@/context/SettingsContext';
+import { calculateDiscountPercent } from '@/lib/pricing';
 
 export const CartDrawer: React.FC = () => {
   const {
@@ -148,7 +149,9 @@ export const CartDrawer: React.FC = () => {
                     <CheckCircle2 className="w-3.5 h-3.5 text-champagne-700 shrink-0" /> Good choice. Your wardrobe agrees.
                   </div>
                   <AnimatePresence mode="popLayout">
-                    {cart.map((item) => (
+                    {cart.map((item) => {
+                      const itemDiscount = calculateDiscountPercent(item.basePrice, item.price);
+                      return (
                       <motion.div
                         key={item.id}
                         layout
@@ -159,13 +162,18 @@ export const CartDrawer: React.FC = () => {
                         className="flex gap-3 sm:gap-4 p-3 bg-sand/25 rounded-2xl border border-sand/50 transition-all duration-300 hover:border-champagne/40"
                       >
                         {/* Item Thumbnail */}
-                        <div className="relative w-18 h-24 sm:w-20 sm:h-26 rounded-xl overflow-hidden shrink-0 bg-sand border border-sand">
+                        <div className="relative w-16 sm:w-20 aspect-[3/4] rounded-xl overflow-hidden shrink-0 bg-sand border border-sand">
                           <Image
                             src={item.image}
                             alt={item.title}
                             fill
                             className="object-cover"
                           />
+                          {itemDiscount > 0 && (
+                            <span className="absolute top-1 left-1 z-10 text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded-full bg-teal-900 text-champagne border border-champagne/40">
+                              {itemDiscount}% OFF
+                            </span>
+                          )}
                         </div>
 
                         {/* Item Information */}
@@ -215,13 +223,26 @@ export const CartDrawer: React.FC = () => {
                             </div>
 
                             {/* Price */}
-                            <span className="font-sans font-bold text-xs sm:text-sm text-teal text-right shrink-0">
-                              Rs. {(item.price * item.quantity).toLocaleString()}
-                            </span>
+                            <div className="text-right shrink-0">
+                              <span className="font-sans font-bold text-xs sm:text-sm text-teal block">
+                                Rs. {(item.price * item.quantity).toLocaleString()}
+                              </span>
+                              {itemDiscount > 0 && (
+                                <div className="flex items-center justify-end gap-1 mt-0.5">
+                                  <span className="text-[10px] text-charcoal-muted line-through">
+                                    Rs. {(item.basePrice * item.quantity).toLocaleString()}
+                                  </span>
+                                  <span className="text-[9px] font-extrabold uppercase px-1 py-0.2 rounded bg-champagne-200 text-teal">
+                                    {itemDiscount}% OFF
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </motion.div>
-                    ))}
+                    );
+                  })}
                   </AnimatePresence>
                 </>
               )}

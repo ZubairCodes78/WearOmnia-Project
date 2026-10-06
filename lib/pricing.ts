@@ -94,6 +94,58 @@ export function getProductDiscountAmount(product: {
 }
 
 /**
+ * Calculates the clean whole integer discount percentage from original price and selling price.
+ * Formula: ((originalPrice - sellingPrice) / originalPrice) * 100
+ *
+ * Rules:
+ * - If originalPrice <= sellingPrice, returns 0 (no discount)
+ * - If originalPrice <= 0 or sellingPrice <= 0, returns 0
+ * - Rounds appropriately to a clean whole percentage (Math.round)
+ *
+ * Examples:
+ *   4500 -> 4000 = 11% OFF
+ *   4500 -> 3500 = 22% OFF
+ *   5000 -> 3500 = 30% OFF
+ */
+export function calculateDiscountPercent(
+  originalPrice: number | string,
+  sellingPrice?: number | string | null
+): number {
+  const original =
+    typeof originalPrice === 'number'
+      ? originalPrice
+      : parseFloat(String(originalPrice)) || 0;
+
+  if (original <= 0) return 0;
+
+  const selling =
+    sellingPrice !== undefined && sellingPrice !== null
+      ? (typeof sellingPrice === 'number' ? sellingPrice : parseFloat(String(sellingPrice)) || 0)
+      : original;
+
+  if (selling <= 0 || selling >= original) return 0;
+
+  const percent = Math.round(((original - selling) / original) * 100);
+  return percent > 0 && percent < 100 ? percent : 0;
+}
+
+/**
+ * Returns the clean whole discount percentage for a product object.
+ */
+export function getProductDiscountPercent(product: {
+  basePrice: number | string;
+  discountPrice?: number | string | null;
+}): number {
+  if (!product) return 0;
+  const original =
+    typeof product.basePrice === 'number'
+      ? product.basePrice
+      : parseFloat(String(product.basePrice)) || 0;
+  const effective = getEffectiveSellingPrice(product);
+  return calculateDiscountPercent(original, effective);
+}
+
+/**
  * Calculates stock valuation breakdown for a single product or SKU.
  *
  * Stock Selling Value = stockQuantity × effectiveSellingPrice
