@@ -1,6 +1,5 @@
 import React from 'react';
 import { Metadata } from 'next';
-import Image from 'next/image';
 import Link from 'next/link';
 import {
   Heart,
@@ -114,68 +113,72 @@ export default function OurStoryPage() {
         </section>
 
         {/* Chapter 1: The Beginning */}
-        <section className="py-20 sm:py-28 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-            {/* Elegant Single Atelier Imagery */}
-            <div className="lg:col-span-6">
-              <div className="relative aspect-[4/5] rounded-3xl overflow-hidden shadow-xl border border-sand">
-                <Image
-                  src="/images/kaftan-1.webp"
-                  alt="WearOMNIA Artisan Workshop"
-                  fill
-                  priority
-                  sizes="(max-width: 1024px) 100vw, 50vw"
-                  className="object-cover object-center"
-                />
-              </div>
-            </div>
-
-            {/* Narrative Story */}
-            <div className="lg:col-span-6 space-y-6">
-              <div className="space-y-1">
-                <span className="font-calligraphy text-xs sm:text-sm text-champagne-700 block tracking-[0.2em]">
-                  How It All Started
+        <section className="py-20 sm:py-28 lg:py-32 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="rounded-3xl bg-sand/30 border border-sand/80 p-8 sm:p-14 lg:p-20 shadow-xs relative overflow-hidden">
+            {/* Editorial Header Block */}
+            <div className="max-w-3xl space-y-4 sm:space-y-6">
+              <div className="flex items-center gap-3">
+                <span className="w-8 h-px bg-champagne-600/60" />
+                <span className="font-sans text-[11px] sm:text-xs text-champagne-700 tracking-[0.28em] uppercase font-bold">
+                  THE BEGINNING
                 </span>
-                <h2 className="font-serif text-3xl sm:text-4xl font-bold text-teal leading-tight">
+              </div>
+
+              <div className="space-y-2 sm:space-y-3">
+                <h3 className="font-serif text-xl sm:text-2xl text-teal-800 tracking-wide font-semibold">
+                  How It All Started
+                </h3>
+                <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-bold text-teal leading-[1.18] tracking-tight">
                   Born From A Personal Quest for Elegance
                 </h2>
               </div>
+            </div>
 
-              <div className="space-y-4 text-xs sm:text-sm text-charcoal-muted leading-relaxed font-sans">
+            {/* Subtle Editorial Divider */}
+            <div className="my-8 sm:my-12 border-t border-sand/80 flex items-center justify-between">
+              <span className="w-16 h-0.5 bg-champagne-600/50 -mt-[1px]" />
+            </div>
+
+            {/* Editorial Story Narrative & Cards */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-start">
+              {/* Left Column: Authentic Story Copy */}
+              <div className="lg:col-span-7 space-y-5 text-sm sm:text-base text-charcoal-muted leading-relaxed font-sans">
                 <p>
                   We started WearOMNIA because &ldquo;I have nothing to wear&rdquo; somehow became a daily morning meeting before 8AM university lectures, coffee runs, and impromptu plans.
                 </p>
                 <p>
                   For years, young Pakistani women faced an annoying compromise: stiff, synthetic fabrics that lose their drape within twenty minutes, or complicated formal wear that felt impossible to style casually.
                 </p>
-                <p>
+                <p className="text-teal font-serif font-semibold text-base sm:text-lg pt-1">
                   We wanted ready-to-wear modest pieces that look like you planned the outfit for hours — even when you got ready in five minutes. Breathable fabrics, graceful drapes, and timeless cuts that you can wear on repeat with total confidence.
                 </p>
               </div>
 
-              {/* Humorous Relatable Origin Box */}
-              <div className="bg-sand/70 border-l-4 border-teal p-4 rounded-r-2xl text-xs text-charcoal space-y-1 shadow-sm">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-teal shrink-0" />
-                  <strong className="text-teal font-bold uppercase tracking-wider text-[11px]">The Outfit Philosophy</strong>
+              {/* Right Column: Outfit Philosophy & Credibility Stats */}
+              <div className="lg:col-span-5 space-y-6">
+                {/* Humorous Relatable Origin Box */}
+                <div className="bg-offwhite/90 border-l-4 border-teal p-5 sm:p-6 rounded-2xl text-xs sm:text-sm text-charcoal space-y-2 border border-sand/60 shadow-xs">
+                  <div className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-teal shrink-0" />
+                    <strong className="text-teal font-bold uppercase tracking-wider text-[11px] sm:text-xs">The Outfit Philosophy</strong>
+                  </div>
+                  <p className="text-xs sm:text-sm text-charcoal-muted leading-relaxed font-sans">
+                    The goal was simple: modest enough for university, chic enough for a dinner plan, and pretty enough that someone across the room will definitely ask where you bought it.
+                  </p>
                 </div>
-                <p className="text-[11px] sm:text-xs text-charcoal-muted leading-relaxed font-sans">
-                  The goal was simple: modest enough for university, chic enough for a dinner plan, and pretty enough that someone across the room will definitely ask where you bought it.
-                </p>
-              </div>
 
-              <div className="pt-2 border-t border-sand">
-                <div className="grid grid-cols-3 gap-4 text-center py-3">
-                  <div className="p-3 bg-sand/60 rounded-2xl card-3d-subtle">
-                    <p className="font-serif text-2xl font-black text-teal">10,000+</p>
+                {/* 3 Metric Cards */}
+                <div className="grid grid-cols-3 gap-3 sm:gap-4 text-center">
+                  <div className="p-3.5 sm:p-4 bg-offwhite/90 rounded-2xl border border-sand/70 shadow-xs">
+                    <p className="font-serif text-xl sm:text-2xl font-black text-teal">10,000+</p>
                     <p className="text-[10px] sm:text-xs text-charcoal-muted mt-0.5">Parcels Delivered</p>
                   </div>
-                  <div className="p-3 bg-sand/60 rounded-2xl card-3d-subtle">
-                    <p className="font-serif text-2xl font-black text-teal">100%</p>
+                  <div className="p-3.5 sm:p-4 bg-offwhite/90 rounded-2xl border border-sand/70 shadow-xs">
+                    <p className="font-serif text-xl sm:text-2xl font-black text-teal">100%</p>
                     <p className="text-[10px] sm:text-xs text-charcoal-muted mt-0.5">Handcrafted</p>
                   </div>
-                  <div className="p-3 bg-sand/60 rounded-2xl card-3d-subtle">
-                    <p className="font-serif text-2xl font-black text-teal">4.9 ★</p>
+                  <div className="p-3.5 sm:p-4 bg-offwhite/90 rounded-2xl border border-sand/70 shadow-xs">
+                    <p className="font-serif text-xl sm:text-2xl font-black text-teal">4.9 ★</p>
                     <p className="text-[10px] sm:text-xs text-charcoal-muted mt-0.5">Client Rating</p>
                   </div>
                 </div>
