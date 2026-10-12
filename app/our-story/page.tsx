@@ -18,16 +18,16 @@ import { PRODUCTION_DOMAIN, generateBreadcrumbSchema } from '@/lib/seo';
 const CANONICAL_URL = `${PRODUCTION_DOMAIN}/our-story`;
 
 export const metadata: Metadata = {
-  title: 'Our Story & Craftsmanship Heritage | WearOMNIA Modest Couture',
+  title: 'Our Story & Heritage | WearOMNIA — Modesty With Functionality',
   description:
-    'Discover the journey of WearOMNIA. Handcrafted in Pakistan with pure raw silks, delicate organzas, and artisanal embroidery designed for timeless modest elegance.',
+    'Discover the story of WearOMNIA — Modesty With Functionality. Thoughtfully designed stitched clothing combining graceful coverage, real-life practicality, and everyday comfort.',
   alternates: {
     canonical: CANONICAL_URL,
   },
   openGraph: {
-    title: 'Our Story & Craftsmanship Heritage | WearOMNIA Modest Couture',
+    title: 'Our Story & Heritage | WearOMNIA — Modesty With Functionality',
     description:
-      'Discover the journey of WearOMNIA. Handcrafted in Pakistan with pure raw silks, delicate organzas, and artisanal embroidery designed for timeless modest elegance.',
+      'Discover the story of WearOMNIA — Modesty With Functionality. Thoughtfully designed stitched clothing combining graceful coverage, real-life practicality, and everyday comfort.',
     url: CANONICAL_URL,
     siteName: 'WearOMNIA',
     type: 'website',
@@ -230,9 +230,9 @@ export default function OurStoryPage() {
                 <div className="w-12 h-12 rounded-2xl bg-teal-950 text-champagne flex items-center justify-center shadow-md">
                   <Heart className="w-6 h-6 text-champagne" />
                 </div>
-                <h3 className="font-serif text-lg font-bold text-teal">Graceful Modesty</h3>
+                <h3 className="font-serif text-lg font-bold text-teal">Modesty With Functionality</h3>
                 <p className="text-xs text-charcoal-muted leading-relaxed font-sans">
-                  Modesty is not an afterthought for us—it is our philosophy. Generous cuts and non-sheer textiles ensure complete peace of mind.
+                  Modesty with functionality is our philosophy. We believe clothing should offer generous modest coverage while being built for real everyday life — featuring thoughtful cuts, comfortable wear, and practical pockets where applicable.
                 </p>
               </div>
 

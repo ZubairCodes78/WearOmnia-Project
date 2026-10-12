@@ -896,7 +896,7 @@ export default function CheckoutPage() {
                       {/* Product Thumbnail - 4:5 aspect ratio preserved, compact 56px mobile / 64px desktop */}
                       <div className="relative w-14 sm:w-16 aspect-[4/5] rounded-xl overflow-hidden shrink-0 bg-sand/80 border border-sand">
                         <Image
-                          src={item.image || '/images/kaftan-1.jpg'}
+                          src={item.image || '/images/og-image.jpg'}
                           alt={item.title}
                           fill
                           sizes="(max-width: 640px) 56px, 64px"

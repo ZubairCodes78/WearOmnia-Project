@@ -11,8 +11,8 @@ export const WhyWearOmnia = () => {
   const features = [
     {
       tag: 'FOR THE 8AM CLASS.',
-      title: 'Modest Fit & Daily Comfort',
-      description: 'Breathable, relaxed tailoring with modest coverage designed for effortless everyday wear and all-day comfort.',
+      title: 'Modesty With Functionality',
+      description: 'Breathable, relaxed tailoring with graceful modest coverage and thoughtful details like practical pockets on select pieces for effortless all-day comfort.',
       icon: Clock,
     },
     {
@@ -115,8 +115,8 @@ export const WhyWearOmnia = () => {
                   <div className="w-7 h-7 mx-auto rounded-full bg-champagne/15 text-champagne flex items-center justify-center mb-1">
                     <ShieldCheck className="w-3.5 h-3.5" />
                   </div>
-                  <div className="font-bold text-xs text-champagne">Effortless Modesty</div>
-                  <div className="text-[11px] text-offwhite/75 leading-tight">Generous drape &amp; easy dupatta styling</div>
+                  <div className="font-bold text-xs text-champagne">Modest &amp; Functional</div>
+                  <div className="text-[11px] text-offwhite/75 leading-tight">Generous drape &amp; practical features</div>
                 </div>
                 <div className="bg-teal-950/80 border border-champagne/25 p-3.5 sm:p-4 rounded-xl text-center space-y-1">
                   <div className="w-7 h-7 mx-auto rounded-full bg-champagne/15 text-champagne flex items-center justify-center mb-1">

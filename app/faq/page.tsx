@@ -53,6 +53,14 @@ const STATIC_FAQS = [
     q: 'Can I exchange an item if it doesn’t fit?',
     a: 'Yes, we provide a 7-day hassle-free exchange window. Simply contact our WhatsApp concierge or customer support with your order number.',
   },
+  {
+    q: 'What is WearOMNIA’s design philosophy?',
+    a: 'Our core philosophy is "Modesty With Functionality." We design clothing that honors graceful modest coverage while providing the everyday practicality women need — breathable fabrics, comfortable movement, and thoughtful details.',
+  },
+  {
+    q: 'Do your garments have pockets?',
+    a: 'Yes, on styles that genuinely have them! For example, our palazzo trousers and select shirts feature two functional side pockets. We clearly indicate pockets in product descriptions only when the garment truly includes them.',
+  },
 ];
 
 export default function FAQPage() {

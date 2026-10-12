@@ -250,17 +250,17 @@ export default function FounderPage() {
               The Guiding Principle
             </span>
             <h2 className="font-serif text-3xl sm:text-4xl lg:text-5xl font-black text-teal tracking-tight">
-              MODESTY, WITH INTENTION.
+              MODESTY WITH FUNCTIONALITY.
             </h2>
             <p className="font-serif text-lg sm:text-xl text-teal-800 italic max-w-2xl mx-auto">
-              &ldquo;WearOMNIA is created for those who want their clothing to feel modest without feeling ordinary.&rdquo;
+              &ldquo;WearOMNIA is created for those who want their clothing to feel modest, purposeful, and practical for real life.&rdquo;
             </p>
             <div className="space-y-4 text-xs sm:text-sm text-charcoal-muted leading-relaxed font-sans max-w-2xl mx-auto pt-2">
               <p>
-                When modesty is intentional, it ceases to be a limitation and becomes a quiet signature of refinement. It shows in the generous sweep of a sleeve, the thoughtful depth of a neckline, and the fluid drape of natural textiles that move with poise.
+                When modesty meets functionality, it ceases to be a limitation and becomes a quiet signature of confidence. It shows in the generous sweep of a sleeve, the thoughtful ease of relaxed tailoring, and real functional details — like practical pockets on styles that carry them — designed for days that actually move.
               </p>
               <p>
-                We spend months perfecting our proportions so that when you put on a WearOMNIA piece, you feel put-together instantly — ready for wherever your day takes you.
+                We spend months perfecting our proportions so that when you put on a WearOMNIA piece, you feel put-together, completely comfortable, and ready for wherever your day takes you.
               </p>
             </div>
           </div>

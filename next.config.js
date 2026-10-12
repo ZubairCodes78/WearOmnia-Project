@@ -53,6 +53,21 @@ const nextConfig = {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
   devIndicators: false,
+  // Permanent 301 redirects for legacy favicon requests to new canonical icons
+  async redirects() {
+    return [
+      {
+        source: '/favicon.jpg',
+        destination: '/favicon.ico',
+        permanent: true,
+      },
+      {
+        source: '/favicon.png',
+        destination: '/icon-32x32.png',
+        permanent: true,
+      },
+    ];
+  },
   // Ensure production headers for caching
   async headers() {
     return [

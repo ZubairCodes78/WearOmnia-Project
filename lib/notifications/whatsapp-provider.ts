@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { INotificationProvider, NotificationProviderType, NotificationResult, WhatsAppSettings } from './types';
 import { normalizePhone, validatePhone } from '@/lib/phone';
+import { formatOrderPlacedComma } from '@/lib/date';
 
 /**
  * Parse variant info string (e.g. "Size: M, Color: Black" or "M / Black")
@@ -97,7 +98,8 @@ export function buildOrderConfirmationMessage(order: any): string {
     `Assalam-o-Alaikum ${customerName},\n\n` +
     `Thank you for shopping with WearOMNIA.\n` +
     `Your order has been received successfully.\n\n` +
-    `Order No: #${orderNumber}\n\n` +
+    `Order No: #${orderNumber}\n` +
+    `Order Placed: ${formatOrderPlacedComma(order.createdAt)}\n\n` +
     `ORDER DETAILS\n` +
     `${itemsText}\n\n` +
     `ORDER SUMMARY\n` +
@@ -114,7 +116,7 @@ export function buildOrderConfirmationMessage(order: any): string {
     `We will keep you updated about your order.\n\n` +
     `Thank you for choosing WearOMNIA.\n\n` +
     `WearOMNIA\n` +
-    `Modern Modesty, Made Distinct.`
+    `Modesty With Functionality.`
   );
 }
 
@@ -404,7 +406,7 @@ export class WhatsAppProvider implements INotificationProvider {
         `Estimated delivery: 2-3 Business Days via Express Courier across Pakistan.\n\n` +
         `Thank you for choosing WearOMNIA.\n\n` +
         `WearOMNIA\n` +
-        `Modern Modesty, Made Distinct.`;
+        `Modesty With Functionality.`;
     } else if (statusUpper === 'PACKING') {
       statusText =
         `WearOMNIA\n\n` +
@@ -413,7 +415,7 @@ export class WhatsAppProvider implements INotificationProvider {
         `📦 Order #${orderNumber} Update: Your luxury garment is now being packed and hand-checked with utmost care at our Lahore atelier.\n\n` +
         `We will notify you with courier tracking as soon as it is dispatched.\n\n` +
         `WearOMNIA\n` +
-        `Modern Modesty, Made Distinct.`;
+        `Modesty With Functionality.`;
     } else if (statusUpper === 'OUT_FOR_DELIVERY' || statusUpper === 'DISPATCHED') {
       const courier = order.courier || 'PostEx';
       const trackingNumber = order.trackingNumber || 'Pending Courier Slip';
@@ -432,7 +434,7 @@ export class WhatsAppProvider implements INotificationProvider {
         `Expect delivery in 24-48 hours across Pakistan.\n\n` +
         `Thank you for choosing WearOMNIA.\n\n` +
         `WearOMNIA\n` +
-        `Modern Modesty, Made Distinct.`;
+        `Modesty With Functionality.`;
     } else if (statusUpper === 'DELIVERED') {
       statusText =
         `WearOMNIA\n\n` +
@@ -441,7 +443,7 @@ export class WhatsAppProvider implements INotificationProvider {
         `🎉 Order #${orderNumber} has been delivered successfully!\n\n` +
         `Thank you for choosing WearOMNIA. We hope you love your luxury outfit!\n\n` +
         `WearOMNIA\n` +
-        `Modern Modesty, Made Distinct.`;
+        `Modesty With Functionality.`;
     } else if (statusUpper === 'CANCELLED') {
       statusText =
         `WearOMNIA\n\n` +
@@ -499,7 +501,7 @@ export class WhatsAppProvider implements INotificationProvider {
       `Your pre-order is now CONFIRMED! Remaining balance: Rs. ${remaining}.\n\n` +
       `Our atelier team is preparing your order. Thank you for choosing WearOMNIA.\n\n` +
       `WearOMNIA\n` +
-      `Modern Modesty, Made Distinct.`;
+      `Modesty With Functionality.`;
 
     const messagePayload = {
       type: 'text',
@@ -546,7 +548,7 @@ export class WhatsAppProvider implements INotificationProvider {
       `${reviewLink}\n\n` +
       `Thank you for choosing WearOMNIA.\n\n` +
       `WearOMNIA\n` +
-      `Modern Modesty, Made Distinct.`;
+      `Modesty With Functionality.`;
 
     const messagePayload = {
       type: 'text',

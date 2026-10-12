@@ -20,9 +20,10 @@ export function getCanonicalUrl(pathname: string = '/'): string {
 export const SITE_METADATA_DEFAULTS = {
   name: 'WearOMNIA',
   siteUrl: PRODUCTION_DOMAIN,
-  title: 'WearOMNIA | Simple, Modest & Stylish Clothing',
+  title: 'WearOMNIA | Modesty With Functionality.',
   description:
-    'WearOMNIA offers simple, modest and stylish stitched clothing for women. Modern Pakistani fashion with nationwide Cash On Delivery.',
+    'WearOMNIA offers simple, modest and stylish clothing designed for real everyday life, practical comfort, and nationwide Cash On Delivery in Pakistan.',
+  slogan: 'Modesty With Functionality.',
   keywords: [
     'WearOMNIA',
     'Pakistani Fashion',
@@ -58,7 +59,7 @@ export function generateProductMetadata(product: any): Metadata {
   const description = rawDesc.length > 155 ? `${rawDesc.slice(0, 152)}...` : (rawDesc || SITE_METADATA_DEFAULTS.description);
 
   const images = Array.isArray(product?.images) ? product.images : [];
-  const primaryImg = images[0]?.url || `${PRODUCTION_DOMAIN}/images/hero-1.jpg`;
+  const primaryImg = images[0]?.url || `${PRODUCTION_DOMAIN}/images/og-image.jpg`;
   const canonicalUrl = getCanonicalUrl(`/product/${product?.slug || ''}`);
 
   return {
@@ -130,7 +131,7 @@ export function generateCategoryMetadata(
       type: 'website',
       images: [
         {
-          url: `${PRODUCTION_DOMAIN}/images/hero-1.jpg`,
+          url: `${PRODUCTION_DOMAIN}/images/og-image.jpg`,
           width: 1200,
           height: 630,
           alt: fullTitle,
@@ -141,7 +142,7 @@ export function generateCategoryMetadata(
       card: 'summary_large_image',
       title: fullTitle,
       description,
-      images: [`${PRODUCTION_DOMAIN}/images/hero-1.jpg`],
+      images: [`${PRODUCTION_DOMAIN}/images/og-image.jpg`],
     },
     // Filter/search combinations are marked noindex to avoid duplicate indexation bloat
     robots: isFiltered
@@ -171,7 +172,7 @@ export function generateProductSchema(product: any) {
   const images = Array.isArray(product?.images) ? product.images : [];
   const imageUrls = images.map((img: any) => img.url).filter(Boolean);
   if (imageUrls.length === 0) {
-    imageUrls.push(`${PRODUCTION_DOMAIN}/images/hero-1.jpg`);
+    imageUrls.push(`${PRODUCTION_DOMAIN}/images/og-image.jpg`);
   }
 
   const basePrice = Number(product?.basePrice) || 0;
@@ -355,7 +356,8 @@ export function generateSiteSchema() {
       alternateName: ['Wear OMNIA', 'WearOMNIA Pakistan'],
       url: PRODUCTION_DOMAIN,
       logo: `${PRODUCTION_DOMAIN}/logo.png`,
-      description: 'World-class luxury fashion e-commerce platform defining Pakistani modern modest couture.',
+      slogan: 'Modesty With Functionality.',
+      description: 'WearOMNIA designs modest and stylish clothing for women, combining modesty with everyday functionality, thoughtful details, and practical comfort.',
       foundingLocation: {
         '@type': 'Place',
         name: 'Lahore, Pakistan',

@@ -346,6 +346,7 @@ export async function POST(req: Request) {
       success: true,
       orderNumber: order.orderNumber,
       orderId: order.id,
+      createdAt: order.createdAt,
     });
   } catch (error) {
     console.error('Order creation failed:', error);

@@ -74,7 +74,7 @@ interface ProductsClientProps {
   collections?: CollectionOption[];
 }
 
-const DEFAULT_IMAGE = '/images/kaftan-1.jpg';
+const DEFAULT_IMAGE = '/images/og-image.jpg';
 
 export function ProductsClient({ initialProducts, categories = [], collections = [] }: ProductsClientProps) {
   const router = useRouter();

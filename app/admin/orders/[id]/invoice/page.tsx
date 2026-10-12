@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma';
 import { PrintControls } from '@/components/admin/PrintControls';
 import Link from 'next/link';
 import { ArrowLeft, AlertCircle } from 'lucide-react';
+import { formatOrderPlacedComma } from '@/lib/date';
 
 interface PrintInvoiceProps {
   params: Promise<{ id: string }>;
@@ -84,7 +85,7 @@ export default async function PrintInvoicePage({ params }: PrintInvoiceProps) {
         <div className="text-right text-xs">
           <span className="font-serif text-xl font-bold block text-teal-900">TAX INVOICE</span>
           <p className="font-mono font-bold">{order.orderNumber}</p>
-          <p className="text-gray-600">{new Date(order.createdAt).toLocaleDateString()}</p>
+          <p className="text-gray-600 font-medium">Order Placed: {formatOrderPlacedComma(order.createdAt)}</p>
         </div>
       </div>
 

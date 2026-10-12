@@ -98,8 +98,8 @@ export const Header: React.FC = () => {
             <span className="font-serif text-2xl sm:text-3xl font-black tracking-tight uppercase text-teal group-hover:text-champagne-700 transition-colors duration-300">
               Wear<span className="text-champagne-600">OMNIA</span>
             </span>
-            <span className="text-[9px] sm:text-[10px] uppercase font-bold tracking-[0.25em] text-champagne-700 mt-0.5">
-              Modest Couture
+            <span className="text-[8.5px] sm:text-[9.5px] uppercase font-bold tracking-[0.2em] text-champagne-700 mt-0.5">
+              Modesty With Functionality.
             </span>
           </Link>
 

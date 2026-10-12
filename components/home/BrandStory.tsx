@@ -35,7 +35,7 @@ export const BrandStory: React.FC = () => {
             {/* Right Column: Supporting Text + CTA Button */}
             <div className="lg:max-w-lg lg:border-l lg:border-sand lg:pl-12 xl:pl-16 space-y-6 sm:space-y-8">
               <p className="font-sans text-sm sm:text-base text-charcoal-muted leading-relaxed">
-                WearOMNIA is built around modern modesty — bringing timeless character, thoughtful design, and everyday comfort together in pieces made to be lived in.
+                WearOMNIA is built around <strong className="text-teal font-semibold">Modesty With Functionality.</strong> We bring timeless modest silhouettes, practical everyday wear, and thoughtful details like functional pockets together in pieces made to be lived in.
               </p>
 
               <div className="pt-1">

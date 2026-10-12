@@ -140,7 +140,7 @@ async function runTestSuite() {
     assert(msg.includes('Payment Method: Cash On Delivery (COD)'), 'Must state Cash On Delivery');
     assert(msg.includes('Delivery Address:\nHouse 45, Street 12, DHA Phase 5'), 'Must include delivery address');
     assert(msg.includes('City: Lahore'), 'Must include delivery city');
-    assert(msg.includes('Modern Modesty, Made Distinct.'), 'Must include brand slogan');
+    assert(msg.includes('Modesty With Functionality.'), 'Must include brand slogan');
     assert(!msg.includes('For pre-orders:'), 'Must NOT include pre-order block for COD order');
   });
 

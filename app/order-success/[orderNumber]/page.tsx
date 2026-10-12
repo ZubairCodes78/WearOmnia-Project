@@ -6,6 +6,7 @@ import { CheckCircle2, Truck, ArrowRight, MessageSquare, ShieldCheck, MapPin, Pa
 import { OrderSuccessConfetti } from './OrderSuccessConfetti';
 import { PreOrderResubmitProof } from './PreOrderResubmitProof';
 import { getSiteSettings } from '@/lib/settings';
+import { formatOrderPlacementTime, formatPlacedOnDate, formatOrderPlacedComma } from '@/lib/date';
 
 interface OrderSuccessPageProps {
   params: Promise<{ orderNumber: string }>;
@@ -111,6 +112,9 @@ export default async function OrderSuccessPage({ params }: OrderSuccessPageProps
               ) : (
                 <>
                   <span className="bg-teal-950/80 px-4 py-2 rounded-full border border-champagne/30 flex items-center gap-2 shadow-sm">
+                    <Clock className="w-4 h-4 text-champagne" /> Order Placed: {formatOrderPlacedComma(order.createdAt)}
+                  </span>
+                  <span className="bg-teal-950/80 px-4 py-2 rounded-full border border-champagne/30 flex items-center gap-2 shadow-sm">
                     <Truck className="w-4 h-4 text-champagne" /> Estimated Delivery: 2 – 4 Business Days
                   </span>
                   <span className="bg-teal-950/80 px-4 py-2 rounded-full border border-champagne/30 flex items-center gap-2 shadow-sm">
@@ -122,7 +126,7 @@ export default async function OrderSuccessPage({ params }: OrderSuccessPageProps
 
             <p className="text-[11px] text-champagne/90 pt-2 font-medium flex items-center justify-center gap-1.5">
               <CheckCircle2 className="w-3.5 h-3.5 text-champagne shrink-0" />
-              <span>Modest enough for uni. Pretty enough for the &ldquo;Where did you get that?&rdquo;</span>
+              <span>Modesty With Functionality. Designed for university mornings, workdays, and everyday life.</span>
             </p>
           </div>
         </div>
@@ -143,7 +147,10 @@ export default async function OrderSuccessPage({ params }: OrderSuccessPageProps
               <h3 className="font-serif text-xl font-bold text-teal">
                 {isPreOrder ? 'Pre-Order Dossier' : 'Order Summary'}
               </h3>
-              <p className="text-xs text-charcoal-muted">Placed on {new Date(order.createdAt).toLocaleDateString()}</p>
+              <p className="text-xs text-charcoal-muted flex items-center gap-1.5 mt-0.5">
+                <Clock className="w-3.5 h-3.5 text-champagne-700 shrink-0" />
+                <span>{formatPlacedOnDate(order.createdAt)} (Asia/Karachi)</span>
+              </p>
             </div>
             <div className="flex items-center gap-2">
               {isPreOrder && (

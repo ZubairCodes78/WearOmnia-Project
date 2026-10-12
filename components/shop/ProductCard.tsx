@@ -61,7 +61,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
     images[1]?.url &&
     images[1].url !== images[0]?.url
   );
-  const primaryImage = images?.[0]?.url || '/images/kaftan-1.jpg';
+  const primaryImage = images?.[0]?.url || '/images/og-image.jpg';
   const secondaryImage = hasSecondaryImage ? images[1].url : null;
 
   const inWishlist = isInWishlist(id);

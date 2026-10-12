@@ -35,6 +35,7 @@ import {
 import { getValidNextStatuses, STATUS_LABELS } from '@/lib/order-status';
 import { normalizePhone } from '@/lib/phone';
 import { DeleteOrderModal } from '@/components/admin/DeleteOrderModal';
+import { formatOrderPlacedComma } from '@/lib/date';
 
 interface OrderDetailClientProps {
   order: any;
@@ -505,6 +506,11 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
           </Link>
           <span className="text-[#D4AF37]/30">/</span>
           <span className="font-mono text-xs font-bold text-[#FAF8F5]">{order.orderNumber}</span>
+          <span className="text-[#D4AF37]/30 hidden sm:inline">•</span>
+          <span className="text-xs text-[#FAF8F5]/80 flex items-center gap-1.5 font-sans">
+            <Clock className="w-3.5 h-3.5 text-[#D4AF37] shrink-0" />
+            <span>Order Placed: <strong className="text-[#FAF8F5] font-semibold">{formatOrderPlacedComma(order.createdAt)}</strong> (Asia/Karachi)</span>
+          </span>
         </div>
 
         <div className="flex flex-wrap items-center gap-2.5">
@@ -776,7 +782,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                       </div>
                       <div className="flex justify-between text-[#FAF8F5]/50 text-[10px]">
                         <span>Submitted At:</span>
-                        <span>{new Date(order.createdAt).toLocaleString()}</span>
+                        <span>{formatOrderPlacedComma(order.createdAt)}</span>
                       </div>
                     </>
                   );

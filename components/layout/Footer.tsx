@@ -66,12 +66,12 @@ export const Footer = () => {
               <span className="font-serif text-3xl tracking-tight text-offwhite font-black uppercase">
                 Wear<span className="text-champagne">OMNIA</span>
               </span>
-              <span className="text-[10px] sm:text-[11px] uppercase font-bold tracking-[0.25em] text-champagne block mt-0.5">
-                Modest Luxury &amp; Couture
+              <span className="text-[10px] sm:text-[11px] uppercase font-bold tracking-[0.2em] text-champagne block mt-0.5">
+                Modesty With Functionality.
               </span>
             </Link>
             <p className="text-xs leading-relaxed text-offwhite/80 max-w-sm font-sans">
-              Modest clothes. Immodestly good outfit days. Designed for university mornings, coffee runs, and everything in between.
+              Modesty With Functionality. Stitched women&apos;s wear thoughtfully tailored for real everyday life — combining generous modest silhouettes, practical details like pockets where applicable, and effortless all-day comfort.
             </p>
             <div className="pt-2">
               <span className="text-[11px] uppercase tracking-widest font-bold text-champagne block mb-1">
