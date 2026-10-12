@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { revalidatePath, revalidateTag } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminSession } from '@/lib/auth';
 import { recordAuditLog } from '@/lib/audit';
@@ -73,6 +74,12 @@ export async function POST(req: NextRequest) {
       `Created payment method: ${method.displayName} (${method.methodType})`
     );
 
+    try {
+      revalidateTag('preorder-settings');
+      revalidateTag('site-settings');
+      revalidatePath('/', 'layout');
+    } catch {}
+
     return NextResponse.json({ success: true, method });
   } catch (error: any) {
     console.error('Error creating payment method:', error);
@@ -129,6 +136,12 @@ export async function PUT(req: NextRequest) {
       `Updated payment method: ${method.displayName}`
     );
 
+    try {
+      revalidateTag('preorder-settings');
+      revalidateTag('site-settings');
+      revalidatePath('/', 'layout');
+    } catch {}
+
     return NextResponse.json({ success: true, method });
   } catch (error: any) {
     console.error('Error updating payment method:', error);
@@ -160,6 +173,12 @@ export async function DELETE(req: NextRequest) {
       id,
       `Deleted payment method: ${deleted.displayName}`
     );
+
+    try {
+      revalidateTag('preorder-settings');
+      revalidateTag('site-settings');
+      revalidatePath('/', 'layout');
+    } catch {}
 
     return NextResponse.json({ success: true });
   } catch (error: any) {

@@ -31,7 +31,10 @@ export async function POST(req: Request) {
     // storefront immediately sees the updated settings (not after 120s TTL)
     try {
       revalidateTag('site-settings');
+      revalidateTag('preorder-settings');
       revalidatePath('/', 'layout');
+      revalidatePath('/shop');
+      revalidatePath('/checkout');
     } catch {
       // Ignored in non-SSR test environments
     }

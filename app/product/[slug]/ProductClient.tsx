@@ -73,11 +73,12 @@ export const ProductClient: React.FC<ProductClientProps> = ({
   const activePrice = getEffectiveSellingPrice({ basePrice, discountPrice: product?.discountPrice });
   const discountPercent = calculateDiscountPercent(basePrice, activePrice);
   const isWish = isInWishlist(product?.id || '');
-  const isPreOrder = Boolean(product?.isPreOrder);
+  const isPreOrder = Boolean(product?.isPreOrder && settings?.preorder_enabled);
 
   // Dynamic Pre-Order Advance Calculation from Single Source of Truth
   const advancePercent = product?.preOrderAdvancePercent ?? settings?.preorder_advance_percent ?? defaultAdvancePercent ?? 50;
-  const advanceAmount = Math.round((activePrice * (advancePercent || 50)) / 100);
+  const isAdvanceRequired = Boolean(isPreOrder && settings?.preorder_advance_enabled !== false && advancePercent > 0);
+  const advanceAmount = isAdvanceRequired ? Math.round((activePrice * advancePercent) / 100) : 0;
   const remainingAmount = Math.max(0, activePrice - advanceAmount);
 
   const sizes = Array.from(new Set(rawVariants.map((v: any) => v?.size).filter(Boolean))) as string[];
@@ -252,14 +253,16 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                     )}
                   </div>
 
-                  {product.isPreOrder && (
+                  {isPreOrder && (
                     <div className="flex items-center gap-2 pt-0.5">
                       <span className="bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-md">
                         PRE-ORDER
                       </span>
-                      <span className="text-xs font-semibold text-amber-900 font-sans">
-                        {advancePercent}% advance required: <strong className="font-mono text-teal">Rs. {advanceAmount.toLocaleString()}</strong>
-                      </span>
+                      {isAdvanceRequired && (
+                        <span className="text-xs font-semibold text-amber-900 font-sans">
+                          {advancePercent}% advance required: <strong className="font-mono text-teal">Rs. {advanceAmount.toLocaleString()}</strong>
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>
@@ -276,7 +279,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({
             </div>
 
             {/* Pre-Order Information Card */}
-            {product.isPreOrder && (
+            {isPreOrder && (
               <div className="bg-amber-500/10 border border-amber-500/30 rounded-2xl p-4 space-y-2.5 font-sans">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span className="bg-amber-600 text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full">
@@ -290,24 +293,35 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                 </div>
 
                 {/* Clear Financial Split */}
-                <div className="grid grid-cols-2 gap-2 bg-white/70 p-3 rounded-xl border border-amber-200 text-xs">
-                  <div>
-                    <span className="text-charcoal-muted block text-[10px]">Amount Required Now ({advancePercent}%):</span>
-                    <span className="font-serif font-bold text-amber-900 text-sm">
-                      Rs. {advanceAmount.toLocaleString()}
-                    </span>
+                {isAdvanceRequired ? (
+                  <div className="grid grid-cols-2 gap-2 bg-white/70 p-3 rounded-xl border border-amber-200 text-xs">
+                    <div>
+                      <span className="text-charcoal-muted block text-[10px]">Amount Required Now ({advancePercent}%):</span>
+                      <span className="font-serif font-bold text-amber-900 text-sm">
+                        Rs. {advanceAmount.toLocaleString()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-charcoal-muted block text-[10px]">Remaining on Delivery (COD):</span>
+                      <span className="font-serif font-bold text-teal text-sm">
+                        Rs. {remainingAmount.toLocaleString()}
+                      </span>
+                    </div>
                   </div>
-                  <div>
-                    <span className="text-charcoal-muted block text-[10px]">Remaining on Delivery (COD):</span>
+                ) : (
+                  <div className="bg-white/70 p-3 rounded-xl border border-amber-200 text-xs">
+                    <span className="text-charcoal-muted block text-[10px]">Payment Terms:</span>
                     <span className="font-serif font-bold text-teal text-sm">
-                      Rs. {remainingAmount.toLocaleString()}
+                      Full Payment on Delivery (Cash On Delivery)
                     </span>
                   </div>
-                </div>
+                )}
 
                 <p className="text-[11px] text-amber-950/80 leading-relaxed">
                   {product.preOrderNote ||
-                    `This artisan garment is handcrafted upon reservation. Submit your ${advancePercent}% advance payment proof at checkout to confirm production.`}
+                    (isAdvanceRequired
+                      ? `This artisan garment is handcrafted upon reservation. Submit your ${advancePercent}% advance payment proof at checkout to confirm production.`
+                      : 'This artisan garment is handcrafted upon reservation. No advance payment required; full amount payable upon delivery.')}
                 </p>
               </div>
             )}
@@ -466,12 +480,12 @@ export const ProductClient: React.FC<ProductClientProps> = ({
               <button
                 type="button"
                 onClick={handleBuyNow}
-                disabled={!product.isPreOrder && currentStock <= 0}
+                disabled={!isPreOrder && currentStock <= 0}
                 className="w-full btn-premium btn-champagne !py-4 rounded-2xl text-xs uppercase font-black tracking-widest transition-all shadow-xl flex items-center justify-center gap-2.5 disabled:opacity-50 border border-teal/20 cursor-pointer"
               >
                 <Zap className="w-4 h-4 text-teal fill-current" />
-                {product.isPreOrder
-                  ? `Pre-Order Now (${advancePercent}% Advance)`
+                {isPreOrder
+                  ? (isAdvanceRequired ? `Pre-Order Now (${advancePercent}% Advance)` : 'Pre-Order Now')
                   : 'Buy Now (Cash On Delivery)'}
               </button>
             </div>
@@ -737,7 +751,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                 <span className="bg-amber-600 text-white text-[8px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded">PRE-ORDER</span>
               )}
             </div>
-            {isPreOrder && (
+            {isPreOrder && isAdvanceRequired && (
               <span className="text-[10px] text-amber-900 font-semibold">
                 {advancePercent}% Advance: Rs. {advanceAmount.toLocaleString()}
               </span>

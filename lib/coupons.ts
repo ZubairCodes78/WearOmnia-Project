@@ -359,7 +359,10 @@ export async function getPreOrderCampaignConfig() {
     startDateFormatted: '29 Sep 2026, 12:00 AM',
     endDateFormatted: '20 Oct 2026, 11:59 PM',
     isActive: true,
-    phase: nowMs < fallbackStartMs ? 'BEFORE_LAUNCH' : nowMs > fallbackEndMs ? 'ENDED' : 'ACTIVE',
+    phase: (nowMs < fallbackStartMs ? 'BEFORE_LAUNCH' : nowMs > fallbackEndMs ? 'ENDED' : 'ACTIVE') as
+      | 'BEFORE_LAUNCH'
+      | 'ACTIVE'
+      | 'ENDED',
     isPreOrderOnly: true,
     autoApply: false,
     serverTimeMs: nowMs,

@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Heart, ShoppingBag, Check, Loader2 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
+import { useSettings } from '@/context/SettingsContext';
 import { useFlyToCart } from '@/components/cart/FlyToCartProvider';
 import { getEffectiveSellingPrice, calculateDiscountPercent } from '@/lib/pricing';
 
@@ -48,8 +49,11 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { triggerFlyToCart } = useFlyToCart();
+  const { settings } = useSettings();
   const cardRef = useRef<HTMLDivElement>(null);
   const [addState, setAddState] = useState<'idle' | 'loading' | 'added'>('idle');
+
+  const effectivePreOrder = Boolean(isPreOrder && settings.preorder_enabled);
 
   const hasSecondaryImage = Boolean(
     images &&
@@ -90,8 +94,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         color: firstVariant.color,
         sku,
         quantity: 1,
-        maxStock: isPreOrder ? 999 : stockQuantity,
-        isPreOrder: Boolean(isPreOrder),
+        maxStock: effectivePreOrder ? 999 : stockQuantity,
+        isPreOrder: Boolean(effectivePreOrder),
       });
       setAddState('added');
       setTimeout(() => setAddState('idle'), 800);
@@ -139,7 +143,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
 
           {/* 3D Minimal Badges */}
           <div className="absolute top-3 left-3 flex flex-col gap-1.5 z-10 items-start">
-            {isPreOrder && (
+            {effectivePreOrder && (
               <span className="badge-3d bg-amber-600/95 text-white text-[9px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full border border-amber-300/40 shadow-sm">
                 Pre-Order
               </span>
@@ -154,7 +158,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 {discountPercent}% OFF
               </span>
             )}
-            {!isPreOrder && inStock && stockQuantity > 0 && discountPercent === 0 && isNewArrival && (
+            {!effectivePreOrder && inStock && stockQuantity > 0 && discountPercent === 0 && isNewArrival && (
               <span className="badge-3d bg-teal text-champagne text-[9px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full border border-champagne/40 shadow-sm">
                 New Arrival
               </span>
@@ -226,9 +230,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           whileHover={{ scale: 1.01 }}
           whileTap={{ scale: 0.96 }}
           onClick={handleQuickAdd}
-          disabled={(!isPreOrder && (!inStock || stockQuantity <= 0)) || addState !== 'idle'}
+          disabled={(!effectivePreOrder && (!inStock || stockQuantity <= 0)) || addState !== 'idle'}
           className="w-full min-h-[44px] h-11 bg-teal text-champagne rounded-xl text-xs uppercase font-extrabold tracking-wider hover:bg-teal-900 transition-all duration-300 flex items-center justify-center gap-1.5 shadow-md disabled:opacity-50 cursor-pointer border border-champagne/20 select-none"
-          aria-label={isPreOrder ? `Pre-order ${title}` : inStock ? `Add ${title} to bag` : `${title} is out of stock`}
+          aria-label={effectivePreOrder ? `Pre-order ${title}` : inStock ? `Add ${title} to bag` : `${title} is out of stock`}
         >
           <AnimatePresence mode="wait">
             {addState === 'loading' ? (
@@ -239,9 +243,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               <motion.span key="added" initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 text-xs text-champagne font-black">
                 <Check className="w-3.5 h-3.5 text-champagne" /> Added to Bag!
               </motion.span>
-            ) : !isPreOrder && (!inStock || stockQuantity <= 0) ? (
+            ) : !effectivePreOrder && (!inStock || stockQuantity <= 0) ? (
               <span key="out">Out of Stock</span>
-            ) : isPreOrder ? (
+            ) : effectivePreOrder ? (
               <motion.span key="idle" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="flex items-center gap-1.5 font-black tracking-widest">
                 <ShoppingBag className="w-3.5 h-3.5" /> Pre-Order
               </motion.span>

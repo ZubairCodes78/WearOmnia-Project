@@ -145,11 +145,23 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
 
   // Pre-Order Configuration State
   const [preOrderEnabled, setPreOrderEnabled] = useState(false);
+  const [preOrderAdvanceEnabled, setPreOrderAdvanceEnabled] = useState(true);
   const [preOrderAdvancePercent, setPreOrderAdvancePercent] = useState(50);
   const [preOrderInstructions, setPreOrderInstructions] = useState('');
   const [paymentMethods, setPaymentMethods] = useState<PreOrderPaymentMethodData[]>([]);
   const [savingPreOrder, setSavingPreOrder] = useState(false);
   const [preOrderMessage, setPreOrderMessage] = useState('');
+
+  const broadcastSettingsUpdate = () => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('wearomnia-settings-updated'));
+      try {
+        const channel = new BroadcastChannel('wearomnia_settings_sync');
+        channel.postMessage({ type: 'SETTINGS_UPDATED', timestamp: Date.now() });
+        channel.close();
+      } catch {}
+    }
+  };
 
   // Payment Method Modal State
   const [methodModalOpen, setMethodModalOpen] = useState(false);
@@ -175,7 +187,8 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
       .then((data) => {
         if (data.success && data.settings) {
           setPreOrderEnabled(Boolean(data.settings.preorder_enabled));
-          setPreOrderAdvancePercent(data.settings.preorder_advance_percent || 50);
+          setPreOrderAdvanceEnabled(data.settings.preorder_advance_enabled !== false);
+          setPreOrderAdvancePercent(typeof data.settings.preorder_advance_percent === 'number' ? data.settings.preorder_advance_percent : 50);
           setPreOrderInstructions(data.settings.preorder_payment_instructions || '');
         }
       })
@@ -200,6 +213,7 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           preorder_enabled: preOrderEnabled,
+          preorder_advance_enabled: preOrderAdvanceEnabled,
           preorder_advance_percent: preOrderAdvancePercent,
           preorder_payment_instructions: preOrderInstructions,
         }),
@@ -209,6 +223,8 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
         setPreOrderMessage(data.error || 'Failed to save pre-order settings');
       } else {
         setPreOrderMessage('✓ Pre-order settings saved successfully!');
+        broadcastSettingsUpdate();
+        router.refresh();
         setTimeout(() => setPreOrderMessage(''), 4000);
       }
     } catch {
@@ -342,6 +358,8 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
         setPaymentMethods((prev) =>
           prev.map((m) => (m.id === method.id ? { ...m, isActive: !m.isActive } : m))
         );
+        broadcastSettingsUpdate();
+        router.refresh();
       }
     } catch (e) {
       console.error(e);
@@ -464,6 +482,7 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
       });
       if (res.ok) {
         setMessage('Settings saved successfully! Storefront updated live.');
+        broadcastSettingsUpdate();
         router.refresh();
       } else {
         setMessage('Failed to save settings');
@@ -1567,7 +1586,25 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
               </label>
             </div>
 
-            <div>
+            <div className="flex items-center justify-between bg-[#141414] p-4 rounded-xl border border-[#262626]">
+              <div>
+                <p className="text-sm font-semibold text-[#FAF8F5]">Require Advance Payment</p>
+                <p className="text-xs text-[#737373]">
+                  When disabled, pre-orders can be confirmed without upfront advance payment.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={preOrderAdvanceEnabled}
+                  onChange={(e) => setPreOrderAdvanceEnabled(e.target.checked)}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-[#262626] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#D4AF37]"></div>
+              </label>
+            </div>
+
+            <div className={preOrderAdvanceEnabled ? 'opacity-100 transition-opacity' : 'opacity-40 pointer-events-none transition-opacity'}>
               <label className="block text-xs text-[#A3A3A3] uppercase font-bold mb-1.5">
                 Default Required Advance Payment (%) *
               </label>
@@ -1576,7 +1613,8 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
                   type="number"
                   min="1"
                   max="100"
-                  required
+                  required={preOrderAdvanceEnabled}
+                  disabled={!preOrderAdvanceEnabled}
                   value={preOrderAdvancePercent}
                   onChange={(e) => setPreOrderAdvancePercent(parseInt(e.target.value || '50'))}
                   className="w-full bg-[#141414] border border-[#262626] rounded-xl px-4 py-2.5 text-sm font-mono text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]"

@@ -39,10 +39,16 @@ export async function GET() {
       hasQrCode: Boolean(m.qrCodeImagePath),
     }));
 
+    const isAdvanceEnabled =
+      settings.preorder_advance_enabled !== false &&
+      (settings.preorder_advance_percent ?? 50) > 0 &&
+      sanitizedMethods.length > 0;
+
     return NextResponse.json({
       success: true,
       enabled: settings.preorder_enabled,
-      advancePercent: settings.preorder_advance_percent || 50,
+      advanceEnabled: isAdvanceEnabled,
+      advancePercent: isAdvanceEnabled ? (settings.preorder_advance_percent || 50) : 0,
       instructions: settings.preorder_payment_instructions || '',
       paymentMethods: sanitizedMethods,
     });

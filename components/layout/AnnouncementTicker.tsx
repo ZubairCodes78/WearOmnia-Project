@@ -12,35 +12,122 @@ export const AnnouncementTicker: React.FC<AnnouncementTickerProps> = ({
 }) => {
   const { settings } = useSettings();
 
+  // If announcement header is disabled in Admin Panel, completely hide
+  if (settings.announcementEnabled === false) {
+    return null;
+  }
+
+  // Pre-Order Campaign & System Status
+  const isPreOrderEnabled = Boolean(settings.preorder_enabled);
+  const isCampaignActive =
+    settings.is_preorder_campaign_active !== undefined
+      ? settings.is_preorder_campaign_active
+      : true;
+
+  // Pre-Order announcement is active ONLY when enabled AND campaign is active / not expired
+  const showPreOrder = isPreOrderEnabled && isCampaignActive;
+
+  // Advance Payment Status & Percentage
   const advancePercent =
     typeof settings.preorder_advance_percent === 'number' && settings.preorder_advance_percent > 0
       ? settings.preorder_advance_percent
       : (initialAdvancePercent || 50);
 
-  const freeDeliveryLabel = settings.freeShippingThreshold
-    ? `FREE DELIVERY (OVER RS. ${settings.freeShippingThreshold.toLocaleString()})`
-    : 'FREE DELIVERY';
+  const isAdvanceEnabled =
+    settings.preorder_advance_enabled !== false &&
+    advancePercent > 0 &&
+    (settings.has_active_payment_methods !== undefined ? settings.has_active_payment_methods : true);
 
-  // A single repeated message unit
+  // Advance payment message is shown ONLY if Pre-Order is active AND advance payment is required
+  const showAdvancePayment = showPreOrder && isAdvanceEnabled;
+
+  // Build synchronized announcement message items
+  interface MessageItem {
+    text: string;
+    highlight: boolean;
+  }
+
+  const items: MessageItem[] = [];
+
+  // 1. Pre-Order Announcement
+  if (showPreOrder) {
+    const isBeforeLaunch = settings.preorder_campaign_phase === 'BEFORE_LAUNCH';
+    items.push({
+      text: isBeforeLaunch ? 'PRE-ORDER STARTING' : 'PRE-ORDER IS NOW LIVE',
+      highlight: true,
+    });
+  }
+
+  // 2. Advance Payment Announcement (always shows actual admin-configured percentage)
+  if (showAdvancePayment) {
+    items.push({
+      text: `${advancePercent}% ADVANCE PAYMENT REQUIRED`,
+      highlight: true,
+    });
+  }
+
+  // 3. Free Delivery Announcement (reflects configured free shipping threshold)
+  const freeDeliveryLabel =
+    settings.freeShippingThreshold && settings.freeShippingThreshold > 0
+      ? `FREE DELIVERY (OVER RS. ${settings.freeShippingThreshold.toLocaleString()})`
+      : 'FREE DELIVERY';
+
+  items.push({
+    text: freeDeliveryLabel,
+    highlight: false,
+  });
+
+  // 4. Configured Store Announcement from Admin Panel (sanitized to prevent contradictory messages)
+  if (settings.announcementText && typeof settings.announcementText === 'string') {
+    const rawParts = settings.announcementText
+      .split(/[•|]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+
+    for (const part of rawParts) {
+      const upper = part.toUpperCase();
+      // Drop any pre-order text if pre-order is disabled or campaign expired
+      const mentionsPreOrder = /PRE-?ORDER|ADVANCE PAYMENT|RESERVATION/i.test(part);
+      if (!showPreOrder && mentionsPreOrder) {
+        continue;
+      }
+      // Avoid duplicate free-delivery phrases or already included items
+      const isDuplicate =
+        items.some((it) => it.text.toUpperCase() === upper) ||
+        upper.includes('FREE DELIVERY');
+      if (!isDuplicate) {
+        items.push({ text: upper, highlight: false });
+      }
+    }
+  }
+
+  if (items.length === 0) {
+    return null;
+  }
+
+  // A single repeated message unit containing all synchronized announcement segments
   const renderMessageUnit = (keyPrefix: string) => (
     <div key={keyPrefix} className="inline-flex items-center gap-3 sm:gap-4 px-3 sm:px-4 shrink-0">
-      <span className="font-bold text-[#D4AF37] tracking-[0.16em] sm:tracking-[0.2em]">
-        PRE-ORDER STARTING
-      </span>
-      <span className="text-[#D4AF37]/40 text-[9px] select-none shrink-0">•</span>
-      <span className="font-semibold text-[#FAF8F5] tracking-[0.16em] sm:tracking-[0.2em]">
-        {freeDeliveryLabel}
-      </span>
-      <span className="text-[#D4AF37]/40 text-[9px] select-none shrink-0">•</span>
-      <span className="font-bold text-[#D4AF37] tracking-[0.16em] sm:tracking-[0.2em]">
-        {advancePercent}% ADVANCE PAYMENT TO CONFIRM YOUR ORDER
-      </span>
-      <span className="text-[#D4AF37]/40 text-[9px] select-none shrink-0">•</span>
+      {items.map((item, idx) => (
+        <React.Fragment key={`${keyPrefix}-${idx}`}>
+          <span
+            className={
+              item.highlight
+                ? 'font-bold text-[#D4AF37] tracking-[0.16em] sm:tracking-[0.2em]'
+                : 'font-semibold text-[#FAF8F5] tracking-[0.16em] sm:tracking-[0.2em]'
+            }
+          >
+            {item.text}
+          </span>
+          <span className="text-[#D4AF37]/40 text-[9px] select-none shrink-0">•</span>
+        </React.Fragment>
+      ))}
     </div>
   );
 
-  // Repeat 5 units per track block so even a 4K screen has zero empty space
-  const trackUnits = ['u1', 'u2', 'u3', 'u4', 'u5'];
+  // Repeat enough units so even ultra-wide 4K screens have zero gap
+  const unitCount = items.length <= 1 ? 8 : 5;
+  const trackUnits = Array.from({ length: unitCount }, (_, i) => `u${i + 1}`);
 
   return (
     <div
@@ -51,17 +138,20 @@ export const AnnouncementTicker: React.FC<AnnouncementTickerProps> = ({
       {/* ── Accessible Static View for Users with Prefers-Reduced-Motion ── */}
       <div className="hidden motion-reduce:flex items-center justify-center w-full px-4 text-center">
         <span className="inline-flex items-center gap-2 sm:gap-3 flex-wrap justify-center font-medium">
-          <span className="font-bold text-[#D4AF37]">PRE-ORDER STARTING</span>
-          <span className="text-[#D4AF37]/40 text-[9px]">•</span>
-          <span className="font-semibold text-[#FAF8F5]">FREE DELIVERY</span>
-          <span className="text-[#D4AF37]/40 text-[9px]">•</span>
-          <span className="font-bold text-[#D4AF37]">
-            {advancePercent}% ADVANCE PAYMENT TO CONFIRM YOUR ORDER
-          </span>
+          {items.map((item, idx) => (
+            <React.Fragment key={`static-${idx}`}>
+              <span className={item.highlight ? 'font-bold text-[#D4AF37]' : 'font-semibold text-[#FAF8F5]'}>
+                {item.text}
+              </span>
+              {idx < items.length - 1 && (
+                <span className="text-[#D4AF37]/40 text-[9px] select-none shrink-0">•</span>
+              )}
+            </React.Fragment>
+          ))}
         </span>
       </div>
 
-      {/* ── Continuous Moving Ticker (Seamless Infinite Loop) ── */}
+      {/* ── Continuous Moving Ticker (Seamless Infinite Loop on Desktop, Tablet & Mobile) ── */}
       <div
         className="flex shrink-0 items-center animate-ticker will-change-transform motion-reduce:hidden hover:[animation-play-state:paused] cursor-default"
       >

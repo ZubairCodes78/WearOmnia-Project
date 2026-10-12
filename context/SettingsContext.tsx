@@ -8,7 +8,11 @@ export const DEFAULT_STORE_SETTINGS: PublicStoreSettings = {
   ...DEFAULT_SITE_SETTINGS,
   preorder_enabled: DEFAULT_PREORDER_SETTINGS.preorder_enabled,
   preorder_advance_percent: DEFAULT_PREORDER_SETTINGS.preorder_advance_percent,
+  preorder_advance_enabled: DEFAULT_PREORDER_SETTINGS.preorder_advance_enabled ?? true,
   preorder_payment_instructions: DEFAULT_PREORDER_SETTINGS.preorder_payment_instructions,
+  is_preorder_campaign_active: true,
+  preorder_campaign_phase: 'ACTIVE',
+  has_active_payment_methods: true,
 };
 
 interface SettingsContextValue {
@@ -67,9 +71,24 @@ export const SettingsProvider: React.FC<{
     window.addEventListener('wearomnia-settings-updated', handleSettingsUpdated);
     window.addEventListener('focus', handleSettingsUpdated);
 
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel('wearomnia_settings_sync');
+      channel.onmessage = (event) => {
+        if (event.data?.type === 'SETTINGS_UPDATED') {
+          refreshSettings();
+        }
+      };
+    } catch {}
+
     return () => {
       window.removeEventListener('wearomnia-settings-updated', handleSettingsUpdated);
       window.removeEventListener('focus', handleSettingsUpdated);
+      if (channel) {
+        try {
+          channel.close();
+        } catch {}
+      }
     };
   }, [initialSettings, refreshSettings]);
 

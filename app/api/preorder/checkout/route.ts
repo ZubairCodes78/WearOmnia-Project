@@ -40,48 +40,56 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!screenshotKey) {
-      return NextResponse.json(
-        { error: 'Please upload your advance payment proof screenshot to place your pre-order' },
-        { status: 400 }
-      );
-    }
-
-    if (!selectedPaymentMethodId) {
-      return NextResponse.json(
-        { error: 'Please select the payment method you transferred the advance payment to' },
-        { status: 400 }
-      );
-    }
-
-    // 2. Validate payment proof file exists on disk
-    const proofExists = await paymentProofExists(screenshotKey);
-    if (!proofExists) {
-      return NextResponse.json(
-        { error: 'Uploaded payment screenshot could not be verified. Please re-upload your screenshot.' },
-        { status: 400 }
-      );
-    }
-
-    // 3. Verify Payment Method
-    const paymentMethod = await prisma.preOrderPaymentMethod.findUnique({
-      where: { id: selectedPaymentMethodId },
-    });
-
-    if (!paymentMethod || !paymentMethod.isActive) {
-      return NextResponse.json(
-        { error: 'Selected payment method is currently unavailable. Please choose another payment method.' },
-        { status: 400 }
-      );
-    }
-
-    // 4. Verify Pre-Order Settings
+    // Verify Pre-Order Settings first
     const preOrderSettings = await getPreOrderSettings();
     if (!preOrderSettings.preorder_enabled) {
       return NextResponse.json(
         { error: 'Pre-orders are currently not accepting new orders.' },
         { status: 400 }
       );
+    }
+
+    const isAdvanceEnabled =
+      preOrderSettings.preorder_advance_enabled !== false &&
+      (preOrderSettings.preorder_advance_percent ?? 50) > 0;
+
+    let paymentMethod: any = null;
+
+    if (isAdvanceEnabled) {
+      if (!screenshotKey) {
+        return NextResponse.json(
+          { error: 'Please upload your advance payment proof screenshot to place your pre-order' },
+          { status: 400 }
+        );
+      }
+
+      if (!selectedPaymentMethodId) {
+        return NextResponse.json(
+          { error: 'Please select the payment method you transferred the advance payment to' },
+          { status: 400 }
+        );
+      }
+
+      // Validate payment proof file exists on disk
+      const proofExists = await paymentProofExists(screenshotKey);
+      if (!proofExists) {
+        return NextResponse.json(
+          { error: 'Uploaded payment screenshot could not be verified. Please re-upload your screenshot.' },
+          { status: 400 }
+        );
+      }
+
+      // Verify Payment Method
+      paymentMethod = await prisma.preOrderPaymentMethod.findUnique({
+        where: { id: selectedPaymentMethodId },
+      });
+
+      if (!paymentMethod || !paymentMethod.isActive) {
+        return NextResponse.json(
+          { error: 'Selected payment method is currently unavailable. Please choose another payment method.' },
+          { status: 400 }
+        );
+      }
     }
 
     // 5. Phone validation and normalization
@@ -124,7 +132,7 @@ export async function POST(req: Request) {
 
     const productMap = new Map(dbProducts.map((p) => [p.id, p]));
 
-    let advancePercent = preOrderSettings.preorder_advance_percent || 50;
+    let advancePercent = isAdvanceEnabled ? (preOrderSettings.preorder_advance_percent || 50) : 0;
 
     for (const item of items) {
       const prod = productMap.get(item.productId);
@@ -142,8 +150,8 @@ export async function POST(req: Request) {
         );
       }
 
-      // If product has a custom pre-order advance percent, use it
-      if (prod.preOrderAdvancePercent && prod.preOrderAdvancePercent > 0) {
+      // If product has a custom pre-order advance percent, use it (if advance enabled)
+      if (isAdvanceEnabled && prod.preOrderAdvancePercent && prod.preOrderAdvancePercent > 0) {
         advancePercent = prod.preOrderAdvancePercent;
       }
     }
@@ -279,9 +287,9 @@ export async function POST(req: Request) {
             status: 'PENDING',
             couponCode: couponCode || null,
             isPreOrder: true,
-            preOrderPaymentStatus: 'PAYMENT_REVIEW_PENDING',
-            preOrderPaymentMethodName: paymentMethod.displayName,
-            preOrderPaymentScreenshotUrl: screenshotKey,
+            preOrderPaymentStatus: isAdvanceEnabled ? 'PAYMENT_REVIEW_PENDING' : 'PAYMENT_APPROVED',
+            preOrderPaymentMethodName: paymentMethod?.displayName || (isAdvanceEnabled ? 'Bank/Wallet Transfer' : 'Cash On Delivery'),
+            preOrderPaymentScreenshotUrl: screenshotKey || null,
             preOrderAdvancePercent: advancePercent,
             preOrderAdvanceAmount: advanceAmount,
             preOrderRemainingAmount: remainingAmount,
@@ -291,7 +299,9 @@ export async function POST(req: Request) {
             timeline: {
               create: {
                 status: 'PENDING',
-                note: `Pre-order created. Advance payment (${advancePercent}% = Rs. ${advanceAmount.toLocaleString()}) submitted via ${paymentMethod.displayName}. Payment proof screenshot pending verification.`,
+                note: isAdvanceEnabled
+                  ? `Pre-order created. Advance payment (${advancePercent}% = Rs. ${advanceAmount.toLocaleString()}) submitted via ${paymentMethod?.displayName || 'Bank/Wallet'}. Payment proof screenshot pending verification.`
+                  : `Pre-order created with 0% advance. Full amount of Rs. ${totalAmount.toLocaleString()} payable upon delivery via Cash On Delivery.`,
                 updatedBy: 'Customer (Pre-order)',
               },
             },

@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingBag, Zap, Check, ShieldCheck, Truck, Ruler } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { useSettings } from '@/context/SettingsContext';
 import { SizeGuideModal } from './SizeGuideModal';
 import { useFlyToCart } from '@/components/cart/FlyToCartProvider';
 import { getEffectiveSellingPrice, calculateDiscountPercent } from '@/lib/pricing';
@@ -31,6 +32,7 @@ interface QuickViewModalProps {
 export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose }) => {
   const { addToCart } = useCart();
   const { triggerFlyToCart } = useFlyToCart();
+  const { settings } = useSettings();
   const modalImageRef = useRef<HTMLDivElement>(null);
   const [selectedImage, setSelectedImage] = useState(0);
   const [selectedSize, setSelectedSize] = useState('');
@@ -40,6 +42,9 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
 
   if (!product) return null;
+
+  const isPreOrderActive = Boolean(product.isPreOrder && settings.preorder_enabled);
+  const isAdvanceRequired = Boolean(isPreOrderActive && settings.preorder_advance_enabled !== false && (settings.preorder_advance_percent ?? 50) > 0);
 
   const sizes = Array.from(new Set(product.variants.map((v) => v.size)));
   const colors = Array.from(new Set(product.variants.map((v) => v.color)));
@@ -66,8 +71,8 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
         color: currentColor,
         sku: product.sku,
         quantity,
-        maxStock: product.isPreOrder ? 999 : product.stockQuantity,
-        isPreOrder: Boolean(product.isPreOrder),
+        maxStock: isPreOrderActive ? 999 : product.stockQuantity,
+        isPreOrder: Boolean(isPreOrderActive),
       });
       setAdded(true);
       setTimeout(() => setAdded(false), 800);
@@ -165,7 +170,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
                         )}
                       </div>
 
-                      {product.isPreOrder && (
+                      {isPreOrderActive && (
                         <div className="flex items-center gap-2 mt-2">
                           <span className="bg-amber-600 text-white text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md">
                             PRE-ORDER
@@ -250,14 +255,14 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
                       <div className="flex gap-3">
                         <button
                           onClick={handleAddToCart}
-                          disabled={!product.isPreOrder && (!product.inStock || product.stockQuantity <= 0)}
+                          disabled={!isPreOrderActive && (!product.inStock || product.stockQuantity <= 0)}
                           className="flex-1 bg-teal text-champagne py-3.5 rounded-xl text-xs uppercase font-bold tracking-widest hover:bg-teal-900 transition-all flex items-center justify-center gap-2 shadow-md disabled:opacity-50"
                         >
                           {added ? (
                             <>
                               <Check className="w-4 h-4 text-champagne" /> Added To Bag
                             </>
-                          ) : product.isPreOrder ? (
+                          ) : isPreOrderActive ? (
                             <>
                               <ShoppingBag className="w-4 h-4" /> Pre-Order
                             </>
@@ -276,7 +281,7 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
                       </div>
                       <div className="flex items-center justify-between text-[11px] text-charcoal-muted pt-2">
                         <span className="flex items-center gap-1.5">
-                          <Truck className="w-3.5 h-3.5 text-teal" /> {product.isPreOrder ? 'Pre-Order Advance Required' : 'Nationwide COD Delivery'}
+                          <Truck className="w-3.5 h-3.5 text-teal" /> {isPreOrderActive ? (isAdvanceRequired ? 'Pre-Order Advance Required' : 'Pre-Order Confirmed') : 'Nationwide COD Delivery'}
                         </span>
                         <Link
                           href={`/product/${product.slug}`}

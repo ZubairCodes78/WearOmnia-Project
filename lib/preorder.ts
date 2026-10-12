@@ -23,7 +23,7 @@ export function calculatePreOrderAmounts(
   totalAmount: number,
   advancePercent: number
 ): PreOrderCalculatedAmounts {
-  const percent = Math.min(100, Math.max(1, Math.round(advancePercent)));
+  const percent = Math.min(100, Math.max(0, Math.round(advancePercent)));
   const rawAdvance = (totalAmount * percent) / 100;
   // Round to nearest integer (PKR standard) or 2 decimals
   const advanceAmount = Math.round(rawAdvance);
@@ -37,7 +37,7 @@ export function calculatePreOrderAmounts(
 }
 
 /**
- * Checks if pre-orders are currently operational (enabled in settings AND has at least 1 active payment method)
+ * Checks if pre-orders are currently operational (enabled in settings AND has at least 1 active payment method if advance payment is enabled)
  */
 export async function isPreOrderSystemOperational(): Promise<{
   operational: boolean;
@@ -55,22 +55,26 @@ export async function isPreOrderSystemOperational(): Promise<{
     };
   }
 
-  const activeMethodsCount = await prisma.preOrderPaymentMethod.count({
-    where: { isActive: true },
-  });
+  const isAdvanceEnabled = settings.preorder_advance_enabled !== false && (settings.preorder_advance_percent ?? 50) > 0;
 
-  if (activeMethodsCount === 0) {
-    return {
-      operational: false,
-      reason: 'No active pre-order payment methods are configured.',
-      advancePercent: settings.preorder_advance_percent || 50,
-      instructions: settings.preorder_payment_instructions || '',
-    };
+  if (isAdvanceEnabled) {
+    const activeMethodsCount = await prisma.preOrderPaymentMethod.count({
+      where: { isActive: true },
+    });
+
+    if (activeMethodsCount === 0) {
+      return {
+        operational: false,
+        reason: 'No active pre-order payment methods are configured.',
+        advancePercent: settings.preorder_advance_percent || 50,
+        instructions: settings.preorder_payment_instructions || '',
+      };
+    }
   }
 
   return {
     operational: true,
-    advancePercent: settings.preorder_advance_percent || 50,
+    advancePercent: isAdvanceEnabled ? (settings.preorder_advance_percent || 50) : 0,
     instructions: settings.preorder_payment_instructions || '',
   };
 }

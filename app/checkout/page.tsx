@@ -133,13 +133,14 @@ export default function CheckoutPage() {
 
   const shippingFee = subtotal >= siteSettings.freeShippingThreshold || cart.length === 0 ? 0 : siteSettings.flatShippingFee;
   const codFee = isPreOrderCart ? 0 : siteSettings.codCharge;
-  const effectiveAdvancePercent = preOrderConfig?.advancePercent || settings?.preorder_advance_percent || 50;
+  const isAdvanceRequired = Boolean(settings?.preorder_advance_enabled !== false && (preOrderConfig?.advancePercent || settings?.preorder_advance_percent || 50) > 0);
+  const effectiveAdvancePercent = isAdvanceRequired ? (preOrderConfig?.advancePercent || settings?.preorder_advance_percent || 50) : 0;
 
   const totalAmount = isPreOrderCart
     ? Math.max(0, subtotal - discountAmount + shippingFee)
     : Math.max(0, subtotal - discountAmount + shippingFee + codFee);
 
-  const preOrderAdvanceAmount = isPreOrderCart
+  const preOrderAdvanceAmount = isPreOrderCart && isAdvanceRequired
     ? Math.round((totalAmount * effectiveAdvancePercent) / 100)
     : 0;
 

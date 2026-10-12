@@ -107,11 +107,22 @@ async function _getSiteSettings(): Promise<SiteSettingsData> {
   return DEFAULT_SITE_SETTINGS;
 }
 
-export const getSiteSettings = unstable_cache(
+const cachedSiteSettings = unstable_cache(
   _getSiteSettings,
   ['site-settings'],
   { revalidate: 120, tags: ['site-settings'] },
 );
+
+export async function getSiteSettings(): Promise<SiteSettingsData> {
+  try {
+    return await cachedSiteSettings();
+  } catch (err: any) {
+    if (err?.message?.includes('incrementalCache')) {
+      return await _getSiteSettings();
+    }
+    throw err;
+  }
+}
 
 export async function updateSiteSettings(data: Partial<SiteSettingsData>): Promise<SiteSettingsData> {
   const current = await getSiteSettings();
@@ -232,6 +243,8 @@ export function getPublicSafeSiteSettings(settings: Partial<SiteSettingsData> | 
   return safe;
 }
 
+import { getPreOrderCampaignConfig } from '@/lib/coupons';
+
 /**
  * Public Customer-Facing Site Settings (Strict Positive Allow-List)
  * NEVER includes tokens, secrets, credentials, or internal courier/WhatsApp keys.
@@ -239,24 +252,11 @@ export function getPublicSafeSiteSettings(settings: Partial<SiteSettingsData> | 
 export interface PublicStoreSettings extends PublicSiteSettings {
   preorder_enabled: boolean;
   preorder_advance_percent: number;
+  preorder_advance_enabled: boolean;
   preorder_payment_instructions: string;
-}
-
-/**
- * Retrieves only the sanitized public site settings for client consumption.
- */
-export async function getPublicSiteSettings(): Promise<PublicStoreSettings> {
-  const [fullSettings, preOrderSettings] = await Promise.all([
-    getSiteSettings(),
-    getPreOrderSettings(),
-  ]);
-  const safe = getPublicSafeSiteSettings(fullSettings);
-  return {
-    ...safe,
-    preorder_enabled: Boolean(preOrderSettings.preorder_enabled),
-    preorder_advance_percent: typeof preOrderSettings.preorder_advance_percent === 'number' ? preOrderSettings.preorder_advance_percent : 50,
-    preorder_payment_instructions: preOrderSettings.preorder_payment_instructions || DEFAULT_PREORDER_SETTINGS.preorder_payment_instructions,
-  };
+  is_preorder_campaign_active: boolean;
+  preorder_campaign_phase?: 'BEFORE_LAUNCH' | 'ACTIVE' | 'ENDED';
+  has_active_payment_methods?: boolean;
 }
 
 /**
@@ -264,13 +264,15 @@ export async function getPublicSiteSettings(): Promise<PublicStoreSettings> {
  */
 export interface PreOrderSettings {
   preorder_enabled: boolean;
-  preorder_advance_percent: number; // 1-100, default 50
+  preorder_advance_percent: number; // 0-100, default 50
+  preorder_advance_enabled?: boolean; // default true if advance_percent > 0
   preorder_payment_instructions: string;
 }
 
 export const DEFAULT_PREORDER_SETTINGS: PreOrderSettings = {
   preorder_enabled: false,
   preorder_advance_percent: 50,
+  preorder_advance_enabled: true,
   preorder_payment_instructions: 'Please transfer the required 50% advance payment to any of our official payment accounts below and upload the payment proof screenshot. Your pre-order will be verified by our team within 24 hours.',
 };
 
@@ -288,11 +290,22 @@ async function _getPreOrderSettings(): Promise<PreOrderSettings> {
   return DEFAULT_PREORDER_SETTINGS;
 }
 
-export const getPreOrderSettings = unstable_cache(
+const cachedPreOrderSettings = unstable_cache(
   _getPreOrderSettings,
   ['preorder-settings'],
   { revalidate: 120, tags: ['preorder-settings'] },
 );
+
+export async function getPreOrderSettings(): Promise<PreOrderSettings> {
+  try {
+    return await cachedPreOrderSettings();
+  } catch (err: any) {
+    if (err?.message?.includes('incrementalCache')) {
+      return await _getPreOrderSettings();
+    }
+    throw err;
+  }
+}
 
 export async function updatePreOrderSettings(data: Partial<PreOrderSettings>): Promise<PreOrderSettings> {
   const current = await getPreOrderSettings();
@@ -305,4 +318,79 @@ export async function updatePreOrderSettings(data: Partial<PreOrderSettings>): P
   });
 
   return updated;
+}
+
+async function _getPublicSiteSettings(): Promise<PublicStoreSettings> {
+  const [fullSettings, preOrderSettings] = await Promise.all([
+    getSiteSettings(),
+    getPreOrderSettings(),
+  ]);
+  const safe = getPublicSafeSiteSettings(fullSettings);
+
+  // Dynamically evaluate Pre-Order Campaign Schedule
+  let isCampaignActive = false;
+  let campaignPhase: 'BEFORE_LAUNCH' | 'ACTIVE' | 'ENDED' = 'ENDED';
+  try {
+    const campaignConfig = await getPreOrderCampaignConfig();
+    campaignPhase = campaignConfig.phase;
+    isCampaignActive = campaignConfig.phase === 'ACTIVE';
+  } catch {
+    const now = Date.now();
+    const startMs = new Date('2026-09-29T00:00:00+05:00').getTime();
+    const endMs = new Date('2026-10-20T23:59:59+05:00').getTime();
+    campaignPhase = now < startMs ? 'BEFORE_LAUNCH' : now > endMs ? 'ENDED' : 'ACTIVE';
+    isCampaignActive = campaignPhase === 'ACTIVE';
+  }
+
+  // Check active payment methods for advance collection
+  let hasActivePaymentMethods = true;
+  try {
+    const activeCount = await prisma.preOrderPaymentMethod.count({
+      where: { isActive: true },
+    });
+    hasActivePaymentMethods = activeCount > 0;
+  } catch {
+    hasActivePaymentMethods = true;
+  }
+
+  const advancePercent =
+    typeof preOrderSettings.preorder_advance_percent === 'number'
+      ? preOrderSettings.preorder_advance_percent
+      : 50;
+
+  const advanceEnabled =
+    preOrderSettings.preorder_advance_enabled !== false &&
+    advancePercent > 0 &&
+    hasActivePaymentMethods;
+
+  return {
+    ...safe,
+    preorder_enabled: Boolean(preOrderSettings.preorder_enabled),
+    preorder_advance_percent: advancePercent,
+    preorder_advance_enabled: advanceEnabled,
+    preorder_payment_instructions:
+      preOrderSettings.preorder_payment_instructions ||
+      DEFAULT_PREORDER_SETTINGS.preorder_payment_instructions,
+    is_preorder_campaign_active: isCampaignActive,
+    preorder_campaign_phase: campaignPhase,
+    has_active_payment_methods: hasActivePaymentMethods,
+  };
+}
+
+const cachedPublicSiteSettings = unstable_cache(
+  _getPublicSiteSettings,
+  ['public-site-settings'],
+  { revalidate: 120, tags: ['site-settings', 'preorder-settings'] },
+);
+
+export async function getPublicSiteSettings(): Promise<PublicStoreSettings> {
+  try {
+    return await cachedPublicSiteSettings();
+  } catch (err: any) {
+    // If invoked in CLI scripts or test environments where Next.js incrementalCache is unavailable
+    if (err?.message?.includes('incrementalCache')) {
+      return await _getPublicSiteSettings();
+    }
+    throw err;
+  }
 }
