@@ -58,10 +58,8 @@ export const SettingsProvider: React.FC<{
   }, []);
 
   useEffect(() => {
-    // If not supplied via server props, or to verify current freshness:
-    if (!initialSettings || Object.keys(initialSettings).length === 0) {
-      refreshSettings();
-    }
+    // Refresh on mount to guarantee 100% synchronization against any stale CDN/prerendered cache
+    refreshSettings();
 
     // Listen for custom settings update events across tabs / components
     const handleSettingsUpdated = () => {
