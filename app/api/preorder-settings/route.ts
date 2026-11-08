@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { getPreOrderSettings } from '@/lib/settings';
+import { getPreOrderSettings, getSiteSettings } from '@/lib/settings';
 
 export const runtime = 'nodejs';
 
 export async function GET() {
   try {
-    const settings = await getPreOrderSettings();
+    const [settings, siteSettings] = await Promise.all([
+      getPreOrderSettings(),
+      getSiteSettings(),
+    ]);
 
     // Fetch active payment methods ordered by displayOrder
     const methods = await prisma.preOrderPaymentMethod.findMany({
@@ -44,12 +47,18 @@ export async function GET() {
       (settings.preorder_advance_percent ?? 50) > 0 &&
       sanitizedMethods.length > 0;
 
+    const isFullAdvanceEnabled =
+      siteSettings.full_advance_payment_enabled !== false &&
+      sanitizedMethods.length > 0;
+
     return NextResponse.json({
       success: true,
       enabled: settings.preorder_enabled,
       advanceEnabled: isAdvanceEnabled,
       advancePercent: isAdvanceEnabled ? (settings.preorder_advance_percent || 50) : 0,
       instructions: settings.preorder_payment_instructions || '',
+      fullAdvanceEnabled: isFullAdvanceEnabled,
+      fullAdvanceInstructions: siteSettings.full_advance_payment_instructions || '',
       paymentMethods: sanitizedMethods,
     });
   } catch (error) {

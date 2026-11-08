@@ -47,6 +47,9 @@ export interface SiteSettingsData {
   postex_api_key?: string;
   postex_merchant_id?: string;
   postex_account_id?: string;
+  // Full Advance Payment Settings (Regular Products)
+  full_advance_payment_enabled: boolean;
+  full_advance_payment_instructions: string;
 }
 
 export const DEFAULT_SITE_SETTINGS: SiteSettingsData = {
@@ -91,6 +94,9 @@ export const DEFAULT_SITE_SETTINGS: SiteSettingsData = {
   postex_store_address_code: '',
   postex_pickup_address_name: '',
   postex_store_address_name: '',
+  // Full Advance Payment Settings Default
+  full_advance_payment_enabled: true,
+  full_advance_payment_instructions: 'Please transfer 100% of the total order amount to any of our official payment accounts below and upload the payment proof screenshot. Your order will be verified by our team before confirmation and dispatch.',
 };
 
 async function _getSiteSettings(): Promise<SiteSettingsData> {
@@ -168,6 +174,8 @@ export interface PublicSiteSettings {
   returnsPolicyText?: string;
   refundPolicyText?: string;
   heroSlides?: any[];
+  full_advance_payment_enabled?: boolean;
+  full_advance_payment_instructions?: string;
 }
 
 /**
@@ -225,6 +233,8 @@ export function getPublicSafeSiteSettings(settings: Partial<SiteSettingsData> | 
     announcementLink: settings.announcementLink || DEFAULT_SITE_SETTINGS.announcementLink,
     footerAboutText: settings.footerAboutText || DEFAULT_SITE_SETTINGS.footerAboutText,
     copyrightText: settings.copyrightText || DEFAULT_SITE_SETTINGS.copyrightText,
+    full_advance_payment_enabled: typeof settings.full_advance_payment_enabled === 'boolean' ? settings.full_advance_payment_enabled : DEFAULT_SITE_SETTINGS.full_advance_payment_enabled,
+    full_advance_payment_instructions: settings.full_advance_payment_instructions || DEFAULT_SITE_SETTINGS.full_advance_payment_instructions,
   };
 
   if ((settings as any).shippingPolicyText) {
@@ -257,6 +267,8 @@ export interface PublicStoreSettings extends PublicSiteSettings {
   is_preorder_campaign_active: boolean;
   preorder_campaign_phase?: 'BEFORE_LAUNCH' | 'ACTIVE' | 'ENDED';
   has_active_payment_methods?: boolean;
+  full_advance_payment_enabled: boolean;
+  full_advance_payment_instructions: string;
 }
 
 /**
@@ -374,6 +386,12 @@ async function _getPublicSiteSettings(): Promise<PublicStoreSettings> {
     is_preorder_campaign_active: isCampaignActive,
     preorder_campaign_phase: campaignPhase,
     has_active_payment_methods: hasActivePaymentMethods,
+    full_advance_payment_enabled:
+      fullSettings.full_advance_payment_enabled !== false && hasActivePaymentMethods,
+    full_advance_payment_instructions:
+      fullSettings.full_advance_payment_instructions ||
+      DEFAULT_SITE_SETTINGS.full_advance_payment_instructions ||
+      '',
   };
 }
 

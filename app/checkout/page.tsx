@@ -106,37 +106,45 @@ export default function CheckoutPage() {
       instructions?: string | null;
       hasQrCode: boolean;
     }>;
+    fullAdvanceEnabled?: boolean;
+    fullAdvanceInstructions?: string;
   } | null>(null);
 
+  const [selectedPaymentType, setSelectedPaymentType] = useState<'COD' | 'FULL_ADVANCE'>('COD');
   const [selectedMethodId, setSelectedMethodId] = useState<string>('');
   const [screenshotKey, setScreenshotKey] = useState<string>('');
   const [screenshotUploading, setScreenshotUploading] = useState(false);
   const [screenshotError, setScreenshotError] = useState('');
   const [copiedAccount, setCopiedAccount] = useState(false);
 
-  // Fetch pre-order configuration if pre-order items present
+  // Fetch payment configuration & methods for both regular and pre-order products
   useEffect(() => {
-    if (isPreOrderCart) {
-      fetch('/api/preorder-settings')
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) {
-            setPreOrderConfig(data);
-            if (data.paymentMethods && data.paymentMethods.length > 0) {
-              setSelectedMethodId(data.paymentMethods[0].id);
-            }
+    fetch('/api/preorder-settings')
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success) {
+          setPreOrderConfig(data);
+          if (data.paymentMethods && data.paymentMethods.length > 0) {
+            setSelectedMethodId(data.paymentMethods[0].id);
           }
-        })
-        .catch(console.error);
-    }
-  }, [isPreOrderCart]);
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  const isFullAdvanceAvailable = Boolean(
+    settings?.full_advance_payment_enabled !== false &&
+    preOrderConfig?.fullAdvanceEnabled !== false &&
+    (preOrderConfig?.paymentMethods?.length || 0) > 0
+  );
 
   const shippingFee = subtotal >= siteSettings.freeShippingThreshold || cart.length === 0 ? 0 : siteSettings.flatShippingFee;
-  const codFee = isPreOrderCart ? 0 : siteSettings.codCharge;
+  const isAdvancePaymentSelected = isPreOrderCart || selectedPaymentType === 'FULL_ADVANCE';
+  const codFee = isAdvancePaymentSelected ? 0 : siteSettings.codCharge;
   const isAdvanceRequired = Boolean(settings?.preorder_advance_enabled !== false && (preOrderConfig?.advancePercent || settings?.preorder_advance_percent || 50) > 0);
   const effectiveAdvancePercent = isAdvanceRequired ? (preOrderConfig?.advancePercent || settings?.preorder_advance_percent || 50) : 0;
 
-  const totalAmount = isPreOrderCart
+  const totalAmount = isAdvancePaymentSelected
     ? Math.max(0, subtotal - discountAmount + shippingFee)
     : Math.max(0, subtotal - discountAmount + shippingFee + codFee);
 
@@ -246,6 +254,13 @@ export default function CheckoutPage() {
       if (!screenshotKey) {
         errors.screenshot = 'Please upload your advance payment proof screenshot';
       }
+    } else if (selectedPaymentType === 'FULL_ADVANCE') {
+      if (!selectedMethodId) {
+        errors.paymentMethod = 'Please select an official payment account';
+      }
+      if (!screenshotKey) {
+        errors.screenshot = 'Please upload your payment screenshot before completing your order';
+      }
     }
 
     setFormErrors(errors);
@@ -295,6 +310,11 @@ export default function CheckoutPage() {
         postalCode: formData.postalCode,
         orderNotes: formData.orderNotes,
         couponCode: appliedCoupon?.code,
+        paymentMethod: isPreOrderCart
+          ? 'PRE_ORDER_ADVANCE'
+          : selectedPaymentType === 'FULL_ADVANCE'
+          ? 'FULL_ADVANCE'
+          : 'CASH_ON_DELIVERY',
         items: cart.map((i) => ({
           productId: i.productId,
           title: i.title,
@@ -306,7 +326,7 @@ export default function CheckoutPage() {
         })),
       };
 
-      if (isPreOrderCart) {
+      if (isPreOrderCart || selectedPaymentType === 'FULL_ADVANCE') {
         payload.screenshotKey = screenshotKey;
         payload.selectedPaymentMethodId = selectedMethodId;
       }
@@ -332,6 +352,171 @@ export default function CheckoutPage() {
       setIsSubmitting(false);
     }
   };
+
+  const renderPaymentMethodsAndScreenshot = (payableAmount: number) => (
+    <div className="space-y-6">
+      {/* Payment Methods Selector */}
+      <div className="space-y-3">
+        <label className="block text-xs font-bold uppercase tracking-wider text-charcoal">
+          1. Select Official Payment Account *
+        </label>
+        {formErrors.paymentMethod && (
+          <p className="text-[11px] text-red-600 font-semibold">{formErrors.paymentMethod}</p>
+        )}
+
+        <div className="grid grid-cols-1 gap-3">
+          {preOrderConfig?.paymentMethods?.map((m) => {
+            const isSelected = selectedMethodId === m.id;
+            return (
+              <div
+                key={m.id}
+                onClick={() => setSelectedMethodId(m.id)}
+                className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
+                  isSelected
+                    ? 'border-teal bg-sand/60 shadow-md ring-1 ring-teal/30'
+                    : 'border-sand/70 bg-sand/20 hover:border-sand hover:bg-sand/40'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="space-y-1 flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-serif font-bold text-teal text-sm">
+                        {m.displayName}
+                      </span>
+                      <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-teal text-champagne">
+                        {m.methodType}
+                      </span>
+                    </div>
+                    <p className="text-xs text-charcoal">
+                      Title: <strong className="font-semibold text-teal">{m.accountTitle}</strong>
+                    </p>
+                    <div className="flex items-center gap-2 pt-0.5">
+                      <span className="text-xs font-mono font-bold text-champagne-800 bg-sand/80 px-2 py-0.5 rounded-lg border border-sand">
+                        {m.accountNumber}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.clipboard.writeText(m.accountNumber);
+                          setCopiedAccount(true);
+                          setTimeout(() => setCopiedAccount(false), 2000);
+                        }}
+                        className="text-[10px] text-teal hover:underline font-bold uppercase"
+                      >
+                        {copiedAccount ? 'Copied!' : 'Copy'}
+                      </button>
+                    </div>
+                    {m.bankName && (
+                      <p className="text-[11px] text-charcoal-muted">Bank: {m.bankName}</p>
+                    )}
+                    {m.iban && (
+                      <p className="text-[10px] font-mono text-charcoal-muted">IBAN: {m.iban}</p>
+                    )}
+                    {m.instructions && (
+                      <p className="text-[11px] text-charcoal-muted pt-1 border-t border-sand/40 italic">
+                        {m.instructions}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-1 border-teal">
+                    {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-teal" />}
+                  </div>
+                </div>
+
+                {/* QR Code image if available and selected */}
+                {isSelected && m.hasQrCode && (
+                  <div className="mt-4 pt-3 border-t border-sand flex items-center gap-4">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`/api/preorder/payment-methods/${m.id}/qr`}
+                      alt="Payment QR Code"
+                      className="w-28 h-28 object-contain rounded-xl border border-sand bg-white p-2 shadow-sm"
+                    />
+                    <div className="space-y-1 text-xs">
+                      <span className="font-bold text-teal flex items-center gap-1">
+                        <QrCode className="w-4 h-4 text-champagne-700" /> Scan QR to Pay
+                      </span>
+                      <p className="text-[11px] text-charcoal-muted leading-relaxed font-sans">
+                        Scan this QR in your bank/wallet app and transfer Rs. {payableAmount.toLocaleString()}.
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Screenshot Upload Section */}
+      <div className="space-y-3 pt-2">
+        <label className="block text-xs font-bold uppercase tracking-wider text-charcoal">
+          2. Upload Payment Proof Screenshot *
+        </label>
+        <p className="text-[11px] text-charcoal-muted">
+          Upload the transaction receipt or screenshot after sending Rs. {payableAmount.toLocaleString()}.
+        </p>
+
+        <div className="border-2 border-dashed border-sand/80 rounded-2xl p-5 bg-sand/30 hover:bg-sand/50 transition-colors text-center space-y-3">
+          {screenshotUploading ? (
+            <div className="flex flex-col items-center gap-2 py-4 text-teal">
+              <Loader2 className="w-6 h-6 animate-spin text-champagne-700" />
+              <span className="text-xs font-bold">Securing screenshot...</span>
+            </div>
+          ) : screenshotKey ? (
+            <div className="flex flex-col items-center gap-2 py-2 text-emerald-800">
+              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                <CheckCircle2 className="w-6 h-6 text-emerald-700" />
+              </div>
+              <span className="text-xs font-bold">Screenshot Attached Successfully!</span>
+              <span className="text-[10px] text-charcoal-muted font-mono">{screenshotKey}</span>
+              <label className="text-[11px] text-teal underline font-bold cursor-pointer mt-1">
+                Replace Screenshot
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  onChange={handleScreenshotUpload}
+                  className="hidden"
+                />
+              </label>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center gap-2 py-3 cursor-pointer">
+              <UploadCloud className="w-8 h-8 text-champagne-700" />
+              <span className="text-xs font-bold text-teal">
+                Click or Drag to Upload Payment Screenshot
+              </span>
+              <span className="text-[10px] text-charcoal-muted">
+                JPEG, PNG, or WebP up to 5MB
+              </span>
+              <input
+                type="file"
+                accept="image/jpeg,image/png,image/webp"
+                onChange={handleScreenshotUpload}
+                className="hidden"
+              />
+            </label>
+          )}
+        </div>
+
+        {screenshotError && (
+          <p className="text-[11px] text-red-600 flex items-center gap-1 font-semibold">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            {screenshotError}
+          </p>
+        )}
+
+        {formErrors.screenshot && (
+          <p className="text-[11px] text-red-600 flex items-center gap-1 font-semibold">
+            <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+            {formErrors.screenshot}
+          </p>
+        )}
+      </div>
+    </div>
+  );
 
   if (isMixedCart) {
     return (
@@ -414,11 +599,17 @@ export default function CheckoutPage() {
                 {isPreOrderCart ? 'Atelier Pre-Order' : 'Fast & Simple'}
               </span>
               <h1 className="font-serif text-2xl sm:text-4xl lg:text-5xl font-black text-teal tracking-tight">
-                {isPreOrderCart ? 'Pre-Order Advance Checkout' : 'Cash On Delivery Checkout'}
+                {isPreOrderCart
+                  ? 'Pre-Order Advance Checkout'
+                  : selectedPaymentType === 'FULL_ADVANCE'
+                  ? 'Full Advance Payment Checkout'
+                  : 'Cash On Delivery Checkout'}
               </h1>
               <p className="text-xs text-charcoal-muted pt-0.5 font-sans">
                 {isPreOrderCart
                   ? `Pay ${effectiveAdvancePercent}% advance via bank/wallet transfer. Remaining balance upon delivery.`
+                  : selectedPaymentType === 'FULL_ADVANCE'
+                  ? '100% Full Advance Payment via secure bank or digital wallet transfer with instant screenshot upload.'
                   : 'Almost there. Your next favourite outfit is waiting.'}
               </p>
             </div>
@@ -427,6 +618,8 @@ export default function CheckoutPage() {
               <span>
                 {isPreOrderCart
                   ? `${effectiveAdvancePercent}% Advance Verification • Remaining COD`
+                  : selectedPaymentType === 'FULL_ADVANCE'
+                  ? '100% Advance Payment • Zero Balance on Delivery'
                   : 'No Account Required • Pay When You Receive'}
               </span>
             </div>
@@ -661,19 +854,143 @@ export default function CheckoutPage() {
                 </div>
 
                 {!isPreOrderCart ? (
-                  <div className="bg-teal text-offwhite p-6 rounded-2xl border border-champagne/40 flex items-start gap-4 shadow-lg">
-                    <div className="w-10 h-10 rounded-full bg-champagne text-teal-950 flex items-center justify-center shrink-0 mt-0.5">
-                      <Banknote className="w-5 h-5" />
+                  isFullAdvanceAvailable ? (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Option 1: Cash on Delivery (COD) */}
+                        <div
+                          onClick={() => setSelectedPaymentType('COD')}
+                          className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                            selectedPaymentType === 'COD'
+                              ? 'border-teal bg-sand/60 shadow-md ring-1 ring-teal/30'
+                              : 'border-sand/70 bg-sand/20 hover:border-sand hover:bg-sand/40'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-champagne text-teal-950 flex items-center justify-center shrink-0">
+                                <Banknote className="w-4 h-4" />
+                              </div>
+                              <span className="font-serif text-base font-bold text-teal">
+                                Cash on Delivery (COD)
+                              </span>
+                            </div>
+                            <div className="w-5 h-5 rounded-full border-2 border-teal flex items-center justify-center shrink-0 mt-1">
+                              {selectedPaymentType === 'COD' && <div className="w-2.5 h-2.5 rounded-full bg-teal" />}
+                            </div>
+                          </div>
+                          <p className="text-xs text-charcoal-muted leading-relaxed font-sans">
+                            Zero online advance payment required. Pay in cash directly to our delivery courier at your doorstep.
+                          </p>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-charcoal bg-sand px-2.5 py-1 rounded-md self-start">
+                            Pay on Delivery
+                          </span>
+                        </div>
+
+                        {/* Option 2: Full Advance Payment (100%) */}
+                        <div
+                          onClick={() => setSelectedPaymentType('FULL_ADVANCE')}
+                          className={`p-5 rounded-2xl border-2 transition-all cursor-pointer flex flex-col justify-between gap-3 ${
+                            selectedPaymentType === 'FULL_ADVANCE'
+                              ? 'border-emerald-600 bg-emerald-500/10 shadow-md ring-1 ring-emerald-600/30'
+                              : 'border-sand/70 bg-sand/20 hover:border-sand hover:bg-sand/40'
+                          }`}
+                        >
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                                <CreditCard className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <span className="font-serif text-base font-bold text-teal block">
+                                  Full Advance (100%)
+                                </span>
+                                <span className="text-[10px] text-emerald-800 font-semibold font-sans">
+                                  Bank Transfer / Mobile Wallet
+                                </span>
+                              </div>
+                            </div>
+                            <div className="w-5 h-5 rounded-full border-2 border-emerald-600 flex items-center justify-center shrink-0 mt-1">
+                              {selectedPaymentType === 'FULL_ADVANCE' && <div className="w-2.5 h-2.5 rounded-full bg-emerald-600" />}
+                            </div>
+                          </div>
+                          <p className="text-xs text-charcoal-muted leading-relaxed font-sans">
+                            Transfer 100% of the payable amount to our official account and upload screenshot. Zero balance on delivery.
+                          </p>
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-800 bg-emerald-100 px-2.5 py-1 rounded-md self-start border border-emerald-300">
+                            100% Advance • COD Fee: Waived
+                          </span>
+                        </div>
+                      </div>
+
+                      {selectedPaymentType === 'COD' ? (
+                        <div className="bg-teal text-offwhite p-5 rounded-2xl border border-champagne/40 flex items-start gap-4 shadow-sm">
+                          <div className="w-9 h-9 rounded-full bg-champagne text-teal-950 flex items-center justify-center shrink-0 mt-0.5">
+                            <Banknote className="w-4 h-4" />
+                          </div>
+                          <div className="space-y-1">
+                            <span className="font-serif text-base font-bold text-champagne flex items-center gap-2">
+                              Cash On Delivery Selected <Check className="w-4 h-4 text-champagne" />
+                            </span>
+                            <p className="text-xs text-offwhite/80 leading-relaxed font-sans">
+                              Pay Rs. {totalAmount.toLocaleString()} in cash directly to our delivery courier upon unboxing your parcel at your doorstep.
+                            </p>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="space-y-6">
+                          {/* Full Advance Breakdown Banner */}
+                          <div className="bg-emerald-500/10 border-2 border-emerald-500/30 p-5 rounded-2xl space-y-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-emerald-500/20 pb-3">
+                              <span className="text-xs uppercase font-extrabold tracking-wider text-emerald-900 flex items-center gap-1.5">
+                                <CreditCard className="w-4 h-4 text-emerald-700" />
+                                Required Payment: 100% Full Advance
+                              </span>
+                              <span className="text-xs font-mono font-bold text-emerald-950">
+                                Rs. {totalAmount.toLocaleString()} PKR
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-4 text-xs font-sans">
+                              <div>
+                                <span className="text-charcoal-muted block">Full Amount Payable Now:</span>
+                                <span className="font-serif font-bold text-emerald-900 text-sm">
+                                  Rs. {totalAmount.toLocaleString()}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-charcoal-muted block">Balance on Delivery (COD):</span>
+                                <span className="font-serif font-bold text-teal text-sm">
+                                  Rs. 0 (Fully Paid)
+                                </span>
+                              </div>
+                            </div>
+                            {(preOrderConfig?.fullAdvanceInstructions || settings?.full_advance_payment_instructions) && (
+                              <p className="text-[11px] text-emerald-900/80 pt-2 border-t border-emerald-500/15 leading-relaxed font-sans">
+                                {preOrderConfig?.fullAdvanceInstructions || settings?.full_advance_payment_instructions}
+                              </p>
+                            )}
+                          </div>
+
+                          {/* Render payment methods & screenshot upload */}
+                          {renderPaymentMethodsAndScreenshot(totalAmount)}
+                        </div>
+                      )}
                     </div>
-                    <div className="space-y-1">
-                      <span className="font-serif text-lg font-bold text-champagne flex items-center gap-2">
-                        Cash On Delivery (COD) <Check className="w-4 h-4 text-champagne" />
-                      </span>
-                      <p className="text-xs text-offwhite/80 leading-relaxed font-sans">
-                        Zero online advance payment required. Pay in cash directly to our delivery courier upon unboxing your WearOMNIA parcel at your door.
-                      </p>
+                  ) : (
+                    <div className="bg-teal text-offwhite p-6 rounded-2xl border border-champagne/40 flex items-start gap-4 shadow-lg">
+                      <div className="w-10 h-10 rounded-full bg-champagne text-teal-950 flex items-center justify-center shrink-0 mt-0.5">
+                        <Banknote className="w-5 h-5" />
+                      </div>
+                      <div className="space-y-1">
+                        <span className="font-serif text-lg font-bold text-champagne flex items-center gap-2">
+                          Cash On Delivery (COD) <Check className="w-4 h-4 text-champagne" />
+                        </span>
+                        <p className="text-xs text-offwhite/80 leading-relaxed font-sans">
+                          Zero online advance payment required. Pay in cash directly to our delivery courier upon unboxing your WearOMNIA parcel at your door.
+                        </p>
+                      </div>
                     </div>
-                  </div>
+                  )
                 ) : (
                   <div className="space-y-6">
                     {/* Section 5: PRE-ORDER PAYMENT NOTICE */}
@@ -720,161 +1037,7 @@ export default function CheckoutPage() {
                       )}
                     </div>
 
-                    {/* Payment Methods Selector */}
-                    <div className="space-y-3">
-                      <label className="block text-xs font-bold uppercase tracking-wider text-charcoal">
-                        1. Select Official Payment Account *
-                      </label>
-                      {formErrors.paymentMethod && (
-                        <p className="text-[11px] text-red-600 font-semibold">{formErrors.paymentMethod}</p>
-                      )}
-
-                      <div className="grid grid-cols-1 gap-3">
-                        {preOrderConfig?.paymentMethods?.map((m) => {
-                          const isSelected = selectedMethodId === m.id;
-                          return (
-                            <div
-                              key={m.id}
-                              onClick={() => setSelectedMethodId(m.id)}
-                              className={`p-4 rounded-2xl border-2 transition-all cursor-pointer ${
-                                isSelected
-                                  ? 'border-teal bg-sand/60 shadow-md'
-                                  : 'border-sand/70 bg-sand/20 hover:border-sand hover:bg-sand/40'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="space-y-1 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-serif font-bold text-teal text-sm">
-                                      {m.displayName}
-                                    </span>
-                                    <span className="text-[9px] font-mono font-bold uppercase px-2 py-0.5 rounded-full bg-teal text-champagne">
-                                      {m.methodType}
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-charcoal">
-                                    Title: <strong className="font-semibold text-teal">{m.accountTitle}</strong>
-                                  </p>
-                                  <div className="flex items-center gap-2 pt-0.5">
-                                    <span className="text-xs font-mono font-bold text-champagne-800 bg-sand/80 px-2 py-0.5 rounded-lg border border-sand">
-                                      {m.accountNumber}
-                                    </span>
-                                    <button
-                                      type="button"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        navigator.clipboard.writeText(m.accountNumber);
-                                        setCopiedAccount(true);
-                                        setTimeout(() => setCopiedAccount(false), 2000);
-                                      }}
-                                      className="text-[10px] text-teal hover:underline font-bold uppercase"
-                                    >
-                                      {copiedAccount ? 'Copied!' : 'Copy'}
-                                    </button>
-                                  </div>
-                                  {m.bankName && (
-                                    <p className="text-[11px] text-charcoal-muted">Bank: {m.bankName}</p>
-                                  )}
-                                  {m.iban && (
-                                    <p className="text-[10px] font-mono text-charcoal-muted">IBAN: {m.iban}</p>
-                                  )}
-                                </div>
-
-                                <div className="w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 mt-1 border-teal">
-                                  {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-teal" />}
-                                </div>
-                              </div>
-
-                              {/* QR Code image if available and selected */}
-                              {isSelected && m.hasQrCode && (
-                                <div className="mt-4 pt-3 border-t border-sand flex items-center gap-4">
-                                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                                  <img
-                                    src={`/api/preorder/payment-methods/${m.id}/qr`}
-                                    alt="Payment QR Code"
-                                    className="w-28 h-28 object-contain rounded-xl border border-sand bg-white p-2 shadow-sm"
-                                  />
-                                  <div className="space-y-1 text-xs">
-                                    <span className="font-bold text-teal flex items-center gap-1">
-                                      <QrCode className="w-4 h-4 text-champagne-700" /> Scan QR to Pay
-                                    </span>
-                                    <p className="text-[11px] text-charcoal-muted leading-relaxed font-sans">
-                                      Scan this QR in your bank/wallet app and transfer Rs. {preOrderAdvanceAmount.toLocaleString()}.
-                                    </p>
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* Screenshot Upload Section */}
-                    <div className="space-y-3 pt-2">
-                      <label className="block text-xs font-bold uppercase tracking-wider text-charcoal">
-                        2. Upload Payment Proof Screenshot *
-                      </label>
-                      <p className="text-[11px] text-charcoal-muted">
-                        Upload the transaction receipt or screenshot after sending Rs. {preOrderAdvanceAmount.toLocaleString()}.
-                      </p>
-
-                      <div className="border-2 border-dashed border-sand/80 rounded-2xl p-5 bg-sand/30 hover:bg-sand/50 transition-colors text-center space-y-3">
-                        {screenshotUploading ? (
-                          <div className="flex flex-col items-center gap-2 py-4 text-teal">
-                            <Loader2 className="w-6 h-6 animate-spin text-champagne-700" />
-                            <span className="text-xs font-bold">Securing screenshot...</span>
-                          </div>
-                        ) : screenshotKey ? (
-                          <div className="flex flex-col items-center gap-2 py-2 text-emerald-800">
-                            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
-                              <CheckCircle2 className="w-6 h-6 text-emerald-700" />
-                            </div>
-                            <span className="text-xs font-bold">Screenshot Attached Successfully!</span>
-                            <span className="text-[10px] text-charcoal-muted font-mono">{screenshotKey}</span>
-                            <label className="text-[11px] text-teal underline font-bold cursor-pointer mt-1">
-                              Replace Screenshot
-                              <input
-                                type="file"
-                                accept="image/jpeg,image/png,image/webp"
-                                onChange={handleScreenshotUpload}
-                                className="hidden"
-                              />
-                            </label>
-                          </div>
-                        ) : (
-                          <label className="flex flex-col items-center gap-2 py-3 cursor-pointer">
-                            <UploadCloud className="w-8 h-8 text-champagne-700" />
-                            <span className="text-xs font-bold text-teal">
-                              Click or Drag to Upload Payment Screenshot
-                            </span>
-                            <span className="text-[10px] text-charcoal-muted">
-                              JPEG, PNG, or WebP up to 5MB
-                            </span>
-                            <input
-                              type="file"
-                              accept="image/jpeg,image/png,image/webp"
-                              onChange={handleScreenshotUpload}
-                              className="hidden"
-                            />
-                          </label>
-                        )}
-                      </div>
-
-                      {screenshotError && (
-                        <p className="text-[11px] text-red-600 flex items-center gap-1 font-semibold">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                          {screenshotError}
-                        </p>
-                      )}
-
-                      {formErrors.screenshot && (
-                        <p className="text-[11px] text-red-600 flex items-center gap-1 font-semibold">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                          {formErrors.screenshot}
-                        </p>
-                      )}
-                    </div>
+                    {renderPaymentMethodsAndScreenshot(preOrderAdvanceAmount)}
                   </div>
                 )}
               </div>
@@ -1095,6 +1258,29 @@ export default function CheckoutPage() {
                         </div>
                       </div>
                     </div>
+                  ) : selectedPaymentType === 'FULL_ADVANCE' ? (
+                    <div className="pt-3 border-t border-sand/80 space-y-2">
+                      <div className="flex justify-between text-base font-extrabold text-teal">
+                        <span>Total Payable:</span>
+                        <span className="font-mono font-black text-lg text-teal">Rs. {totalAmount.toLocaleString()}</span>
+                      </div>
+                      <div className="bg-emerald-500/10 p-3.5 rounded-2xl border border-emerald-500/30 space-y-2 mt-2">
+                        <div className="flex justify-between text-xs text-emerald-900 font-bold">
+                          <span>Payment Option:</span>
+                          <span className="font-mono">100% Full Advance</span>
+                        </div>
+                        <div className="flex justify-between text-sm font-extrabold text-emerald-950 pt-1.5 border-t border-emerald-500/20">
+                          <span>Pay Now:</span>
+                          <span className="font-mono text-base font-black text-emerald-900">
+                            Rs. {totalAmount.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-xs font-semibold text-emerald-800">
+                          <span>Balance on Delivery:</span>
+                          <span className="font-mono font-bold">Rs. 0</span>
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <div className="flex justify-between text-lg font-bold text-teal pt-3 border-t border-sand/80">
                       <span>Grand Total (COD):</span>
@@ -1108,7 +1294,11 @@ export default function CheckoutPage() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   type="submit"
-                  disabled={isSubmitting || (isPreOrderCart && (screenshotUploading || !screenshotKey))}
+                  disabled={
+                    isSubmitting ||
+                    (isPreOrderCart && (screenshotUploading || !screenshotKey)) ||
+                    (selectedPaymentType === 'FULL_ADVANCE' && (screenshotUploading || !screenshotKey || !selectedMethodId))
+                  }
                   className="w-full btn-premium btn-primary !py-4 rounded-2xl text-xs uppercase font-black tracking-widest transition-all shadow-2xl flex items-center justify-center gap-2.5 disabled:opacity-50 mt-6 border border-champagne/30 cursor-pointer"
                 >
                   {isSubmitting ? (
@@ -1117,11 +1307,20 @@ export default function CheckoutPage() {
                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
-                      {isPreOrderCart ? 'Placing Pre-Order...' : 'Confirming Your Order...'}
+                      {isPreOrderCart
+                        ? 'Placing Pre-Order...'
+                        : selectedPaymentType === 'FULL_ADVANCE'
+                          ? 'Submitting Full Advance Order...'
+                          : 'Confirming Your Order...'}
                     </span>
                   ) : isPreOrderCart ? (
                     <>
                       <Lock className="w-4 h-4 text-champagne" /> Place Pre-Order (Rs. {preOrderAdvanceAmount.toLocaleString()} Advance){' '}
+                      <ArrowRight className="w-4 h-4 text-champagne" />
+                    </>
+                  ) : selectedPaymentType === 'FULL_ADVANCE' ? (
+                    <>
+                      <Lock className="w-4 h-4 text-champagne" /> Place Order (Rs. {totalAmount.toLocaleString()} Full Advance){' '}
                       <ArrowRight className="w-4 h-4 text-champagne" />
                     </>
                   ) : (
@@ -1138,11 +1337,13 @@ export default function CheckoutPage() {
                     <span>
                       {isPreOrderCart
                         ? 'Advance payment verified by finance team within 24 hours.'
-                        : '7-day easy exchange guarantee across all cities in Pakistan.'}
+                        : selectedPaymentType === 'FULL_ADVANCE'
+                          ? 'Full advance payment verified by finance team within 24 hours.'
+                          : '7-day easy exchange guarantee across all cities in Pakistan.'}
                     </span>
                   </p>
                   <p>
-                    {isPreOrderCart
+                    {isPreOrderCart || selectedPaymentType === 'FULL_ADVANCE'
                       ? 'Live WhatsApp updates sent upon verification & dispatch.'
                       : 'Express courier dispatch with discreet packaging (no family questions asked).'}
                   </p>

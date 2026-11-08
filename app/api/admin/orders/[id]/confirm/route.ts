@@ -34,10 +34,10 @@ export async function POST(
       });
     }
 
-    // Check pre-order rule: Pre-orders must have payment approved first
-    if (order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED') {
+    // Check advance payment rule: Orders with advance payment must have payment approved first
+    if ((order.isPreOrder || order.paymentMethod === 'FULL_ADVANCE' || order.status === 'PAYMENT_REVIEW_PENDING') && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED') {
       return NextResponse.json(
-        { error: 'Cannot confirm pre-order: Payment proof screenshot must be verified and approved first.' },
+        { error: 'Cannot confirm order: Advance payment proof screenshot must be verified and approved first.' },
         { status: 400 }
       );
     }

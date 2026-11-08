@@ -46,8 +46,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!order.isPreOrder) {
-      return NextResponse.json({ error: 'This order is not a pre-order' }, { status: 400 });
+    if (!order.isPreOrder && order.paymentMethod !== 'FULL_ADVANCE' && order.status !== 'PAYMENT_REVIEW_PENDING' && order.preOrderPaymentStatus !== 'PAYMENT_REJECTED') {
+      return NextResponse.json({ error: 'This order does not accept payment screenshot resubmission' }, { status: 400 });
     }
 
     if (order.preOrderPaymentStatus === 'PAYMENT_APPROVED') {
@@ -66,18 +66,20 @@ export async function POST(req: NextRequest) {
     }
 
     const oldScreenshot = order.preOrderPaymentScreenshotUrl;
+    const isRegularFullAdvance = !order.isPreOrder && (order.paymentMethod === 'FULL_ADVANCE' || order.preOrderAdvancePercent === 100);
 
     const updatedOrder = await prisma.order.update({
       where: { id: order.id },
       data: {
+        status: order.status === 'CONFIRMED' ? 'CONFIRMED' : 'PAYMENT_REVIEW_PENDING',
         preOrderPaymentScreenshotUrl: screenshotKey,
         preOrderPaymentStatus: 'PAYMENT_REVIEW_PENDING',
         preOrderPaymentRejectionReason: null,
         preOrderPaymentMethodName: methodName,
         timeline: {
           create: {
-            status: order.status,
-            note: `Customer re-uploaded advance payment proof screenshot (${methodName || 'Bank Transfer'}). Sent back to finance review queue.`,
+            status: order.status === 'CONFIRMED' ? 'CONFIRMED' : 'PAYMENT_REVIEW_PENDING',
+            note: `Customer re-uploaded payment proof screenshot (${methodName || 'Bank Transfer'}). Sent back to finance review queue.`,
             updatedBy: 'Customer (Re-upload)',
           },
         },

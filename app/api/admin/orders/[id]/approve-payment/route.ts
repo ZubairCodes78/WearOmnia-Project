@@ -27,8 +27,8 @@ export async function POST(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    if (!order.isPreOrder) {
-      return NextResponse.json({ error: 'This order is not a pre-order' }, { status: 400 });
+    if (!order.isPreOrder && order.paymentMethod !== 'FULL_ADVANCE' && order.status !== 'PAYMENT_REVIEW_PENDING') {
+      return NextResponse.json({ error: 'This order does not require payment review' }, { status: 400 });
     }
 
     // Idempotency: If already approved, return success immediately
@@ -58,15 +58,17 @@ export async function POST(
     }
 
     const now = new Date();
-    const advanceAmount = order.preOrderAdvanceAmount || 0;
-    const advanceAmountFormatted = Number(advanceAmount).toLocaleString();
+    const isRegularFullAdvance = !order.isPreOrder && (order.paymentMethod === 'FULL_ADVANCE' || order.preOrderAdvancePercent === 100);
+    const approvedAmount = isRegularFullAdvance ? order.totalAmount : (order.preOrderAdvanceAmount || 0);
+    const approvedAmountFormatted = Number(approvedAmount).toLocaleString();
+    const remainingAmount = Math.max(0, order.totalAmount - approvedAmount);
 
     const updatedOrder = await prisma.order.update({
       where: { id },
       data: {
         preOrderPaymentStatus: 'PAYMENT_APPROVED',
-        amountPaid: advanceAmount,
-        preOrderRemainingAmount: Math.max(0, order.totalAmount - advanceAmount),
+        amountPaid: approvedAmount,
+        preOrderRemainingAmount: remainingAmount,
         preOrderPaymentVerifiedAt: now,
         preOrderPaymentVerifiedBy: adminName,
         confirmedAt: now,
@@ -75,7 +77,9 @@ export async function POST(
         timeline: {
           create: {
             status: 'CONFIRMED',
-            note: `Advance payment verified and approved by ${adminName}. Pre-order confirmed (Rs. ${advanceAmountFormatted} advance received).`,
+            note: isRegularFullAdvance
+              ? `100% Full advance payment verified and approved by ${adminName}. Order confirmed (Rs. ${approvedAmountFormatted} received in full).`
+              : `Advance payment verified and approved by ${adminName}. Pre-order confirmed (Rs. ${approvedAmountFormatted} advance received).`,
             updatedBy: adminName,
           },
         },
@@ -84,17 +88,21 @@ export async function POST(
 
     // Record audit log
     await recordAuditLog(
-      'PRE_ORDER_PAYMENT_APPROVED',
+      isRegularFullAdvance ? 'ORDER_PAYMENT_APPROVED' : 'PRE_ORDER_PAYMENT_APPROVED',
       'Order',
       order.id,
-      `Pre-Order ${order.orderNumber} advance payment approved by ${adminName} (${adminId || 'session'}). Amount paid: Rs. ${advanceAmountFormatted}`
+      `${isRegularFullAdvance ? 'Regular Order' : 'Pre-Order'} ${order.orderNumber} payment approved by ${adminName} (${adminId || 'session'}). Amount paid: Rs. ${approvedAmountFormatted}`
     );
 
     // Send WhatsApp notification to customer
     try {
-      await NotificationService.sendPreOrderApproved(updatedOrder);
+      if (isRegularFullAdvance) {
+        await NotificationService.sendPaymentApproved(updatedOrder);
+      } else {
+        await NotificationService.sendPreOrderApproved(updatedOrder);
+      }
     } catch (e) {
-      console.error('[WhatsApp Pre-order Approval Notification Error]', e);
+      console.error('[WhatsApp Payment Approval Notification Error]', e);
     }
 
     return NextResponse.json({

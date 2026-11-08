@@ -18,6 +18,15 @@ export default async function AdminOrdersPage({ searchParams }: OrdersPageProps)
         ? { isPreOrder: true }
         : params.status === 'PRE_ORDER_PENDING'
         ? { isPreOrder: true, preOrderPaymentStatus: 'PAYMENT_REVIEW_PENDING' }
+        : params.status === 'FULL_ADVANCE'
+        ? { paymentMethod: 'FULL_ADVANCE' }
+        : params.status === 'PAYMENT_REVIEW_PENDING'
+        ? {
+            OR: [
+              { status: 'PAYMENT_REVIEW_PENDING' },
+              { preOrderPaymentStatus: 'PAYMENT_REVIEW_PENDING' },
+            ],
+          }
         : params.status && params.status !== 'ALL'
         ? { status: params.status }
         : {}),

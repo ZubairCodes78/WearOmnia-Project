@@ -535,6 +535,60 @@ export class WhatsAppProvider implements INotificationProvider {
   }
 
   /**
+   * Regular Full Advance: Send Payment Approved Notification to Customer
+   */
+  public async sendPaymentApproved(order: any, settings: WhatsAppSettings): Promise<NotificationResult> {
+    if (order.isPreOrder) {
+      return this.sendPreOrderApproved(order, settings);
+    }
+    const phone = order.customerWhatsapp || order.customerPhone;
+    const amount = Number(order.totalAmount || order.amountPaid || 0).toLocaleString('en-PK');
+
+    const text =
+      `WearOMNIA\n\n` +
+      `FULL ADVANCE PAYMENT APPROVED\n\n` +
+      `Assalam-o-Alaikum ${order.customerName},\n\n` +
+      `🎉 Great news! Your 100% advance payment of Rs. ${amount} for Order #${order.orderNumber} has been VERIFIED & APPROVED.\n\n` +
+      `Your order is now CONFIRMED! Zero balance due upon delivery.\n\n` +
+      `Our atelier team is preparing your package for dispatch. Thank you for choosing WearOMNIA.\n\n` +
+      `WearOMNIA\n` +
+      `Modesty With Functionality.`;
+
+    const messagePayload = {
+      type: 'text',
+      text: { body: text },
+    };
+
+    return this.sendMetaApiMessage(phone, messagePayload, settings);
+  }
+
+  /**
+   * Regular Full Advance: Send Payment Rejected Notification to Customer
+   */
+  public async sendPaymentRejected(order: any, reason: string, settings: WhatsAppSettings): Promise<NotificationResult> {
+    if (order.isPreOrder) {
+      return this.sendPreOrderRejected(order, reason, settings);
+    }
+    const phone = order.customerWhatsapp || order.customerPhone;
+
+    const text =
+      `WearOMNIA\n\n` +
+      `PAYMENT VERIFICATION NOTICE\n\n` +
+      `Assalam-o-Alaikum ${order.customerName},\n\n` +
+      `We were unable to verify your payment screenshot for Order #${order.orderNumber}.\n\n` +
+      `Reason: ${reason || 'Screenshot illegible or transaction not found'}\n\n` +
+      `Please visit the order link or reply to this WhatsApp message to re-upload your valid payment screenshot so our team can verify and confirm your order.\n\n` +
+      `WearOMNIA Support`;
+
+    const messagePayload = {
+      type: 'text',
+      text: { body: text },
+    };
+
+    return this.sendMetaApiMessage(phone, messagePayload, settings);
+  }
+
+  /**
    * Send Post-Delivery Review Request with real product review link
    */
   public async sendReviewRequest(order: any, reviewLink: string, settings: WhatsAppSettings): Promise<NotificationResult> {

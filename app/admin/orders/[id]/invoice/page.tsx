@@ -103,7 +103,9 @@ export default async function PrintInvoicePage({ params }: PrintInvoiceProps) {
           <h3 className="font-serif font-bold uppercase text-teal-900 mb-1">Dispatched From:</h3>
           <p className="font-bold">WearOMNIA Flagship Atelier</p>
           <p>Lahore, Pakistan</p>
-          <p className="mt-1 font-semibold text-teal-950">Payment Method: CASH ON DELIVERY (COD)</p>
+          <p className="mt-1 font-semibold text-teal-950">
+            Payment Method: {order.paymentMethod === 'FULL_ADVANCE' ? '100% FULL ADVANCE' : order.isPreOrder ? 'PRE-ORDER (50% ADVANCE)' : 'CASH ON DELIVERY (COD)'}
+          </p>
           {order.courier && (
             <p className="font-semibold text-teal-950">Courier: {order.courier}</p>
           )}
@@ -162,9 +164,21 @@ export default async function PrintInvoicePage({ params }: PrintInvoiceProps) {
             <span className="font-mono">{order.shippingFee === 0 ? 'FREE' : `Rs. ${order.shippingFee}`}</span>
           </div>
           <div className="flex justify-between text-base font-bold text-teal-900 border-t-2 border-teal-900 pt-2">
-            <span>Total Payable COD:</span>
-            <span className="font-mono">Rs. {(order.totalAmount ?? 0).toLocaleString()}</span>
+            <span>{order.paymentMethod === 'FULL_ADVANCE' ? 'Amount Paid (Advance):' : order.isPreOrder ? 'Balance Payable COD:' : 'Total Payable COD:'}</span>
+            <span className="font-mono">
+              Rs. {(order.paymentMethod === 'FULL_ADVANCE' 
+                ? (order.totalAmount ?? 0) 
+                : order.isPreOrder 
+                ? (order.preOrderRemainingAmount ?? 0) 
+                : (order.totalAmount ?? 0)).toLocaleString()}
+            </span>
           </div>
+          {order.paymentMethod === 'FULL_ADVANCE' && (
+            <div className="flex justify-between text-xs font-bold text-emerald-800">
+              <span>Balance Due on Delivery:</span>
+              <span className="font-mono">Rs. 0</span>
+            </div>
+          )}
         </div>
       </div>
 

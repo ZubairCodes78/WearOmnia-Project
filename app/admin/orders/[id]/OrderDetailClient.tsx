@@ -571,11 +571,15 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 creatingShipment ||
                 order.status === 'PENDING' ||
                 order.status === 'PLACED' ||
-                (order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED')
+                order.status === 'PAYMENT_REVIEW_PENDING' ||
+                (order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED') ||
+                (order.paymentMethod === 'FULL_ADVANCE' && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED')
               }
               className="bg-[#D4AF37] hover:bg-[#FAF8F5] text-black px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 shadow disabled:opacity-40"
               title={
-                order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED'
+                order.status === 'PAYMENT_REVIEW_PENDING' || (order.paymentMethod === 'FULL_ADVANCE' && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED')
+                  ? 'Approve full advance payment proof first'
+                  : order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED'
                   ? 'Approve 50% advance payment proof first'
                   : order.status === 'PENDING'
                   ? 'Confirm order first'
@@ -693,8 +697,8 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
         </div>
       )}
 
-      {/* Pre-Order Advance Payment Review Panel (Prominent Full-Width) */}
-      {order.isPreOrder && (
+      {/* Advance / Full Advance Payment Review Panel (Prominent Full-Width) */}
+      {(order.isPreOrder || order.paymentMethod === 'FULL_ADVANCE' || order.status === 'PAYMENT_REVIEW_PENDING' || !!order.preOrderPaymentScreenshotUrl) && (
         <div className={`border rounded-2xl p-6 shadow-xl transition-all ${
           order.preOrderPaymentStatus === 'PAYMENT_APPROVED'
             ? 'bg-emerald-950/30 border-emerald-500/40'
@@ -704,11 +708,15 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
         }`}>
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#D4AF37]/15 pb-4">
             <div className="flex items-center gap-3">
-              <span className="bg-amber-400 text-teal-950 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider shadow">
-                Pre-Order
+              <span className={`text-teal-950 text-xs font-black px-3 py-1 rounded-full uppercase tracking-wider shadow ${
+                order.paymentMethod === 'FULL_ADVANCE' ? 'bg-emerald-400' : 'bg-amber-400'
+              }`}>
+                {order.paymentMethod === 'FULL_ADVANCE' ? 'Full Advance' : 'Pre-Order'}
               </span>
               <h2 className="font-serif text-lg font-bold text-[#FAF8F5]">
-                50% Advance Payment Verification
+                {order.paymentMethod === 'FULL_ADVANCE'
+                  ? '100% Full Advance Payment Verification'
+                  : `${order.preOrderAdvancePercent || 50}% Advance Payment Verification`}
               </h2>
             </div>
             <div>
@@ -738,7 +746,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                   const originalSum = order.items?.reduce((sum: number, item: any) => sum + ((item.originalPrice || item.unitPrice) * item.quantity), 0) || order.subtotal;
                   const discountSum = Math.max(0, originalSum - order.subtotal) + (order.discountAmount || 0);
                   const isApproved = order.preOrderPaymentStatus === 'PAYMENT_APPROVED';
-                  const advanceReq = order.preOrderAdvanceAmount || 0;
+                  const advanceReq = order.paymentMethod === 'FULL_ADVANCE' ? order.totalAmount : (order.preOrderAdvanceAmount || 0);
                   const paid = order.amountPaid != null ? order.amountPaid : (isApproved ? advanceReq : 0);
                   const remaining = Math.max(0, order.totalAmount - paid);
 
@@ -765,7 +773,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                         <span className="font-mono text-[#D4AF37]">Rs. {order.totalAmount.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between text-amber-400 font-semibold pt-1 border-t border-white/5">
-                        <span>Advance Required ({order.preOrderAdvancePercent || 50}%):</span>
+                        <span>Advance Required ({order.paymentMethod === 'FULL_ADVANCE' ? 100 : (order.preOrderAdvancePercent || 50)}%):</span>
                         <span className="font-mono">Rs. {advanceReq.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between font-bold text-emerald-400">
@@ -839,7 +847,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 <div>
                   <h4 className="font-serif font-bold text-sm text-[#FAF8F5]">Payment Receipt Screenshot</h4>
                   <p className="text-[11px] text-[#FAF8F5]/60 mt-1 leading-relaxed">
-                    Verify that the 50% advance (Rs. {(order.preOrderAdvanceAmount || 0).toLocaleString()}) was successfully credited to your bank/account before confirming the order.
+                    Verify that the {order.paymentMethod === 'FULL_ADVANCE' ? '100% full' : `${order.preOrderAdvancePercent || 50}%`} advance (Rs. {(order.paymentMethod === 'FULL_ADVANCE' ? order.totalAmount : (order.preOrderAdvanceAmount || 0)).toLocaleString()}) was successfully credited to your bank/account before confirming the order.
                   </p>
                 </div>
 
@@ -1013,10 +1021,11 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                     <div>
                       <span className="text-[10px] text-[#FAF8F5]/50 block">COD Collectable:</span>
                       <span className="font-mono font-bold text-emerald-400">
-                        Rs. {(order.isPreOrder && (order.preOrderRemainingAmount != null || order.preOrderBalanceAmount != null)
+                        Rs. {(order.paymentMethod === 'FULL_ADVANCE' ? 0 : (order.isPreOrder && (order.preOrderRemainingAmount != null || order.preOrderBalanceAmount != null)
                           ? (order.preOrderRemainingAmount ?? order.preOrderBalanceAmount)
-                          : order.totalAmount).toLocaleString()}
+                          : order.totalAmount)).toLocaleString()}
                         {order.isPreOrder && ' (Bal)'}
+                        {order.paymentMethod === 'FULL_ADVANCE' && ' (Full Advance Paid)'}
                       </span>
                     </div>
                     <div>
@@ -1092,18 +1101,24 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 <p className="text-xs text-[#FAF8F5]/70 leading-relaxed">
                   {order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED'
                     ? 'Review and approve 50% advance payment proof first to unlock PostEx booking.'
+                    : (order.paymentMethod === 'FULL_ADVANCE' && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED')
+                    ? 'Review and approve 100% full advance payment proof first to unlock PostEx booking.'
+                    : order.status === 'PAYMENT_REVIEW_PENDING'
+                    ? 'Review and approve payment proof first to unlock PostEx booking.'
                     : order.status === 'PENDING' || order.status === 'PLACED'
                     ? 'Confirm order first to unlock 1-click PostEx dispatch.'
                     : 'Order confirmed and ready for courier booking.'}
                 </p>
 
-                {order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED' ? (
+                {(order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED') ||
+                (order.paymentMethod === 'FULL_ADVANCE' && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED') ||
+                order.status === 'PAYMENT_REVIEW_PENDING' ? (
                   <div className="p-3 bg-amber-950/40 border border-amber-500/30 rounded-xl text-xs text-amber-300 space-y-1">
                     <span className="font-bold flex items-center gap-1.5 text-amber-200">
                       <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Advance Approval Required
                     </span>
                     <p className="text-[11px] text-amber-200/80">
-                      Verify the customer&apos;s 50% payment proof in the banner above before booking with PostEx.
+                      Verify the customer&apos;s {order.paymentMethod === 'FULL_ADVANCE' ? '100% full' : '50%'} payment proof in the banner above before booking with PostEx.
                     </p>
                   </div>
                 ) : (order.status === 'PENDING' || order.status === 'PLACED') ? (
@@ -1157,7 +1172,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
               {order.isPreOrder ? (
                 <div className="pt-2 mt-2 border-t border-dashed border-[#D4AF37]/20 space-y-1.5 bg-[#06191B] p-3 rounded-xl">
                   <div className="flex justify-between text-emerald-400 font-bold">
-                    <span>50% Advance {order.preOrderPaymentStatus === 'PAYMENT_APPROVED' ? '(Received)' : '(Payable)'}:</span>
+                    <span>{order.preOrderAdvancePercent || 50}% Advance {order.preOrderPaymentStatus === 'PAYMENT_APPROVED' ? '(Received)' : '(Payable)'}:</span>
                     <span>Rs. {(order.preOrderAdvanceAmount || 0).toLocaleString()}</span>
                   </div>
                   <div className="flex justify-between text-[#FAF8F5]/50 text-[11px]">
@@ -1167,6 +1182,21 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                   <div className="flex justify-between text-[#D4AF37] font-extrabold text-sm pt-1 border-t border-[#D4AF37]/15 font-mono">
                     <span>Balance on Delivery (COD):</span>
                     <span>Rs. {(order.preOrderRemainingAmount ?? order.preOrderBalanceAmount ?? 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              ) : order.paymentMethod === 'FULL_ADVANCE' ? (
+                <div className="pt-2 mt-2 border-t border-dashed border-[#D4AF37]/20 space-y-1.5 bg-[#06191B] p-3 rounded-xl">
+                  <div className="flex justify-between text-emerald-400 font-bold">
+                    <span>100% Full Advance {order.preOrderPaymentStatus === 'PAYMENT_APPROVED' ? '(Received)' : '(Pending Verification)'}:</span>
+                    <span>Rs. {order.totalAmount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex justify-between text-[#FAF8F5]/50 text-[11px]">
+                    <span>Method:</span>
+                    <span className="text-[#D4AF37] font-medium">{order.preOrderPaymentMethodName || 'Manual Transfer'}</span>
+                  </div>
+                  <div className="flex justify-between text-[#D4AF37] font-extrabold text-sm pt-1 border-t border-[#D4AF37]/15 font-mono">
+                    <span>Balance on Delivery (COD):</span>
+                    <span>Rs. 0</span>
                   </div>
                 </div>
               ) : (

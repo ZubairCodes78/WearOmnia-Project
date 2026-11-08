@@ -13,6 +13,8 @@ export const DEFAULT_STORE_SETTINGS: PublicStoreSettings = {
   is_preorder_campaign_active: true,
   preorder_campaign_phase: 'ACTIVE',
   has_active_payment_methods: true,
+  full_advance_payment_enabled: DEFAULT_SITE_SETTINGS.full_advance_payment_enabled ?? true,
+  full_advance_payment_instructions: DEFAULT_SITE_SETTINGS.full_advance_payment_instructions ?? '',
 };
 
 interface SettingsContextValue {

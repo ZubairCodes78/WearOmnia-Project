@@ -436,6 +436,85 @@ export class NotificationService {
   }
 
   /**
+   * Send payment approved notification for regular orders or pre-orders
+   */
+  public static async sendPaymentApproved(order: any) {
+    if (order.isPreOrder) {
+      return this.sendPreOrderApproved(order);
+    }
+    const settings = await this.getSettings();
+    if (!settings.whatsapp_customer_notify_enabled) return;
+
+    const existing = await prisma.notificationLog.findFirst({
+      where: {
+        orderId: order.id,
+        messageType: 'PAYMENT_APPROVED',
+        status: 'SENT',
+      },
+    });
+    if (existing) return { success: true, messageId: existing.whatsappMessageId };
+
+    const recipientPhone = normalizePhone(order.customerWhatsapp || order.customerPhone);
+    const logRecord = await this.logNotification({
+      orderId: order.id,
+      recipientPhone,
+      messageType: 'PAYMENT_APPROVED',
+      status: 'QUEUED',
+      attempts: 1,
+    });
+
+    const result = await this.whatsappProvider.sendPaymentApproved(order, settings);
+
+    if (logRecord) {
+      await prisma.notificationLog.update({
+        where: { id: logRecord.id },
+        data: {
+          status: result.success ? 'SENT' : 'FAILED',
+          whatsappMessageId: result.messageId,
+          errorDetails: result.error,
+        },
+      });
+    }
+
+    return result;
+  }
+
+  /**
+   * Send payment rejected notification for regular orders or pre-orders
+   */
+  public static async sendPaymentRejected(order: any, reason: string) {
+    if (order.isPreOrder) {
+      return this.sendPreOrderRejected(order, reason);
+    }
+    const settings = await this.getSettings();
+    if (!settings.whatsapp_customer_notify_enabled) return;
+
+    const recipientPhone = normalizePhone(order.customerWhatsapp || order.customerPhone);
+    const logRecord = await this.logNotification({
+      orderId: order.id,
+      recipientPhone,
+      messageType: 'PAYMENT_REJECTED',
+      status: 'QUEUED',
+      attempts: 1,
+    });
+
+    const result = await this.whatsappProvider.sendPaymentRejected(order, reason, settings);
+
+    if (logRecord) {
+      await prisma.notificationLog.update({
+        where: { id: logRecord.id },
+        data: {
+          status: result.success ? 'SENT' : 'FAILED',
+          whatsappMessageId: result.messageId,
+          errorDetails: result.error,
+        },
+      });
+    }
+
+    return result;
+  }
+
+  /**
    * Pre-order: Send rejection notification if payment proof is invalid
    */
   public static async sendPreOrderRejected(order: any, reason: string) {

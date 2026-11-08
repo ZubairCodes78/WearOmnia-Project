@@ -11,6 +11,7 @@
 
 export const ORDER_STATUSES = [
   'PENDING',
+  'PAYMENT_REVIEW_PENDING',
   'CONFIRMED',
   'PACKING',
   'DISPATCHED',
@@ -24,6 +25,7 @@ export type OrderStatus = typeof ORDER_STATUSES[number];
 
 export const STATUS_LABELS: Record<OrderStatus, string> = {
   PENDING: 'Pending',
+  PAYMENT_REVIEW_PENDING: 'Payment Review Pending',
   CONFIRMED: 'Confirmed',
   PACKING: 'Packing',
   DISPATCHED: 'Dispatched',
@@ -35,6 +37,7 @@ export const STATUS_LABELS: Record<OrderStatus, string> = {
 
 export const STATUS_COLORS: Record<OrderStatus, { bg: string; text: string; border: string }> = {
   PENDING: { bg: 'bg-amber-100', text: 'text-amber-900', border: 'border-amber-300' },
+  PAYMENT_REVIEW_PENDING: { bg: 'bg-amber-100', text: 'text-amber-900', border: 'border-amber-300' },
   CONFIRMED: { bg: 'bg-blue-100', text: 'text-blue-900', border: 'border-blue-300' },
   PACKING: { bg: 'bg-purple-100', text: 'text-purple-900', border: 'border-purple-300' },
   DISPATCHED: { bg: 'bg-cyan-100', text: 'text-cyan-900', border: 'border-cyan-300' },
@@ -47,6 +50,7 @@ export const STATUS_COLORS: Record<OrderStatus, { bg: string; text: string; bord
 // Valid status transitions map
 const VALID_TRANSITIONS: Record<string, string[]> = {
   PENDING: ['CONFIRMED', 'CANCELLED'],
+  PAYMENT_REVIEW_PENDING: ['CONFIRMED', 'CANCELLED'],
   CONFIRMED: ['PACKING', 'CANCELLED'],
   PACKING: ['DISPATCHED', 'CANCELLED'],
   DISPATCHED: ['OUT_FOR_DELIVERY', 'CANCELLED'],
@@ -79,6 +83,7 @@ export const TIMELINE_STEPS: { status: OrderStatus; label: string; icon: string 
 // Notification message templates
 export const STATUS_NOTIFICATION_MESSAGES: Record<OrderStatus, (orderNumber: string, courier?: string, trackingNumber?: string) => string> = {
   PENDING: (orderNumber) => `Your WearOMNIA order ${orderNumber} has been received and is awaiting confirmation.`,
+  PAYMENT_REVIEW_PENDING: (orderNumber) => `Your WearOMNIA order ${orderNumber} has been received with payment screenshot and is currently awaiting manual finance review.`,
   CONFIRMED: (orderNumber) => `Your WearOMNIA order ${orderNumber} has been confirmed. We're preparing it with care.`,
   PACKING: (orderNumber) => `Your WearOMNIA order ${orderNumber} is now being carefully packed at our Lahore Atelier.`,
   DISPATCHED: (orderNumber, courier, trackingNumber) =>

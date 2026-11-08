@@ -66,6 +66,7 @@ interface Order {
   shippingFee: number;
   totalAmount: number;
   status: string;
+  paymentMethod?: string | null;
   trackingNumber: string | null;
   courier: string | null;
   couponCode: string | null;
@@ -151,7 +152,11 @@ export function OrdersClient({
   const getNextLifecycleAction = (
     order: Order
   ): 'SEND_CONFIRMATION' | 'SEND_TRACKING' | 'SEND_DELIVERED' | 'CONFIRM_ORDER' | 'VERIFY_PAYMENT' | 'NONE' => {
-    if (order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED') {
+    if (
+      (order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED') ||
+      order.status === 'PAYMENT_REVIEW_PENDING' ||
+      (order.paymentMethod === 'FULL_ADVANCE' && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED')
+    ) {
       return 'VERIFY_PAYMENT';
     }
 
@@ -250,7 +255,11 @@ export function OrdersClient({
     if (!matchesSearch) return false;
 
     // Status filter
-    if (statusFilter === 'PRE_ORDER') {
+    if (statusFilter === 'PAYMENT_REVIEW_PENDING') {
+      if (o.status !== 'PAYMENT_REVIEW_PENDING' && o.preOrderPaymentStatus !== 'PAYMENT_REVIEW_PENDING') return false;
+    } else if (statusFilter === 'FULL_ADVANCE') {
+      if (o.paymentMethod !== 'FULL_ADVANCE') return false;
+    } else if (statusFilter === 'PRE_ORDER') {
       if (!o.isPreOrder) return false;
     } else if (statusFilter === 'PRE_ORDER_PENDING') {
       if (!o.isPreOrder || o.preOrderPaymentStatus === 'PAYMENT_APPROVED') return false;
@@ -777,20 +786,22 @@ export function OrdersClient({
   const eligibleForConfirm = selectedOrders.filter(
     (o) =>
       o.status === 'PENDING' &&
-      (!o.isPreOrder || o.preOrderPaymentStatus === 'PAYMENT_APPROVED')
+      (!o.isPreOrder || o.preOrderPaymentStatus === 'PAYMENT_APPROVED') &&
+      (o.paymentMethod !== 'FULL_ADVANCE' || o.preOrderPaymentStatus === 'PAYMENT_APPROVED')
   ).length;
   const skippedForConfirm = selectedOrders.length - eligibleForConfirm;
   const skippedConfirmReasons = selectedOrders
     .filter(
       (o) =>
         o.status !== 'PENDING' ||
-        (o.isPreOrder && o.preOrderPaymentStatus !== 'PAYMENT_APPROVED')
+        (o.isPreOrder && o.preOrderPaymentStatus !== 'PAYMENT_APPROVED') ||
+        (o.paymentMethod === 'FULL_ADVANCE' && o.preOrderPaymentStatus !== 'PAYMENT_APPROVED')
     )
     .map((o) =>
       o.status === 'CONFIRMED'
         ? `#${o.orderNumber}: Already confirmed`
-        : o.isPreOrder && o.preOrderPaymentStatus !== 'PAYMENT_APPROVED'
-        ? `#${o.orderNumber}: Pre-order payment proof awaiting approval`
+        : (o.isPreOrder || o.paymentMethod === 'FULL_ADVANCE' || o.status === 'PAYMENT_REVIEW_PENDING') && o.preOrderPaymentStatus !== 'PAYMENT_APPROVED'
+        ? `#${o.orderNumber}: Payment proof awaiting approval`
         : `#${o.orderNumber}: In ${o.status} state`
     );
 
@@ -798,7 +809,8 @@ export function OrdersClient({
     (o) =>
       (o.status === 'CONFIRMED' || o.status === 'PACKING') &&
       !resolveTracking(o) &&
-      (!o.isPreOrder || o.preOrderPaymentStatus === 'PAYMENT_APPROVED')
+      (!o.isPreOrder || o.preOrderPaymentStatus === 'PAYMENT_APPROVED') &&
+      (o.paymentMethod !== 'FULL_ADVANCE' || o.preOrderPaymentStatus === 'PAYMENT_APPROVED')
   ).length;
   const alreadyTrackedShipments = selectedOrders.filter((o) =>
     Boolean(resolveTracking(o))
@@ -977,6 +989,8 @@ export function OrdersClient({
             className="w-full sm:w-auto h-10 px-4 bg-[#06191B] rounded-xl text-xs text-[#D4AF37] border border-[#D4AF37]/30 focus:outline-none font-bold uppercase tracking-wider cursor-pointer"
           >
             <option value="ALL">All Statuses</option>
+            <option value="PAYMENT_REVIEW_PENDING">⏳ Payment Review Pending</option>
+            <option value="FULL_ADVANCE">💎 Full Advance (100%)</option>
             <option value="PRE_ORDER">✨ Pre-Orders (All)</option>
             <option value="PRE_ORDER_PENDING">⏳ Pre-Order Review Pending</option>
             <option value="PENDING">Pending Confirmation</option>
@@ -1095,6 +1109,11 @@ export function OrdersClient({
                                 PRE-ORDER
                               </span>
                             )}
+                            {order.paymentMethod === 'FULL_ADVANCE' && (
+                              <span className="bg-emerald-500/20 text-emerald-300 text-[9px] font-black px-1.5 py-0.5 rounded tracking-wider uppercase border border-emerald-500/40">
+                                FULL ADVANCE
+                              </span>
+                            )}
                           </div>
                         </td>
 
@@ -1123,7 +1142,12 @@ export function OrdersClient({
                           <div>Rs. {order.totalAmount.toLocaleString()}</div>
                           {order.isPreOrder && (
                             <div className="text-[10px] font-sans font-medium text-emerald-400 mt-0.5">
-                              50% Adv: Rs. {(order.preOrderAdvanceAmount || 0).toLocaleString()}
+                              {order.preOrderAdvancePercent || 50}% Adv: Rs. {(order.preOrderAdvanceAmount || 0).toLocaleString()}
+                            </div>
+                          )}
+                          {order.paymentMethod === 'FULL_ADVANCE' && (
+                            <div className="text-[10px] font-sans font-medium text-emerald-400 mt-0.5">
+                              100% Adv: Rs. {order.totalAmount.toLocaleString()}
                             </div>
                           )}
                         </td>
@@ -1132,7 +1156,7 @@ export function OrdersClient({
                         <td className="p-3.5">
                           <div className="space-y-1">
                             <OrderStatusBadge status={order.status} />
-                            {order.isPreOrder && (
+                            {(order.isPreOrder || order.paymentMethod === 'FULL_ADVANCE') && (
                               <div>
                                 {order.preOrderPaymentStatus === 'PAYMENT_APPROVED' ? (
                                   <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-700/50 text-[9px] font-bold px-1.5 py-0.5 rounded inline-block">
@@ -1341,6 +1365,11 @@ export function OrdersClient({
                             PRE-ORDER
                           </span>
                         )}
+                        {order.paymentMethod === 'FULL_ADVANCE' && (
+                          <span className="bg-emerald-500/20 text-emerald-300 text-[9px] font-black px-1.5 py-0.5 rounded uppercase border border-emerald-500/40">
+                            FULL ADVANCE
+                          </span>
+                        )}
                       </div>
 
                       <OrderStatusBadge status={order.status} />
@@ -1367,6 +1396,16 @@ export function OrdersClient({
                         <span className="font-mono font-bold text-[#D4AF37] text-sm">
                           Rs. {order.totalAmount.toLocaleString()}
                         </span>
+                        {order.isPreOrder && (
+                          <span className="text-emerald-400 text-[10px] block font-sans font-medium">
+                            50% Adv: Rs. {(order.preOrderAdvanceAmount || 0).toLocaleString()}
+                          </span>
+                        )}
+                        {order.paymentMethod === 'FULL_ADVANCE' && (
+                          <span className="text-emerald-400 text-[10px] block font-sans font-medium">
+                            100% Full Advance
+                          </span>
+                        )}
                         <span className="text-[#FAF8F5]/60 text-[11px] block">
                           {order.shippingCity}
                         </span>

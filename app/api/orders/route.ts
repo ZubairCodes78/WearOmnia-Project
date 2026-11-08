@@ -9,6 +9,7 @@ import { getSiteSettings } from '@/lib/settings';
 import { normalizePhone, validatePhone } from '@/lib/phone';
 import { generateNextOrderNumber } from '@/lib/order-number';
 import { WEAROMNIA_CAMPAIGN, validatePreOrderCampaignCoupon } from '@/lib/preorder';
+import { paymentProofExists } from '@/lib/storage';
 
 export async function POST(req: Request) {
   try {
@@ -25,6 +26,9 @@ export async function POST(req: Request) {
       orderNotes,
       couponCode,
       items,
+      paymentMethod: requestedPaymentMethod,
+      screenshotKey,
+      selectedPaymentMethodId,
     } = body;
 
     if (!fullName || !phone || !province || !city || !address || !items || items.length === 0) {
@@ -87,8 +91,39 @@ export async function POST(req: Request) {
       subtotal += item.price * item.quantity;
     }
 
-    // 2. Shipping fee
+    // 2. Settings & Payment Option Handling
     const siteSettings = await getSiteSettings();
+    const isFullAdvance = requestedPaymentMethod === 'FULL_ADVANCE';
+
+    let activePaymentMethodRecord: any = null;
+    if (isFullAdvance) {
+      if (siteSettings.full_advance_payment_enabled === false) {
+        return NextResponse.json({ error: 'Full Advance Payment is currently not enabled.' }, { status: 400 });
+      }
+
+      if (!screenshotKey) {
+        return NextResponse.json({ error: 'Please upload your payment screenshot before placing the order.' }, { status: 400 });
+      }
+
+      const proofExists = await paymentProofExists(screenshotKey);
+      if (!proofExists) {
+        return NextResponse.json({ error: 'Uploaded payment screenshot could not be verified. Please re-upload your screenshot.' }, { status: 400 });
+      }
+
+      if (!selectedPaymentMethodId) {
+        return NextResponse.json({ error: 'Please select the payment method you transferred the payment to.' }, { status: 400 });
+      }
+
+      activePaymentMethodRecord = await prisma.preOrderPaymentMethod.findUnique({
+        where: { id: selectedPaymentMethodId },
+      });
+
+      if (!activePaymentMethodRecord || !activePaymentMethodRecord.isActive) {
+        return NextResponse.json({ error: 'Selected payment method is currently unavailable. Please choose another payment method.' }, { status: 400 });
+      }
+    }
+
+    // 3. Shipping fee
     let shippingFee = typeof siteSettings.flatShippingFee === 'number' ? siteSettings.flatShippingFee : 250;
     const rule = await prisma.shippingRule.findUnique({ where: { city } });
     if (rule) {
@@ -97,10 +132,10 @@ export async function POST(req: Request) {
       shippingFee = 0;
     }
 
-    // 3. COD fee
-    const codFee = siteSettings.codCharge || 0;
+    // 4. COD fee (Rs. 0 for full advance payment)
+    const codFee = isFullAdvance ? 0 : (siteSettings.codCharge || 0);
 
-    // 3. Process Coupon Discount
+    // 5. Process Coupon Discount
     let discountAmount = 0;
     if (couponCode) {
       const cleanCode = couponCode.trim().toUpperCase();
@@ -198,16 +233,22 @@ export async function POST(req: Request) {
       try {
         orderNumber = await generateNextOrderNumber(prisma);
 
-        // Payment Processing (COD Abstraction)
-        const paymentResult = await defaultPaymentGateway.processPayment({
-          orderNumber,
-          amount: totalAmount,
-          currency: 'PKR',
-          customerName: fullName,
-          customerPhone: finalPhone,
-          customerEmail: email,
-          description: 'WearOMNIA Cash On Delivery Order',
-        });
+        // Payment Processing (COD Abstraction for Cash on Delivery)
+        let resolvedPaymentMethod = 'CASH_ON_DELIVERY';
+        if (!isFullAdvance) {
+          const paymentResult = await defaultPaymentGateway.processPayment({
+            orderNumber,
+            amount: totalAmount,
+            currency: 'PKR',
+            customerName: fullName,
+            customerPhone: finalPhone,
+            customerEmail: email,
+            description: 'WearOMNIA Cash On Delivery Order',
+          });
+          resolvedPaymentMethod = paymentResult.paymentMethod;
+        } else {
+          resolvedPaymentMethod = 'FULL_ADVANCE';
+        }
 
         // 6. Create Order, Timeline, Items
         order = await prisma.order.create({
@@ -229,14 +270,21 @@ export async function POST(req: Request) {
             codCharges: codFee,
             totalAmount,
             amountPaid: 0,
-            paymentMethod: paymentResult.paymentMethod,
-            status: 'PENDING',
+            paymentMethod: resolvedPaymentMethod,
+            status: isFullAdvance ? 'PAYMENT_REVIEW_PENDING' : 'PENDING',
             couponCode: couponCode || null,
+            isPreOrder: false,
+            preOrderPaymentStatus: isFullAdvance ? 'PAYMENT_REVIEW_PENDING' : null,
+            preOrderPaymentMethodName: isFullAdvance ? activePaymentMethodRecord.displayName : null,
+            preOrderPaymentScreenshotUrl: isFullAdvance ? screenshotKey : null,
+            preOrderAdvancePercent: isFullAdvance ? 100 : null,
+            preOrderAdvanceAmount: isFullAdvance ? totalAmount : null,
+            preOrderRemainingAmount: isFullAdvance ? 0 : null,
             items: {
               create: items.map((i: any) => ({
                 productId: i.productId,
-                productTitle: i.title,
-                variantInfo: `Size: ${i.size}, Color: ${i.color}`,
+                productTitle: i.title || i.productTitle || 'Product',
+                variantInfo: i.variantInfo || (i.size || i.color ? `Size: ${i.size || '-'}, Color: ${i.color || '-'}` : 'Standard'),
                 unitPrice: i.price,
                 originalPrice: i.basePrice || i.price,
                 quantity: i.quantity,
@@ -245,9 +293,11 @@ export async function POST(req: Request) {
             },
             timeline: {
               create: {
-                status: 'PENDING',
-                note: 'Order placed by customer via Single Page Guest Checkout (COD)',
-                updatedBy: 'Customer (Guest)',
+                status: isFullAdvance ? 'PAYMENT_REVIEW_PENDING' : 'PENDING',
+                note: isFullAdvance
+                  ? `Order placed with 100% Full Advance Payment (Rs. ${totalAmount.toLocaleString()}) via ${activePaymentMethodRecord.displayName}. Payment proof screenshot pending manual review.`
+                  : 'Order placed by customer via Single Page Guest Checkout (COD)',
+                updatedBy: isFullAdvance ? 'Customer (Full Advance)' : 'Customer (Guest)',
               },
             },
           },
@@ -309,15 +359,17 @@ export async function POST(req: Request) {
     const adminNotif = await prisma.adminNotification.create({
       data: {
         orderId: order.id,
-        type: 'NEW_ORDER',
-        title: `🛍️ New Order ${orderNumber}`,
-        message: `New Order ${orderNumber} placed by ${fullName} from ${city} for Rs. ${totalAmount.toLocaleString()}`,
+        type: isFullAdvance ? 'PAYMENT_REVIEW_PENDING' : 'NEW_ORDER',
+        title: isFullAdvance ? `⏳ Payment Review: ${orderNumber}` : `🛍️ New Order ${orderNumber}`,
+        message: isFullAdvance
+          ? `Order ${orderNumber} placed by ${fullName} with 100% Full Advance Payment of Rs. ${totalAmount.toLocaleString()} via ${activePaymentMethodRecord.displayName}. Payment screenshot pending review.`
+          : `New Order ${orderNumber} placed by ${fullName} from ${city} for Rs. ${totalAmount.toLocaleString()}`,
       },
     }).catch(() => null);
 
     // Broadcast SSE Real-Time event to Admin Console
     broadcastAdminEvent({
-      type: 'NEW_ORDER',
+      type: isFullAdvance ? 'PAYMENT_PROOF_RESUBMITTED' : 'NEW_ORDER',
       order,
       notification: adminNotif,
       sound: true,
@@ -329,8 +381,10 @@ export async function POST(req: Request) {
       idempotencyKey: `NEW_ORDER:${order.id}`,
       type: 'NEW_ORDER',
       orderId: order.id,
-      title: `🛍️ New Order #${orderNumber}`,
-      body: `Rs. ${totalAmount.toLocaleString()} • ${fullName} (${city})`,
+      title: isFullAdvance ? `⏳ Payment Review: #${orderNumber}` : `🛍️ New Order #${orderNumber}`,
+      body: isFullAdvance
+        ? `Rs. ${totalAmount.toLocaleString()} Full Advance • ${fullName} (${city}) - Review Proof`
+        : `Rs. ${totalAmount.toLocaleString()} • ${fullName} (${city})`,
       data: {
         orderId: order.id,
         orderNumber: order.orderNumber,
@@ -340,7 +394,12 @@ export async function POST(req: Request) {
       },
     }).catch(err => console.error('[FCM Push Error]', err));
 
-    await recordAuditLog('ORDER_PLACED', 'Order', order.id, `Order ${orderNumber} placed for Rs. ${totalAmount}`);
+    await recordAuditLog(
+      isFullAdvance ? 'ORDER_PLACED_FULL_ADVANCE' : 'ORDER_PLACED',
+      'Order',
+      order.id,
+      `Order ${orderNumber} placed for Rs. ${totalAmount} via ${isFullAdvance ? `Full Advance (${activePaymentMethodRecord.displayName})` : 'COD'}`
+    );
 
     return NextResponse.json({
       success: true,

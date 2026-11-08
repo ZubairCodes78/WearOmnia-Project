@@ -36,10 +36,16 @@ export async function POST(req: Request) {
       }, { status: 400 });
     }
 
-    // 3b. Verify Pre-Order payment approval
+    // 3b. Verify Advance payment approval (Pre-Orders and Full Advance Regular Orders)
     if (order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED') {
       return NextResponse.json({
         error: `Cannot book courier shipment for Pre-Order ${order.orderNumber} until payment proof has been reviewed and approved. Current payment status: ${order.preOrderPaymentStatus || 'PENDING'}.`,
+      }, { status: 400 });
+    }
+
+    if (order.paymentMethod === 'FULL_ADVANCE' && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED') {
+      return NextResponse.json({
+        error: `Cannot book courier shipment for Order ${order.orderNumber} until 100% advance payment proof has been reviewed and approved. Current payment status: ${order.preOrderPaymentStatus || 'PENDING'}.`,
       }, { status: 400 });
     }
 
@@ -90,7 +96,9 @@ export async function POST(req: Request) {
     const pickupAddressCode = body.pickupAddressCode?.trim() || settings.postex_pickup_address_code?.trim() || undefined;
     const storeAddressCode = body.storeAddressCode?.trim() || settings.postex_store_address_code?.trim() || undefined;
 
-    const shipmentCodAmount = (order.isPreOrder && order.preOrderRemainingAmount != null)
+    const shipmentCodAmount = order.paymentMethod === 'FULL_ADVANCE'
+      ? 0
+      : (order.isPreOrder && order.preOrderRemainingAmount != null)
       ? order.preOrderRemainingAmount
       : order.totalAmount;
 

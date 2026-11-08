@@ -9,6 +9,10 @@ export const OrderStatusBadge: React.FC<{ status: string }> = ({ status }) => {
       colorClass = 'bg-amber-950/70 text-amber-300 border-amber-500/40 shadow-amber-900/20';
       label = 'Pending Confirmation';
       break;
+    case 'PAYMENT_REVIEW_PENDING':
+      colorClass = 'bg-amber-950/70 text-amber-300 border-amber-500/40 shadow-amber-900/20';
+      label = 'Payment Review Pending';
+      break;
     case 'CONFIRMED':
       colorClass = 'bg-blue-950/70 text-blue-300 border-blue-500/40 shadow-blue-900/20';
       label = 'Confirmed';

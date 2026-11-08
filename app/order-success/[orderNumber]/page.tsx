@@ -35,11 +35,15 @@ export default async function OrderSuccessPage({ params }: OrderSuccessPageProps
   );
 
   const isPreOrder = Boolean(order.isPreOrder);
-  const paymentStatus = order.preOrderPaymentStatus || 'PAYMENT_REVIEW_PENDING';
-  const isRejected = isPreOrder && paymentStatus === 'PAYMENT_REJECTED';
-  const isApproved = isPreOrder && paymentStatus === 'PAYMENT_APPROVED';
-  const isReviewPending = isPreOrder && !isRejected && !isApproved;
-  const advancePercent = order.preOrderAdvanceAmount && order.totalAmount
+  const isFullAdvance = order.paymentMethod === 'FULL_ADVANCE';
+  const isAdvancePayment = isPreOrder || isFullAdvance;
+  const paymentStatus = order.preOrderPaymentStatus || (isFullAdvance ? 'PAYMENT_REVIEW_PENDING' : null);
+  const isRejected = isAdvancePayment && paymentStatus === 'PAYMENT_REJECTED';
+  const isApproved = isAdvancePayment && paymentStatus === 'PAYMENT_APPROVED';
+  const isReviewPending = isAdvancePayment && !isRejected && !isApproved;
+  const advancePercent = isFullAdvance
+    ? 100
+    : order.preOrderAdvanceAmount && order.totalAmount
     ? Math.round((order.preOrderAdvanceAmount / order.totalAmount) * 100) || 50
     : 50;
 
@@ -71,24 +75,26 @@ export default async function OrderSuccessPage({ params }: OrderSuccessPageProps
             </div>
 
             <span className="font-calligraphy text-xs sm:text-sm text-champagne block tracking-[0.2em]">
-              {isPreOrder ? 'Exclusive Pre-Order' : "It's Official."}
+              {isPreOrder ? 'Exclusive Pre-Order' : isFullAdvance ? 'Full Advance Order' : "It's Official."}
             </span>
 
             <h1 className="font-serif text-3xl sm:text-5xl font-black text-offwhite tracking-tight">
               {isRejected
                 ? 'Action Required: Verify Payment Proof'
                 : isReviewPending
-                ? 'Pre-Order Received! Verifying Payment'
+                ? (isFullAdvance ? 'Order Received! Verifying Payment' : 'Pre-Order Received! Verifying Payment')
                 : 'Your Wardrobe Just Got A Little Happier.'}
             </h1>
 
             <p className="text-xs sm:text-sm text-offwhite/90 max-w-md mx-auto leading-relaxed pt-1 font-sans">
               {isRejected ? (
-                <>Your Pre-Order <strong className="text-champagne font-mono font-bold">{order.orderNumber}</strong> has been logged, but our finance team could not verify the uploaded payment proof. Please see below to resubmit.</>
+                <>Your order <strong className="text-champagne font-mono font-bold">{order.orderNumber}</strong> has been logged, but our finance team could not verify the uploaded payment proof. Please see below to resubmit.</>
               ) : isReviewPending ? (
-                <>Your Pre-Order <strong className="text-champagne font-mono font-bold">{order.orderNumber}</strong> has been submitted with your {advancePercent}% advance payment proof. Our team is verifying your payment and will confirm shortly via WhatsApp.</>
+                <>Your order <strong className="text-champagne font-mono font-bold">{order.orderNumber}</strong> has been submitted with your {isFullAdvance ? '100% full advance' : `${advancePercent}% advance`} payment proof. Our team is verifying your payment and will confirm shortly via WhatsApp.</>
               ) : isPreOrder ? (
                 <>Your {advancePercent}% advance payment for Pre-Order <strong className="text-champagne font-mono font-bold">{order.orderNumber}</strong> is confirmed! Your artisan piece is reserved and entering production.</>
+              ) : isFullAdvance ? (
+                <>Your full advance payment for order <strong className="text-champagne font-mono font-bold">{order.orderNumber}</strong> is confirmed! Your order is being prepared with care.</>
               ) : (
                 <>Now comes the hardest part: waiting for it to arrive. Your Cash On Delivery order <strong className="text-champagne font-mono font-bold">{order.orderNumber}</strong> is confirmed and being prepared with care.</>
               )}
@@ -102,6 +108,20 @@ export default async function OrderSuccessPage({ params }: OrderSuccessPageProps
                   </span>
                   <span className="bg-teal-950/80 px-4 py-2 rounded-full border border-champagne/30 flex items-center gap-2 shadow-sm">
                     <Truck className="w-4 h-4 text-champagne" /> Balance Due on Delivery (COD): Rs. {(order.preOrderRemainingAmount || 0).toLocaleString()}
+                  </span>
+                  {order.preOrderPaymentMethodName && (
+                    <span className="bg-teal-950/80 px-4 py-2 rounded-full border border-champagne/30 flex items-center gap-2 shadow-sm">
+                      Method: {order.preOrderPaymentMethodName}
+                    </span>
+                  )}
+                </>
+              ) : isFullAdvance ? (
+                <>
+                  <span className="bg-teal-950/80 px-4 py-2 rounded-full border border-champagne/30 flex items-center gap-2 shadow-sm">
+                    <ShieldCheck className="w-4 h-4 text-champagne" /> Full Advance (100%): Rs. {order.totalAmount.toLocaleString()}
+                  </span>
+                  <span className="bg-teal-950/80 px-4 py-2 rounded-full border border-champagne/30 flex items-center gap-2 shadow-sm">
+                    <Truck className="w-4 h-4 text-champagne" /> Balance Due on Delivery: Rs. 0
                   </span>
                   {order.preOrderPaymentMethodName && (
                     <span className="bg-teal-950/80 px-4 py-2 rounded-full border border-champagne/30 flex items-center gap-2 shadow-sm">
@@ -158,6 +178,11 @@ export default async function OrderSuccessPage({ params }: OrderSuccessPageProps
                   PRE-ORDER
                 </span>
               )}
+              {isFullAdvance && (
+                <span className="bg-emerald-600 text-white text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">
+                  FULL ADVANCE
+                </span>
+              )}
               <span className={`text-xs font-bold px-3 py-1 rounded-full uppercase ${
                 isApproved 
                   ? 'bg-emerald-600 text-white' 
@@ -165,7 +190,7 @@ export default async function OrderSuccessPage({ params }: OrderSuccessPageProps
                   ? 'bg-red-600 text-white' 
                   : 'bg-teal text-champagne'
               }`}>
-                {isPreOrder ? `Payment: ${paymentStatus.replace('PAYMENT_', '')}` : `Status: ${order.status}`}
+                {isAdvancePayment ? `Payment: ${paymentStatus?.replace('PAYMENT_', '') || 'PENDING'}` : `Status: ${order.status}`}
               </span>
             </div>
           </div>
@@ -231,7 +256,7 @@ export default async function OrderSuccessPage({ params }: OrderSuccessPageProps
             {isPreOrder && (
               <div className="pt-2 mt-2 border-t border-dashed border-sand space-y-1.5 bg-champagne/15 p-3 rounded-xl">
                 <div className="flex justify-between text-teal font-bold">
-                  <span>50% Advance Payable / Paid:</span>
+                  <span>{advancePercent}% Advance Payable / Paid:</span>
                   <span>Rs. {(order.preOrderAdvanceAmount || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-charcoal-muted text-[11px]">
@@ -245,7 +270,24 @@ export default async function OrderSuccessPage({ params }: OrderSuccessPageProps
               </div>
             )}
 
-            {!isPreOrder && (
+            {isFullAdvance && (
+              <div className="pt-2 mt-2 border-t border-dashed border-sand space-y-1.5 bg-emerald-500/10 p-3 rounded-xl border border-emerald-500/20">
+                <div className="flex justify-between text-emerald-900 font-bold">
+                  <span>100% Full Advance {isApproved ? 'Paid' : 'Payable / Submitted'}:</span>
+                  <span>Rs. {order.totalAmount.toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between text-charcoal-muted text-[11px]">
+                  <span>Payment Method:</span>
+                  <span className="font-medium text-teal">{order.preOrderPaymentMethodName || 'Manual Transfer'}</span>
+                </div>
+                <div className="flex justify-between text-emerald-950 font-extrabold text-sm pt-1 border-t border-emerald-500/20">
+                  <span>Remaining Balance on Delivery:</span>
+                  <span>Rs. 0</span>
+                </div>
+              </div>
+            )}
+
+            {!isPreOrder && !isFullAdvance && (
               <div className="flex justify-between text-lg font-bold text-teal pt-2 border-t border-sand">
                 <span>Total Payable (COD):</span>
                 <span>Rs. {order.totalAmount.toLocaleString()}</span>

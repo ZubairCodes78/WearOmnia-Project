@@ -29,7 +29,7 @@ export async function GET(
       },
     });
 
-    if (!order || !order.isPreOrder || !order.preOrderPaymentScreenshotUrl) {
+    if (!order || !order.preOrderPaymentScreenshotUrl) {
       return NextResponse.json(
         { error: 'Payment proof screenshot not found for this order' },
         { status: 404 }

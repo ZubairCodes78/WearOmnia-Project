@@ -100,15 +100,15 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        // Pre-order check: payment proof must be approved
-        if (order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED') {
+        // Advance payment check: payment proof must be approved
+        if ((order.isPreOrder || order.paymentMethod === 'FULL_ADVANCE' || order.status === 'PAYMENT_REVIEW_PENDING') && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED') {
           results.push({
             orderId: id,
             orderNumber: order.orderNumber,
             success: false,
             action: 'CONFIRM',
             skipped: true,
-            message: 'Pre-order payment proof is awaiting approval.',
+            message: 'Advance payment proof is awaiting approval.',
           });
           skippedCount++;
           continue;
@@ -212,15 +212,15 @@ export async function POST(req: NextRequest) {
           continue;
         }
 
-        // Pre-order check
-        if (order.isPreOrder && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED') {
+        // Advance payment check
+        if ((order.isPreOrder || order.paymentMethod === 'FULL_ADVANCE') && order.preOrderPaymentStatus !== 'PAYMENT_APPROVED') {
           results.push({
             orderId: id,
             orderNumber: order.orderNumber,
             success: false,
             action: 'CREATE_SHIPMENT',
             skipped: true,
-            message: 'Pre-order payment proof not approved.',
+            message: 'Advance payment proof not approved.',
           });
           skippedCount++;
           continue;
@@ -259,7 +259,9 @@ export async function POST(req: NextRequest) {
         }
 
         try {
-          const codAmount = (order.isPreOrder && order.preOrderRemainingAmount != null)
+          const codAmount = order.paymentMethod === 'FULL_ADVANCE'
+            ? 0
+            : (order.isPreOrder && order.preOrderRemainingAmount != null)
             ? order.preOrderRemainingAmount
             : order.totalAmount;
 

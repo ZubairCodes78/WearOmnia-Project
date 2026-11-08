@@ -37,8 +37,8 @@ export async function POST(
       return NextResponse.json({ error: 'Order not found' }, { status: 404 });
     }
 
-    if (!order.isPreOrder) {
-      return NextResponse.json({ error: 'This order is not a pre-order' }, { status: 400 });
+    if (!order.isPreOrder && order.paymentMethod !== 'FULL_ADVANCE' && order.status !== 'PAYMENT_REVIEW_PENDING') {
+      return NextResponse.json({ error: 'This order does not have payment review enabled' }, { status: 400 });
     }
 
     // Get Admin Name / ID from cookie
@@ -52,6 +52,7 @@ export async function POST(
 
     const now = new Date();
     const rejectionReason = reason.trim();
+    const isRegularFullAdvance = !order.isPreOrder && (order.paymentMethod === 'FULL_ADVANCE' || order.preOrderAdvancePercent === 100);
 
     const updatedOrder = await prisma.order.update({
       where: { id },
@@ -72,17 +73,21 @@ export async function POST(
 
     // Record audit log
     await recordAuditLog(
-      'PRE_ORDER_PAYMENT_REJECTED',
+      isRegularFullAdvance ? 'ORDER_PAYMENT_REJECTED' : 'PRE_ORDER_PAYMENT_REJECTED',
       'Order',
       order.id,
-      `Pre-Order ${order.orderNumber} payment rejected by ${adminName}. Reason: ${rejectionReason}`
+      `${isRegularFullAdvance ? 'Regular Order' : 'Pre-Order'} ${order.orderNumber} payment rejected by ${adminName} (${adminId || 'session'}). Reason: ${rejectionReason}`
     );
 
     // Send WhatsApp notification to customer
     try {
-      await NotificationService.sendPreOrderRejected(updatedOrder, rejectionReason);
+      if (isRegularFullAdvance) {
+        await NotificationService.sendPaymentRejected(updatedOrder, rejectionReason);
+      } else {
+        await NotificationService.sendPreOrderRejected(updatedOrder, rejectionReason);
+      }
     } catch (e) {
-      console.error('[WhatsApp Pre-order Rejection Notification Error]', e);
+      console.error('[WhatsApp Payment Rejection Notification Error]', e);
     }
 
     return NextResponse.json({

@@ -143,6 +143,14 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
   const [newMinAmount, setNewMinAmount] = useState('10000');
   const [addingRule, setAddingRule] = useState(false);
 
+  // Full Advance Payment Configuration State (Regular Products)
+  const [fullAdvanceEnabled, setFullAdvanceEnabled] = useState(
+    initialSettings.full_advance_payment_enabled !== false
+  );
+  const [fullAdvanceInstructions, setFullAdvanceInstructions] = useState(
+    initialSettings.full_advance_payment_instructions || 'Please transfer 100% of the total order amount to any of our official payment accounts below and upload the payment proof screenshot. Your order will be verified by our team before confirmation and dispatch.'
+  );
+
   // Pre-Order Configuration State
   const [preOrderEnabled, setPreOrderEnabled] = useState(false);
   const [preOrderAdvanceEnabled, setPreOrderAdvanceEnabled] = useState(true);
@@ -208,27 +216,41 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
     setSavingPreOrder(true);
     setPreOrderMessage('');
     try {
-      const res = await fetch('/api/admin/preorder/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          preorder_enabled: preOrderEnabled,
-          preorder_advance_enabled: preOrderAdvanceEnabled,
-          preorder_advance_percent: preOrderAdvancePercent,
-          preorder_payment_instructions: preOrderInstructions,
+      const [resPreorder, resSite] = await Promise.all([
+        fetch('/api/admin/preorder/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            preorder_enabled: preOrderEnabled,
+            preorder_advance_enabled: preOrderAdvanceEnabled,
+            preorder_advance_percent: preOrderAdvancePercent,
+            preorder_payment_instructions: preOrderInstructions,
+          }),
         }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        setPreOrderMessage(data.error || 'Failed to save pre-order settings');
+        fetch('/api/admin/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            ...settings,
+            full_advance_payment_enabled: fullAdvanceEnabled,
+            full_advance_payment_instructions: fullAdvanceInstructions,
+          }),
+        }),
+      ]);
+
+      const dataPre = await resPreorder.json();
+      const dataSite = await resSite.json();
+
+      if (!resPreorder.ok || !resSite.ok) {
+        setPreOrderMessage(dataPre.error || dataSite.error || 'Failed to save advance payment settings');
       } else {
-        setPreOrderMessage('✓ Pre-order settings saved successfully!');
+        setPreOrderMessage('✓ Advance payment & pre-order settings saved successfully!');
         broadcastSettingsUpdate();
         router.refresh();
         setTimeout(() => setPreOrderMessage(''), 4000);
       }
     } catch {
-      setPreOrderMessage('Network error saving pre-order settings');
+      setPreOrderMessage('Network error saving advance payment settings');
     } finally {
       setSavingPreOrder(false);
     }
@@ -475,12 +497,18 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
     setSavingSettings(true);
     setMessage('');
     try {
+      const payload = {
+        ...settings,
+        full_advance_payment_enabled: fullAdvanceEnabled,
+        full_advance_payment_instructions: fullAdvanceInstructions,
+      };
       const res = await fetch('/api/admin/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings),
+        body: JSON.stringify(payload),
       });
       if (res.ok) {
+        setSettings(payload);
         setMessage('Settings saved successfully! Storefront updated live.');
         broadcastSettingsUpdate();
         router.refresh();
@@ -1527,7 +1555,7 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
       </div>
 
       {/* ========================================================================= */}
-      {/* SECTION: PRE-ORDER & ADVANCE PAYMENT CONFIGURATION */}
+      {/* SECTION: ADVANCE PAYMENT & PRE-ORDERS CONFIGURATION */}
       {/* ========================================================================= */}
       <div className="bg-[#141414] border border-[#262626] rounded-xl p-6 space-y-6 mt-8">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-[#262626] pb-4">
@@ -1537,10 +1565,10 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
             </div>
             <div>
               <h2 className="font-serif text-lg font-semibold text-[#FAF8F5]">
-                Pre-Order & Advance Payment System
+                Advance Payment &amp; Pre-Orders System
               </h2>
               <p className="text-xs text-[#A3A3A3]">
-                Configure advance percentage, manage bank accounts &amp; digital wallets, and customer payment proof guidelines.
+                Configure 100% Full Advance Payment for regular products, pre-order advance rules, and official bank/wallet accounts.
               </p>
             </div>
           </div>
@@ -1551,7 +1579,7 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
             className="flex items-center justify-center gap-2 bg-[#D4AF37] hover:bg-white text-black px-5 py-2.5 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all disabled:opacity-50 shrink-0"
           >
             {savingPreOrder ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {savingPreOrder ? 'Saving...' : 'Save Pre-Order Settings'}
+            {savingPreOrder ? 'Saving...' : 'Save Advance Payment Settings'}
           </button>
         </div>
 
@@ -1565,7 +1593,49 @@ export function SettingsClient({ initialSettings, initialShippingRules, initialA
           </div>
         )}
 
-        {/* Global Pre-Order Toggles & Fields */}
+        {/* 1. Full Advance Payment (Regular Products) Configuration */}
+        <div className="bg-[#1A1A1A] p-5 rounded-xl border border-[#262626] space-y-4">
+          <div className="flex items-center justify-between border-b border-[#262626] pb-3">
+            <div>
+              <span className="bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
+                Regular Products Checkout
+              </span>
+              <h3 className="font-serif text-base font-semibold text-[#FAF8F5] mt-1">
+                Full Advance Payment (100%)
+              </h3>
+              <p className="text-xs text-[#737373]">
+                Offer customers the choice between Cash on Delivery (COD) and 100% Full Advance Payment via bank transfer or mobile wallet for normal products.
+              </p>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer shrink-0">
+              <input
+                type="checkbox"
+                checked={fullAdvanceEnabled}
+                onChange={(e) => setFullAdvanceEnabled(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-[#262626] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+            </label>
+          </div>
+
+          <div className={fullAdvanceEnabled ? 'opacity-100 transition-opacity space-y-2' : 'opacity-40 pointer-events-none transition-opacity space-y-2'}>
+            <label className="block text-xs text-[#A3A3A3] uppercase font-bold mb-1.5">
+              Full Advance Payment Instructions (Shown at Checkout)
+            </label>
+            <textarea
+              rows={3}
+              value={fullAdvanceInstructions}
+              onChange={(e) => setFullAdvanceInstructions(e.target.value)}
+              placeholder="Instructions displayed to customers when Full Advance Payment is selected at checkout..."
+              className="w-full bg-[#141414] border border-[#262626] rounded-xl p-3.5 text-xs text-[#FAF8F5] placeholder-[#737373] focus:outline-none focus:border-[#D4AF37]"
+            />
+            <p className="text-[11px] text-[#737373]">
+              Payment details and QR codes from the active payment accounts below will be automatically rendered on the checkout page.
+            </p>
+          </div>
+        </div>
+
+        {/* 2. Global Pre-Order Toggles & Fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#1A1A1A] p-5 rounded-xl border border-[#262626]">
           <div className="space-y-4">
             <div className="flex items-center justify-between bg-[#141414] p-4 rounded-xl border border-[#262626]">
