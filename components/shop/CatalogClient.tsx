@@ -5,6 +5,7 @@ import { ProductCard } from './ProductCard';
 import { QuickViewModal } from './QuickViewModal';
 import { ChevronLeft, ChevronRight, Grid2X2, Grid3X3, Heart, LayoutGrid, X, Search } from 'lucide-react';
 import { useWishlist } from '@/context/WishlistContext';
+import type { ProductCampaignPricingResult } from '@/lib/campaign-math';
 
 interface ProductItem {
   id: string;
@@ -13,6 +14,7 @@ interface ProductItem {
   description: string;
   basePrice: number;
   discountPrice?: number | null;
+  campaignPricing?: ProductCampaignPricingResult | null;
   sku: string;
   isNewArrival: boolean;
   isBestSeller: boolean;
@@ -118,8 +120,8 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
         return true;
       })
       .sort((a, b) => {
-        const priceA = a.discountPrice || a.basePrice;
-        const priceB = b.discountPrice || b.basePrice;
+        const priceA = a.campaignPricing?.effectiveSellingPrice ?? a.discountPrice ?? a.basePrice;
+        const priceB = b.campaignPricing?.effectiveSellingPrice ?? b.discountPrice ?? b.basePrice;
         if (sortBy === 'price-low') return priceA - priceB;
         if (sortBy === 'price-high') return priceB - priceA;
         if (sortBy === 'bestseller') return b.isBestSeller ? 1 : -1;
@@ -374,6 +376,7 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
               images={product.images}
               categoryName={product.category?.name}
               variants={product.variants}
+              campaignPricing={product.campaignPricing}
               onQuickView={() => setQuickViewProduct(product)}
             />
           ))}

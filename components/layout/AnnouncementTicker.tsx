@@ -1,19 +1,29 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { useSettings } from '@/context/SettingsContext';
+
+export interface CampaignAnnouncementItem {
+  text: string;
+  href: string;
+}
 
 interface AnnouncementTickerProps {
   initialAdvancePercent?: number;
+  campaignAnnouncements?: CampaignAnnouncementItem[];
 }
 
 export const AnnouncementTicker: React.FC<AnnouncementTickerProps> = ({
   initialAdvancePercent,
+  campaignAnnouncements = [],
 }) => {
   const { settings } = useSettings();
 
-  // If announcement header is disabled in Admin Panel, completely hide
-  if (settings.announcementEnabled === false) {
+  const hasCampaignAnnouncements = campaignAnnouncements.length > 0;
+
+  // If announcement header is disabled in Admin Panel AND no campaign announcement is enabled, completely hide
+  if (settings.announcementEnabled === false && !hasCampaignAnnouncements) {
     return null;
   }
 
@@ -45,58 +55,72 @@ export const AnnouncementTicker: React.FC<AnnouncementTickerProps> = ({
   interface MessageItem {
     text: string;
     highlight: boolean;
+    href?: string;
   }
 
   const items: MessageItem[] = [];
 
+  // 0. Active Seasonal Campaign Announcements (highest visibility)
+  for (const campAnn of campaignAnnouncements) {
+    if (campAnn.text) {
+      items.push({
+        text: campAnn.text.toUpperCase(),
+        highlight: true,
+        href: campAnn.href,
+      });
+    }
+  }
+
   // 1. Pre-Order Announcement
-  if (showPreOrder) {
-    const isBeforeLaunch = settings.preorder_campaign_phase === 'BEFORE_LAUNCH';
+  if (settings.announcementEnabled !== false) {
+    if (showPreOrder) {
+      const isBeforeLaunch = settings.preorder_campaign_phase === 'BEFORE_LAUNCH';
+      items.push({
+        text: isBeforeLaunch ? 'PRE-ORDER STARTING' : 'PRE-ORDER IS NOW LIVE',
+        highlight: true,
+      });
+    }
+
+    // 2. Advance Payment Announcement (always shows actual admin-configured percentage)
+    if (showAdvancePayment) {
+      items.push({
+        text: `${advancePercent}% ADVANCE PAYMENT REQUIRED`,
+        highlight: true,
+      });
+    }
+
+    // 3. Free Delivery Announcement (reflects configured free shipping threshold)
+    const freeDeliveryLabel =
+      settings.freeShippingThreshold && settings.freeShippingThreshold > 0
+        ? `FREE DELIVERY (OVER RS. ${settings.freeShippingThreshold.toLocaleString()})`
+        : 'FREE DELIVERY';
+
     items.push({
-      text: isBeforeLaunch ? 'PRE-ORDER STARTING' : 'PRE-ORDER IS NOW LIVE',
-      highlight: true,
+      text: freeDeliveryLabel,
+      highlight: false,
     });
-  }
 
-  // 2. Advance Payment Announcement (always shows actual admin-configured percentage)
-  if (showAdvancePayment) {
-    items.push({
-      text: `${advancePercent}% ADVANCE PAYMENT REQUIRED`,
-      highlight: true,
-    });
-  }
+    // 4. Configured Store Announcement from Admin Panel (sanitized to prevent contradictory messages)
+    if (settings.announcementText && typeof settings.announcementText === 'string') {
+      const rawParts = settings.announcementText
+        .split(/[•|]/)
+        .map((s) => s.trim())
+        .filter(Boolean);
 
-  // 3. Free Delivery Announcement (reflects configured free shipping threshold)
-  const freeDeliveryLabel =
-    settings.freeShippingThreshold && settings.freeShippingThreshold > 0
-      ? `FREE DELIVERY (OVER RS. ${settings.freeShippingThreshold.toLocaleString()})`
-      : 'FREE DELIVERY';
-
-  items.push({
-    text: freeDeliveryLabel,
-    highlight: false,
-  });
-
-  // 4. Configured Store Announcement from Admin Panel (sanitized to prevent contradictory messages)
-  if (settings.announcementText && typeof settings.announcementText === 'string') {
-    const rawParts = settings.announcementText
-      .split(/[•|]/)
-      .map((s) => s.trim())
-      .filter(Boolean);
-
-    for (const part of rawParts) {
-      const upper = part.toUpperCase();
-      // Drop any pre-order text if pre-order is disabled or campaign expired
-      const mentionsPreOrder = /PRE-?ORDER|ADVANCE PAYMENT|RESERVATION/i.test(part);
-      if (!showPreOrder && mentionsPreOrder) {
-        continue;
-      }
-      // Avoid duplicate free-delivery phrases or already included items
-      const isDuplicate =
-        items.some((it) => it.text.toUpperCase() === upper) ||
-        upper.includes('FREE DELIVERY');
-      if (!isDuplicate) {
-        items.push({ text: upper, highlight: false });
+      for (const part of rawParts) {
+        const upper = part.toUpperCase();
+        // Drop any pre-order text if pre-order is disabled or campaign expired
+        const mentionsPreOrder = /PRE-?ORDER|ADVANCE PAYMENT|RESERVATION/i.test(part);
+        if (!showPreOrder && mentionsPreOrder) {
+          continue;
+        }
+        // Avoid duplicate free-delivery phrases or already included items
+        const isDuplicate =
+          items.some((it) => it.text.toUpperCase() === upper) ||
+          upper.includes('FREE DELIVERY');
+        if (!isDuplicate) {
+          items.push({ text: upper, highlight: false });
+        }
       }
     }
   }
@@ -110,15 +134,24 @@ export const AnnouncementTicker: React.FC<AnnouncementTickerProps> = ({
     <div key={keyPrefix} className="inline-flex items-center gap-3 sm:gap-4 px-3 sm:px-4 shrink-0">
       {items.map((item, idx) => (
         <React.Fragment key={`${keyPrefix}-${idx}`}>
-          <span
-            className={
-              item.highlight
-                ? 'font-bold text-[#D4AF37] tracking-[0.16em] sm:tracking-[0.2em]'
-                : 'font-semibold text-[#FAF8F5] tracking-[0.16em] sm:tracking-[0.2em]'
-            }
-          >
-            {item.text}
-          </span>
+          {item.href ? (
+            <Link
+              href={item.href}
+              className="font-bold text-[#D4AF37] hover:underline tracking-[0.16em] sm:tracking-[0.2em]"
+            >
+              {item.text} →
+            </Link>
+          ) : (
+            <span
+              className={
+                item.highlight
+                  ? 'font-bold text-[#D4AF37] tracking-[0.16em] sm:tracking-[0.2em]'
+                  : 'font-semibold text-[#FAF8F5] tracking-[0.16em] sm:tracking-[0.2em]'
+              }
+            >
+              {item.text}
+            </span>
+          )}
           <span className="text-[#D4AF37]/40 text-[9px] select-none shrink-0">•</span>
         </React.Fragment>
       ))}
@@ -140,9 +173,15 @@ export const AnnouncementTicker: React.FC<AnnouncementTickerProps> = ({
         <span className="inline-flex items-center gap-2 sm:gap-3 flex-wrap justify-center font-medium">
           {items.map((item, idx) => (
             <React.Fragment key={`static-${idx}`}>
-              <span className={item.highlight ? 'font-bold text-[#D4AF37]' : 'font-semibold text-[#FAF8F5]'}>
-                {item.text}
-              </span>
+              {item.href ? (
+                <Link href={item.href} className="font-bold text-[#D4AF37] hover:underline">
+                  {item.text} →
+                </Link>
+              ) : (
+                <span className={item.highlight ? 'font-bold text-[#D4AF37]' : 'font-semibold text-[#FAF8F5]'}>
+                  {item.text}
+                </span>
+              )}
               {idx < items.length - 1 && (
                 <span className="text-[#D4AF37]/40 text-[9px] select-none shrink-0">•</span>
               )}

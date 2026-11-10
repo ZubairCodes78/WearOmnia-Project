@@ -1154,6 +1154,12 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 <span>Subtotal:</span>
                 <span>Rs. {order.subtotal.toLocaleString()}</span>
               </div>
+              {((order.campaignDiscountAmount && order.campaignDiscountAmount > 0) || order.campaignName) && (
+                <div className="flex justify-between text-emerald-300">
+                  <span>Campaign ({order.campaignName || 'Seasonal Sale'}):</span>
+                  <span>- Rs. {(order.campaignDiscountAmount || 0).toLocaleString()}</span>
+                </div>
+              )}
               {order.discountAmount > 0 && (
                 <div className="flex justify-between text-[#D4AF37]">
                   <span>Discount {order.couponCode && `(${order.couponCode})`}:</span>

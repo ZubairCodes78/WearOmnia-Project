@@ -31,6 +31,7 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
+  Sparkles,
 } from 'lucide-react';
 import { AdminNotificationProvider } from '@/context/AdminNotificationContext';
 import { NotificationCenter } from '@/components/admin/NotificationCenter';
@@ -61,6 +62,7 @@ const NAV_GROUPS: NavGroup[] = [
       { name: 'Customers', href: '/admin/customers', icon: Users },
       { name: 'Reviews', href: '/admin/reviews', icon: Star },
       { name: 'Coupons', href: '/admin/coupons', icon: Tag },
+      { name: 'Campaigns', href: '/admin/campaigns', icon: Sparkles },
     ],
   },
   {

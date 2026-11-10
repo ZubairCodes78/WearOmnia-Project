@@ -10,6 +10,7 @@ import { useWishlist } from '@/context/WishlistContext';
 import { useSettings } from '@/context/SettingsContext';
 import { useFlyToCart } from '@/components/cart/FlyToCartProvider';
 import { getEffectiveSellingPrice, calculateDiscountPercent } from '@/lib/pricing';
+import type { ProductCampaignPricingResult } from '@/lib/campaign-math';
 
 export interface ProductCardProps {
   id: string;
@@ -26,6 +27,7 @@ export interface ProductCardProps {
   images: { url: string; altText?: string | null }[];
   categoryName?: string;
   variants: { size: string; color: string; stock: number }[];
+  campaignPricing?: ProductCampaignPricingResult | null;
   onQuickView?: () => void;
 }
 
@@ -44,6 +46,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   images,
   categoryName,
   variants,
+  campaignPricing,
   onQuickView,
 }) => {
   const { addToCart } = useCart();
@@ -65,8 +68,15 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   const secondaryImage = hasSecondaryImage ? images[1].url : null;
 
   const inWishlist = isInWishlist(id);
-  const activePrice = getEffectiveSellingPrice({ basePrice, discountPrice });
-  const discountPercent = calculateDiscountPercent(basePrice, activePrice);
+  const originalDisplayPrice = campaignPricing ? campaignPricing.originalPrice : basePrice;
+  const activePrice = campaignPricing
+    ? campaignPricing.effectiveSellingPrice
+    : getEffectiveSellingPrice({ basePrice, discountPrice });
+  const discountPercent = campaignPricing
+    ? campaignPricing.discountPercent
+    : calculateDiscountPercent(basePrice, activePrice);
+  const activeCampaign = campaignPricing?.appliedCampaign || null;
+  const totalSavedAmount = Math.max(0, originalDisplayPrice - activePrice);
 
   const handleQuickAdd = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -153,12 +163,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 Out of Stock
               </span>
             ) : null}
+            {activeCampaign && (
+              <span className="badge-3d bg-champagne text-[#06191B] text-[9px] font-black uppercase tracking-widest px-2.5 py-1 rounded-full border border-[#06191B]/20 shadow-md">
+                {activeCampaign.badgeText || 'SALE'}
+              </span>
+            )}
             {discountPercent > 0 && (
               <span className="badge-3d bg-teal-900 text-champagne text-[10px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full border border-champagne/40 shadow-md">
                 {discountPercent}% OFF
               </span>
             )}
-            {!effectivePreOrder && inStock && stockQuantity > 0 && discountPercent === 0 && isNewArrival && (
+            {!effectivePreOrder && !activeCampaign && inStock && stockQuantity > 0 && discountPercent === 0 && isNewArrival && (
               <span className="badge-3d bg-teal text-champagne text-[9px] uppercase font-black tracking-widest px-2.5 py-1 rounded-full border border-champagne/40 shadow-sm">
                 New Arrival
               </span>
@@ -209,13 +224,17 @@ export const ProductCard: React.FC<ProductCardProps> = ({
             <span className="font-sans font-black text-sm sm:text-base text-teal">
               Rs. {activePrice.toLocaleString()}
             </span>
-            {discountPercent > 0 && (
+            {totalSavedAmount > 0 && (
               <>
                 <span className="text-xs text-charcoal-muted line-through font-medium">
-                  Rs. {basePrice.toLocaleString()}
+                  Rs. {originalDisplayPrice.toLocaleString()}
                 </span>
                 <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-extrabold uppercase tracking-wider bg-champagne-100 text-teal-900 border border-champagne/50">
-                  {discountPercent}% OFF
+                  {activeCampaign?.discountType === 'FIXED' && discountPercent > 0
+                    ? `Save Rs. ${totalSavedAmount.toLocaleString()} (${discountPercent}%)`
+                    : discountPercent > 0
+                    ? `${discountPercent}% OFF`
+                    : `Save Rs. ${totalSavedAmount.toLocaleString()}`}
                 </span>
               </>
             )}

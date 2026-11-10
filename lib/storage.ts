@@ -14,6 +14,7 @@ import {
   optimizeSizeGuideImage,
   optimizeQrCodeImage,
   optimizePaymentProofImage,
+  optimizeCampaignBanner,
 } from './image-optimizer';
 
 const ALLOWED_MIME_TYPES: Record<string, string> = {
@@ -29,6 +30,7 @@ const MAX_PROOF_SIZE = 5 * 1024 * 1024; // 5MB
 const PROOF_STORAGE_DIR = path.join(process.cwd(), 'uploads', 'payment-proofs');
 const QR_STORAGE_DIR = path.join(process.cwd(), 'uploads', 'qr-codes');
 const PRODUCT_IMAGES_DIR = path.join(process.cwd(), 'public', 'uploads', 'products');
+const CAMPAIGN_IMAGES_DIR = path.join(process.cwd(), 'public', 'uploads', 'campaigns');
 
 async function ensureDir(dirPath: string) {
   try {
@@ -178,6 +180,7 @@ export async function deleteFile(keyOrUrl: string): Promise<{ success: boolean; 
     if (
       isR2Configured() &&
       (keyOrUrl.startsWith('products/') ||
+        keyOrUrl.startsWith('campaigns/') ||
         keyOrUrl.startsWith('payment-proofs/') ||
         keyOrUrl.startsWith('qr-codes/'))
     ) {
@@ -541,4 +544,87 @@ export async function saveQrCode(
 export function getQrCodePath(filename: string): string {
   const safeFilename = path.basename(filename);
   return path.join(QR_STORAGE_DIR, safeFilename);
+}
+
+/**
+ * Validates, optimizes, and stores a seasonal campaign banner asset (desktop or mobile).
+ * Uses Cloudflare R2 under `campaigns/` prefix, with local disk fallback in development.
+ */
+export async function saveCampaignAsset(
+  buffer: Buffer,
+  mimeType: string,
+  variant: 'desktop' | 'mobile' = 'desktop'
+): Promise<{ success: boolean; url?: string; error?: string }> {
+  const cleanMime = mimeType.toLowerCase();
+  if (!['image/jpeg', 'image/jpg', 'image/png', 'image/webp'].includes(cleanMime)) {
+    return {
+      success: false,
+      error: 'Invalid campaign asset format. Only JPEG, PNG, and WebP images are permitted.',
+    };
+  }
+
+  const validation = await validateImageBuffer(buffer, cleanMime, 10 * 1024 * 1024);
+  if (!validation.valid) {
+    return { success: false, error: validation.error || 'Invalid campaign image asset.' };
+  }
+
+  let optimizedBuffer = buffer;
+  let finalMime = 'image/webp';
+  let finalExt = '.webp';
+
+  try {
+    const optRes = await optimizeCampaignBanner(buffer, variant);
+    optimizedBuffer = optRes.buffer;
+    finalMime = optRes.mimeType;
+    finalExt = optRes.extension;
+  } catch (optErr) {
+    console.warn('[Campaign Asset Optimizer] Fallback to original validated image:', optErr);
+    finalExt = ALLOWED_MIME_TYPES[cleanMime] || '.jpg';
+    finalMime = cleanMime;
+  }
+
+  if (isR2Configured()) {
+    const uuid = crypto.randomUUID();
+    const key = `campaigns/${variant}_${uuid}${finalExt}`;
+
+    const r2Res = await uploadFile({
+      buffer: optimizedBuffer,
+      key,
+      mimeType: finalMime,
+      cacheControl: 'public, max-age=31536000, immutable',
+    });
+
+    if (r2Res.success && r2Res.url) {
+      return { success: true, url: r2Res.url };
+    }
+
+    if (isServerless) {
+      return {
+        success: false,
+        error: `Cloudflare R2 upload failed: ${r2Res.error}`,
+      };
+    }
+    console.warn('[R2 Warning] Campaign asset upload fell back to local disk:', r2Res.error);
+  } else if (isServerless) {
+    return {
+      success: false,
+      error:
+        'Serverless deployment (Vercel) detected: Cloudflare R2 is not configured for campaign assets.',
+    };
+  }
+
+  try {
+    await ensureDir(CAMPAIGN_IMAGES_DIR);
+    const uuid = crypto.randomUUID();
+    const filename = `${variant}_${uuid}${finalExt}`;
+    const filePath = path.join(CAMPAIGN_IMAGES_DIR, filename);
+
+    await fs.writeFile(filePath, optimizedBuffer);
+    return { success: true, url: `/uploads/campaigns/${filename}` };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: `Failed to save campaign image locally: ${err?.message || 'Filesystem error'}`,
+    };
+  }
 }

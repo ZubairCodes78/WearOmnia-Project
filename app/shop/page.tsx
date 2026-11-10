@@ -2,6 +2,7 @@ import React from 'react';
 import { prisma } from '@/lib/prisma';
 import { CatalogClient } from '@/components/shop/CatalogClient';
 import { generateCategoryMetadata, generateBreadcrumbSchema } from '@/lib/seo';
+import { getLiveCampaigns, applyCampaignsToProducts } from '@/lib/campaigns';
 
 interface ShopPageProps {
   searchParams: Promise<{
@@ -37,12 +38,13 @@ export async function generateMetadata({ searchParams }: ShopPageProps) {
   return generateCategoryMetadata(title, description, '/shop', isFiltered);
 }
 
-export const revalidate = 60; // ISR: revalidate every 60 seconds
+export const dynamic = 'force-dynamic';
 
 export default async function ShopPage({ searchParams }: ShopPageProps) {
   const params = await searchParams;
+  const now = new Date();
 
-  const [products, categories] = await Promise.all([
+  const [rawProducts, categories, liveCampaigns] = await Promise.all([
     prisma.product.findMany({
       where: { status: 'PUBLISHED' },
       include: {
@@ -56,7 +58,10 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
     prisma.category.findMany({
       select: { id: true, name: true, slug: true },
     }),
+    getLiveCampaigns(now),
   ]);
+
+  const products = applyCampaignsToProducts(rawProducts, liveCampaigns);
 
   const breadcrumbsSchema = generateBreadcrumbSchema([
     { name: 'Home', url: '/' },

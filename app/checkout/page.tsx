@@ -116,6 +116,8 @@ export default function CheckoutPage() {
   const [screenshotUploading, setScreenshotUploading] = useState(false);
   const [screenshotError, setScreenshotError] = useState('');
   const [copiedAccount, setCopiedAccount] = useState(false);
+  const [serverQuote, setServerQuote] = useState<any | null>(null);
+  const [quoteNotice, setQuoteNotice] = useState<string>('');
 
   // Fetch payment configuration & methods for both regular and pre-order products
   useEffect(() => {
@@ -132,21 +134,88 @@ export default function CheckoutPage() {
       .catch(console.error);
   }, []);
 
+  // Synchronize live server-authoritative pricing & active campaign rules cleanly
+  useEffect(() => {
+    if (cart.length === 0) {
+      setServerQuote(null);
+      return;
+    }
+
+    let cancelled = false;
+    const paymentMode = isPreOrderCart
+      ? 'PRE_ORDER_ADVANCE'
+      : selectedPaymentType === 'FULL_ADVANCE'
+      ? 'FULL_ADVANCE'
+      : 'CASH_ON_DELIVERY';
+
+    fetch('/api/checkout/price-check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: cart.map((i) => ({
+          productId: i.productId,
+          title: i.title,
+          size: i.size,
+          color: i.color,
+          quantity: i.quantity,
+          price: i.price,
+          sku: i.sku,
+        })),
+        couponCode: appliedCoupon?.code || null,
+        isPreOrder: isPreOrderCart,
+        city: formData.city,
+        paymentMethod: paymentMode,
+      }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        if (!cancelled && data.success && data.quote) {
+          setServerQuote(data.quote);
+          if (data.quote.couponError && appliedCoupon) {
+            setCouponError(data.quote.couponError);
+            applyCoupon(null);
+          } else if (data.quote.stackingMessage) {
+            setQuoteNotice(data.quote.stackingMessage);
+          } else {
+            setQuoteNotice('');
+          }
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      cancelled = true;
+    };
+  }, [cart, formData.city, appliedCoupon?.code, selectedPaymentType, isPreOrderCart]);
+
   const isFullAdvanceAvailable = Boolean(
     settings?.full_advance_payment_enabled !== false &&
     preOrderConfig?.fullAdvanceEnabled !== false &&
     (preOrderConfig?.paymentMethods?.length || 0) > 0
   );
 
-  const shippingFee = subtotal >= siteSettings.freeShippingThreshold || cart.length === 0 ? 0 : siteSettings.flatShippingFee;
+  const effectiveSubtotal = serverQuote ? serverQuote.subtotal : subtotal;
+  const effectiveDiscountAmount = serverQuote ? serverQuote.couponDiscountAmount : discountAmount;
+  const effectiveCampaignDiscount = serverQuote ? serverQuote.campaignDiscountAmount : 0;
+  const shippingFee = serverQuote
+    ? serverQuote.shippingFee
+    : effectiveSubtotal >= siteSettings.freeShippingThreshold || cart.length === 0
+    ? 0
+    : siteSettings.flatShippingFee;
   const isAdvancePaymentSelected = isPreOrderCart || selectedPaymentType === 'FULL_ADVANCE';
-  const codFee = isAdvancePaymentSelected ? 0 : siteSettings.codCharge;
+  const codFee = serverQuote
+    ? serverQuote.codCharges
+    : isAdvancePaymentSelected
+    ? 0
+    : siteSettings.codCharge;
   const isAdvanceRequired = Boolean(settings?.preorder_advance_enabled !== false && (preOrderConfig?.advancePercent || settings?.preorder_advance_percent || 50) > 0);
   const effectiveAdvancePercent = isAdvanceRequired ? (preOrderConfig?.advancePercent || settings?.preorder_advance_percent || 50) : 0;
 
-  const totalAmount = isAdvancePaymentSelected
-    ? Math.max(0, subtotal - discountAmount + shippingFee)
-    : Math.max(0, subtotal - discountAmount + shippingFee + codFee);
+  const totalAmount = serverQuote
+    ? serverQuote.totalAmount
+    : isAdvancePaymentSelected
+    ? Math.max(0, effectiveSubtotal - effectiveDiscountAmount + shippingFee)
+    : Math.max(0, effectiveSubtotal - effectiveDiscountAmount + shippingFee + codFee);
 
   const preOrderAdvanceAmount = isPreOrderCart && isAdvanceRequired
     ? Math.round((totalAmount * effectiveAdvancePercent) / 100)
@@ -156,26 +225,50 @@ export default function CheckoutPage() {
     ? Math.max(0, totalAmount - preOrderAdvanceAmount)
     : 0;
 
-  const totalOriginalPrice = cart.reduce((acc, item) => acc + ((item.basePrice || item.price) * item.quantity), 0);
-  const youSaveDiscount = Math.max(0, totalOriginalPrice - subtotal);
+  const totalOriginalPrice = serverQuote
+    ? serverQuote.originalRetailSubtotal
+    : cart.reduce((acc, item) => acc + ((item.basePrice || item.price) * item.quantity), 0);
+  const youSaveDiscount = Math.max(0, totalOriginalPrice - effectiveSubtotal);
 
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!couponInput.trim()) return;
     setCouponError('');
+    setQuoteNotice('');
     setCouponLoading(true);
 
     try {
       const res = await fetch('/api/coupons/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: couponInput.trim(), subtotal }),
+        body: JSON.stringify({
+          code: couponInput.trim(),
+          subtotal: effectiveSubtotal,
+          isPreOrder: isPreOrderCart,
+          city: formData.city,
+          paymentMethod: isPreOrderCart
+            ? 'PRE_ORDER_ADVANCE'
+            : selectedPaymentType === 'FULL_ADVANCE'
+            ? 'FULL_ADVANCE'
+            : 'CASH_ON_DELIVERY',
+          items: cart.map((i) => ({
+            productId: i.productId,
+            title: i.title,
+            size: i.size,
+            color: i.color,
+            quantity: i.quantity,
+            price: i.price,
+            sku: i.sku,
+          })),
+        }),
       });
       const data = await res.json();
       if (!res.ok) {
         setCouponError(data.error || 'Invalid promo code');
       } else {
         applyCoupon(data);
+        if (data.quote) setServerQuote(data.quote);
+        if (data.stackingMessage) setQuoteNotice(data.stackingMessage);
         setCouponInput('');
       }
     } catch (err) {
@@ -324,6 +417,7 @@ export default function CheckoutPage() {
           price: i.price,
           sku: i.sku,
         })),
+        expectedTotalAmount: totalAmount,
       };
 
       if (isPreOrderCart || selectedPaymentType === 'FULL_ADVANCE') {
@@ -340,6 +434,13 @@ export default function CheckoutPage() {
       const data = await res.json();
 
       if (!res.ok) {
+        if (res.status === 409 && data.code === 'PRICE_CHANGED' && data.quote) {
+          setServerQuote(data.quote);
+          if (data.quote.couponError && appliedCoupon) {
+            applyCoupon(null);
+            setCouponError(data.quote.couponError);
+          }
+        }
         setFormErrors({ _form: data.error || 'Failed to place order' });
         setIsSubmitting(false);
       } else {
@@ -1052,8 +1153,12 @@ export default function CheckoutPage() {
 
                 {/* Items List with Interactive Quantity Adjusters */}
                 <div className="space-y-4 max-h-64 sm:max-h-72 overflow-y-auto pr-1">
-                  {cart.map((item) => {
-                    const itemDiscount = calculateDiscountPercent(item.basePrice, item.price);
+                  {cart.map((item, idx) => {
+                    const serverLine = serverQuote?.items?.[idx];
+                    const liveUnitPrice = serverLine ? serverLine.unitPrice : item.price;
+                    const liveOrigPrice = serverLine ? serverLine.originalPrice : (item.basePrice || item.price);
+                    const itemDiscount = calculateDiscountPercent(liveOrigPrice, liveUnitPrice);
+                    const appliedLineCampaign = serverLine?.appliedCampaign || null;
                     return (
                     <div key={item.id} className="flex items-center gap-3 bg-sand/40 p-2.5 rounded-2xl border border-sand/80">
                       {/* Product Thumbnail - 4:5 aspect ratio preserved, compact 56px mobile / 64px desktop */}
@@ -1073,13 +1178,18 @@ export default function CheckoutPage() {
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 flex-wrap">
                           <h4 className="font-serif text-xs font-bold text-teal line-clamp-2 leading-snug">
                             {item.title}
                           </h4>
                           {item.isPreOrder && (
                             <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-amber-500/20 text-amber-900 shrink-0">
                               Pre-Order
+                            </span>
+                          )}
+                          {appliedLineCampaign && (
+                            <span className="px-1.5 py-0.5 rounded text-[8px] font-black uppercase bg-champagne text-[#06191B] shrink-0">
+                              {appliedLineCampaign.badgeText || 'SALE'}
                             </span>
                           )}
                         </div>
@@ -1121,12 +1231,12 @@ export default function CheckoutPage() {
 
                       <div className="text-right shrink-0">
                         <p className="text-xs font-bold text-teal">
-                          Rs. {(item.price * item.quantity).toLocaleString()}
+                          Rs. {(liveUnitPrice * item.quantity).toLocaleString()}
                         </p>
                         {itemDiscount > 0 && (
                           <div className="flex flex-col items-end mt-0.5">
                             <span className="text-[10px] text-charcoal-muted line-through">
-                              Rs. {(item.basePrice * item.quantity).toLocaleString()}
+                              Rs. {(liveOrigPrice * item.quantity).toLocaleString()}
                             </span>
                             <span className="text-[9px] font-extrabold uppercase px-1 py-0.2 rounded bg-champagne-200 text-teal">
                               {itemDiscount}% OFF
@@ -1142,17 +1252,25 @@ export default function CheckoutPage() {
                 {/* Coupon Code Drawer */}
                 <div className="pt-4 border-t border-sand/80">
                   {appliedCoupon ? (
-                    <div className="flex items-center justify-between bg-champagne-100 text-teal-900 p-3 rounded-xl text-xs border border-champagne">
-                      <span className="flex items-center gap-2 font-semibold">
-                        <Tag className="w-4 h-4 text-teal" /> {appliedCoupon.code} (-Rs. {discountAmount.toLocaleString()})
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => applyCoupon(null)}
-                        className="text-teal font-bold hover:underline text-[11px]"
-                      >
-                        Remove
-                      </button>
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between bg-champagne-100 text-teal-900 p-3 rounded-xl text-xs border border-champagne">
+                        <span className="flex items-center gap-2 font-semibold">
+                          <Tag className="w-4 h-4 text-teal" /> {appliedCoupon.code} (-Rs. {effectiveDiscountAmount.toLocaleString()})
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            applyCoupon(null);
+                            setQuoteNotice('');
+                          }}
+                          className="text-teal font-bold hover:underline text-[11px]"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                      {quoteNotice && (
+                        <p className="text-[11px] text-teal font-medium">{quoteNotice}</p>
+                      )}
                     </div>
                   ) : (
                     <div className="space-y-2">
@@ -1180,14 +1298,20 @@ export default function CheckoutPage() {
 
                 {/* Financial Summary */}
                 <div className="space-y-2 pt-4 border-t border-sand/80 text-xs text-charcoal">
+                  {effectiveCampaignDiscount > 0 && (
+                    <div className="flex justify-between text-emerald-700 font-semibold">
+                      <span>Seasonal Campaign Savings:</span>
+                      <span>- Rs. {effectiveCampaignDiscount.toLocaleString()}</span>
+                    </div>
+                  )}
                   <div className="flex justify-between">
                     <span className="text-charcoal-muted">Subtotal:</span>
-                    <span className="font-semibold">Rs. {subtotal.toLocaleString()}</span>
+                    <span className="font-semibold">Rs. {effectiveSubtotal.toLocaleString()}</span>
                   </div>
-                  {appliedCoupon && (
+                  {appliedCoupon && effectiveDiscountAmount > 0 && (
                     <div className="flex justify-between text-teal font-semibold">
-                      <span>Discount:</span>
-                      <span>- Rs. {discountAmount.toLocaleString()}</span>
+                      <span>Coupon Discount ({appliedCoupon.code}):</span>
+                      <span>- Rs. {effectiveDiscountAmount.toLocaleString()}</span>
                     </div>
                   )}
                   <div className="flex justify-between">
@@ -1207,7 +1331,7 @@ export default function CheckoutPage() {
 
                   {isPreOrderCart ? (
                     <div className="space-y-2.5 pt-2 border-t border-sand/80 font-sans">
-                      {totalOriginalPrice > subtotal && (
+                      {totalOriginalPrice > effectiveSubtotal && (
                         <div className="flex justify-between text-charcoal-muted">
                           <span>Original Price:</span>
                           <span className="line-through font-mono">Rs. {totalOriginalPrice.toLocaleString()}</span>
@@ -1215,7 +1339,7 @@ export default function CheckoutPage() {
                       )}
                       <div className="flex justify-between text-teal font-semibold">
                         <span>Pre-order Price:</span>
-                        <span className="font-mono">Rs. {subtotal.toLocaleString()}</span>
+                        <span className="font-mono">Rs. {effectiveSubtotal.toLocaleString()}</span>
                       </div>
                       {youSaveDiscount > 0 && (
                         <div className="flex justify-between text-emerald-700 font-semibold">
@@ -1223,10 +1347,10 @@ export default function CheckoutPage() {
                           <span className="font-mono">Rs. {youSaveDiscount.toLocaleString()}</span>
                         </div>
                       )}
-                      {appliedCoupon && (
+                      {appliedCoupon && effectiveDiscountAmount > 0 && (
                         <div className="flex justify-between text-teal font-semibold">
                           <span>Coupon Discount:</span>
-                          <span className="font-mono">- Rs. {discountAmount.toLocaleString()}</span>
+                          <span className="font-mono">- Rs. {effectiveDiscountAmount.toLocaleString()}</span>
                         </div>
                       )}
                       <div className="flex justify-between text-charcoal-muted text-[11px]">

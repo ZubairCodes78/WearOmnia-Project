@@ -28,17 +28,21 @@ import { SizeGuideModal } from '@/components/shop/SizeGuideModal';
 import { ProductImageZoom } from '@/components/shop/ProductImageZoom';
 import { useSettings } from '@/context/SettingsContext';
 import { getEffectiveSellingPrice, calculateDiscountPercent } from '@/lib/pricing';
+import { CampaignCountdown } from '@/components/campaigns/CampaignCountdown';
+import type { ProductCampaignPricingResult } from '@/lib/campaign-math';
 
 interface ProductClientProps {
   product: any;
   relatedProducts: any[];
   defaultAdvancePercent?: number;
+  serverTimeMs?: number;
 }
 
 export const ProductClient: React.FC<ProductClientProps> = ({
   product,
   relatedProducts,
   defaultAdvancePercent = 50,
+  serverTimeMs,
 }) => {
   const { settings } = useSettings();
   const { addToCart } = useCart();
@@ -70,8 +74,15 @@ export const ProductClient: React.FC<ProductClientProps> = ({
   const basePrice = typeof product?.basePrice === 'number'
     ? product.basePrice
     : (Number(product?.basePrice) || 0);
-  const activePrice = getEffectiveSellingPrice({ basePrice, discountPrice: product?.discountPrice });
-  const discountPercent = calculateDiscountPercent(basePrice, activePrice);
+  const campaignPricing: ProductCampaignPricingResult | null = product?.campaignPricing || null;
+  const activePrice = campaignPricing
+    ? campaignPricing.effectiveSellingPrice
+    : getEffectiveSellingPrice({ basePrice, discountPrice: product?.discountPrice });
+  const discountPercent = campaignPricing
+    ? campaignPricing.discountPercent
+    : calculateDiscountPercent(basePrice, activePrice);
+  const appliedCampaign = campaignPricing?.appliedCampaign || null;
+  const totalSavedAmount = Math.max(0, basePrice - activePrice);
   const isWish = isInWishlist(product?.id || '');
   const isPreOrder = Boolean(product?.isPreOrder && settings?.preorder_enabled);
 
@@ -236,18 +247,39 @@ export const ProductClient: React.FC<ProductClientProps> = ({
 
               {/* Price & Rating */}
               <div className="flex flex-wrap items-center justify-between gap-3 mt-4 pb-4 border-b border-sand/80">
-                <div className="space-y-1">
-                  <div className="flex items-baseline gap-3">
+                <div className="space-y-1.5">
+                  {appliedCampaign && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/sale/${appliedCampaign.slug}`}
+                        className="inline-flex items-center px-2.5 py-0.5 rounded-full bg-champagne text-[#06191B] text-[10px] font-black uppercase tracking-widest hover:bg-champagne-400 transition-colors"
+                      >
+                        {appliedCampaign.badgeText || appliedCampaign.publicTitle}
+                      </Link>
+                      {appliedCampaign.endDate && (
+                        <CampaignCountdown
+                          targetDateIso={appliedCampaign.endDate}
+                          serverTimeMs={serverTimeMs}
+                          label="Sale ends in"
+                          variant="light"
+                        />
+                      )}
+                    </div>
+                  )}
+
+                  <div className="flex items-baseline gap-3 flex-wrap">
                     <span className="font-sans text-3xl sm:text-4xl font-black text-teal">
                       Rs. {activePrice.toLocaleString()}
                     </span>
-                    {discountPercent > 0 && (
+                    {totalSavedAmount > 0 && (
                       <>
                         <span className="text-sm sm:text-base text-charcoal-muted line-through font-medium">
                           Rs. {basePrice.toLocaleString()}
                         </span>
                         <span className="badge-3d bg-teal text-champagne text-xs sm:text-sm font-black uppercase tracking-wider px-3 py-1 rounded-full border border-champagne/40 shadow-sm">
-                          {discountPercent}% OFF
+                          {discountPercent > 0
+                            ? `${discountPercent}% OFF • Save Rs. ${totalSavedAmount.toLocaleString()}`
+                            : `Save Rs. ${totalSavedAmount.toLocaleString()}`}
                         </span>
                       </>
                     )}
@@ -705,6 +737,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                   images={p.images}
                   categoryName={p.category?.name}
                   variants={p.variants}
+                  campaignPricing={p.campaignPricing}
                 />
               ))}
             </div>

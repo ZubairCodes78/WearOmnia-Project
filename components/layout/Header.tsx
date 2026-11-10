@@ -8,9 +8,11 @@ import { ShoppingBag, Heart, Search, Menu, X, Truck, MapPin, Phone } from 'lucid
 import { useCart } from '@/context/CartContext';
 import { useWishlist } from '@/context/WishlistContext';
 import { useSettings } from '@/context/SettingsContext';
-import { AnnouncementTicker } from '@/components/layout/AnnouncementTicker';
+import { AnnouncementTicker, CampaignAnnouncementItem } from '@/components/layout/AnnouncementTicker';
 
-export const Header: React.FC = () => {
+export const Header: React.FC<{ campaignAnnouncements?: CampaignAnnouncementItem[] }> = ({
+  campaignAnnouncements = [],
+}) => {
   const pathname = usePathname();
   const { settings } = useSettings();
   const { cart, setIsCartOpen } = useCart();
@@ -73,7 +75,7 @@ export const Header: React.FC = () => {
   return (
     <>
       {/* Top Announcement Bar — Continuous Infinite Ticker */}
-      <AnnouncementTicker />
+      <AnnouncementTicker campaignAnnouncements={campaignAnnouncements} />
 
       {/* Main Sticky Header with Premium Glass Effect */}
       <header

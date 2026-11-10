@@ -1,6 +1,8 @@
 import React from 'react';
 
 import { getCampaignPhase } from '@/lib/preorder';
+import { getLiveCampaigns, applyCampaignsToProducts } from '@/lib/campaigns';
+import { CampaignBanner } from '@/components/campaigns/CampaignBanner';
 
 // ─── Coming Soon Mode ────────────────────────────────────────────────────────
 // Enabled when COMING_SOON/NEXT_PUBLIC_COMING_SOON is set and before campaign start (29 Sep 2026).
@@ -43,7 +45,7 @@ async function getLaunchProducts() {
   }
 }
 
-export const revalidate = 60; // ISR: revalidate every 60 seconds
+export const dynamic = 'force-dynamic';
 
 export default async function HomePage() {
   // ── Coming Soon Mode ─────────────────────────────────────────────────────
@@ -52,15 +54,42 @@ export default async function HomePage() {
   }
 
   // ── Live Storefront ──────────────────────────────────────────────────────
-  const launchProducts = await getLaunchProducts();
+  const now = new Date();
+  const [rawProducts, liveCampaigns] = await Promise.all([
+    getLaunchProducts(),
+    getLiveCampaigns(now),
+  ]);
+
+  const launchProducts = applyCampaignsToProducts(rawProducts, liveCampaigns);
+  const heroReplacementCampaign = liveCampaigns.find((c) => c.showBanner && c.replaceHeroSlider) || null;
+  const featuredBannerCampaign =
+    !heroReplacementCampaign
+      ? liveCampaigns.find((c) => c.showBanner) || null
+      : null;
 
   return (
     <PageTransition>
       <h1 className="sr-only">WearOMNIA — Contemporary Modest Clothing &amp; Luxury Modest Fashion in Pakistan</h1>
 
-      <div className="space-y-20 sm:space-y-24 lg:space-y-28 bg-offwhite pb-16">
-        {/* Editorial Hero Slider */}
-        <HeroSlider />
+      <div className="space-y-16 sm:space-y-20 lg:space-y-24 bg-offwhite pb-16">
+        {/* Editorial Hero Slider (replaced only if explicitly configured by Administrator) */}
+        {heroReplacementCampaign ? (
+          <CampaignBanner
+            campaign={heroReplacementCampaign}
+            serverTimeMs={now.getTime()}
+            isHeroMode={true}
+          />
+        ) : (
+          <HeroSlider />
+        )}
+
+        {/* Active Seasonal Campaign Showcase Banner */}
+        {featuredBannerCampaign && (
+          <CampaignBanner
+            campaign={featuredBannerCampaign}
+            serverTimeMs={now.getTime()}
+          />
+        )}
 
         {/* Exclusive Single Product Launch Showcase */}
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -94,6 +123,7 @@ export default async function HomePage() {
                 images={product.images}
                 categoryName={product.category?.name}
                 variants={product.variants}
+                campaignPricing={product.campaignPricing}
               />
             ))}
           </div>

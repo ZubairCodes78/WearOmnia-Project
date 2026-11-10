@@ -181,6 +181,12 @@ model Order {
   courier          String?             // PostEx, TCS, Leopards, M&P, Other
   codCharges       Float               @default(0)
   couponCode       String?
+  campaignId       String?
+  campaignName     String?
+  campaignSlug     String?
+  campaignIds      String[]            @default([])
+  campaignDiscountAmount Float         @default(0)
+  couponDiscountAmount   Float         @default(0)
   isReadByAdmin    Boolean             @default(false)
   amountPaid       Float               @default(0) // 0 until payment approved (for Pre-orders, equals advance amount; for COD, paid at delivery)
   // Pre-order Payment Fields
@@ -230,6 +236,7 @@ model Order {
   @@index([trackingWhatsAppSentAt])
   @@index([deliveredWhatsAppSentAt])
   @@index([deliveredAt])
+  @@index([campaignId])
 }
 
 model Shipment {
@@ -273,17 +280,22 @@ model Shipment {
 }
 
 model OrderItem {
-  id           String   @id @default(uuid())
-  orderId      String
-  order        Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId    String?
-  product      Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
-  productTitle String
-  variantInfo  String?
-  unitPrice    Float
-  originalPrice Float?   // Original retail price before discount
-  quantity     Int
-  subtotal     Float
+  id                      String   @id @default(uuid())
+  orderId                 String
+  order                   Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId               String?
+  product                 Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productTitle            String
+  variantInfo             String?
+  unitPrice               Float
+  originalPrice           Float?   // Original retail price before discount
+  campaignId              String?
+  campaignName            String?
+  campaignDiscountPerUnit Float    @default(0)
+  quantity                Int
+  subtotal                Float
+
+  @@index([campaignId])
 }
 
 model OrderTimeline {
@@ -519,3 +531,69 @@ model AdminPushNotificationLog {
   @@index([createdAt])
 }
 
+
+// ─────────────────────────────────────────────────────
+// Seasonal Sale & Campaign Management System
+// ─────────────────────────────────────────────────────
+
+model Campaign {
+  id                     String    @id @default(uuid())
+  name                   String
+  slug                   String    @unique
+  internalDescription    String?
+  publicTitle            String
+  badgeText              String?   @default("SALE")
+
+  // Server-Authoritative Scheduling (Asia/Karachi)
+  status                 String    @default("DRAFT") // DRAFT | SCHEDULED | ACTIVE | PAUSED | COMPLETED | CANCELLED
+  startDate              DateTime?
+  endDate                DateTime?
+  timezone               String    @default("Asia/Karachi")
+  priority               Int       @default(10)
+
+  // Scope & Product Eligibility
+  scopeType              String    @default("SELECTED_PRODUCTS") // STOREWIDE | COLLECTIONS | CATEGORIES | SELECTED_PRODUCTS
+  includedProductIds     String[]  @default([])
+  excludedProductIds     String[]  @default([])
+  includedCollectionIds  String[]  @default([])
+  includedCategoryIds    String[]  @default([])
+
+  // Pre-Order & Coupon Stacking Rules
+  allowPreOrderProducts  Boolean   @default(false)
+  couponStackingMode     String    @default("BLOCK_COUPONS") // BLOCK_COUPONS | ALLOW_COUPONS | BEST_DISCOUNT_ONLY
+
+  // Discount Mechanics
+  discountType           String    @default("PERCENTAGE") // PERCENTAGE | FIXED
+  discountValue          Float     @default(0)
+  maxDiscountAmount      Float?
+
+  // Storefront Display & Assets (Uploaded to R2)
+  bannerTitle            String?
+  bannerSubtitle         String?
+  desktopBannerUrl       String?
+  mobileBannerUrl        String?
+  showBanner             Boolean   @default(true)
+  replaceHeroSlider      Boolean   @default(false)
+  announcementEnabled    Boolean   @default(false)
+  announcementText       String?
+  ctaText                String?   @default("Shop Sale")
+  ctaLink                String?
+  showCountdown          Boolean   @default(true)
+
+  // Campaign Landing Page & SEO
+  landingPageEnabled     Boolean   @default(true)
+  landingPageDescription String?
+  seoTitle               String?
+  seoDescription         String?
+  previewToken           String?   @unique
+
+  createdBy              String?
+  updatedBy              String?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([status])
+  @@index([startDate, endDate])
+  @@index([priority])
+  @@index([slug])
+}

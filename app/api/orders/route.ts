@@ -10,6 +10,7 @@ import { normalizePhone, validatePhone } from '@/lib/phone';
 import { generateNextOrderNumber } from '@/lib/order-number';
 import { WEAROMNIA_CAMPAIGN, validatePreOrderCampaignCoupon } from '@/lib/preorder';
 import { paymentProofExists } from '@/lib/storage';
+import { calculateServerCartQuote } from '@/lib/campaigns';
 
 export async function POST(req: Request) {
   try {
@@ -29,6 +30,7 @@ export async function POST(req: Request) {
       paymentMethod: requestedPaymentMethod,
       screenshotKey,
       selectedPaymentMethodId,
+      expectedTotalAmount,
     } = body;
 
     if (!fullName || !phone || !province || !city || !address || !items || items.length === 0) {
@@ -85,13 +87,7 @@ export async function POST(req: Request) {
       }
     }
 
-    // 1. Calculate subtotal
-    let subtotal = 0;
-    for (const item of items) {
-      subtotal += item.price * item.quantity;
-    }
-
-    // 2. Settings & Payment Option Handling
+    // 1. Settings & Payment Option Handling
     const siteSettings = await getSiteSettings();
     const isFullAdvance = requestedPaymentMethod === 'FULL_ADVANCE';
 
@@ -123,61 +119,45 @@ export async function POST(req: Request) {
       }
     }
 
-    // 3. Shipping fee
-    let shippingFee = typeof siteSettings.flatShippingFee === 'number' ? siteSettings.flatShippingFee : 250;
-    const rule = await prisma.shippingRule.findUnique({ where: { city } });
-    if (rule) {
-      shippingFee = subtotal >= rule.freeShippingMinAmount ? 0 : rule.charge;
-    } else if (subtotal >= (typeof siteSettings.freeShippingThreshold === 'number' ? siteSettings.freeShippingThreshold : 10000)) {
-      shippingFee = 0;
+    // 2. Server-Authoritative Pricing, Seasonal Campaign Discounts, Coupon Stacking & Shipping
+    const quote = await calculateServerCartQuote({
+      items,
+      couponCode: couponCode || null,
+      isPreOrderOrder: false,
+      city,
+      paymentMethod: isFullAdvance ? 'FULL_ADVANCE' : 'CASH_ON_DELIVERY',
+      now: new Date(),
+    });
+
+    // Guard against expired campaigns or stale totals shown in customer browser during checkout
+    if (
+      expectedTotalAmount !== undefined &&
+      expectedTotalAmount !== null &&
+      Math.round(Number(expectedTotalAmount)) !== quote.totalAmount
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Campaign pricing or order totals changed since you opened checkout. Please review the updated summary before placing your order.',
+          code: 'PRICE_CHANGED',
+          quote,
+        },
+        { status: 409 }
+      );
     }
 
-    // 4. COD fee (Rs. 0 for full advance payment)
-    const codFee = isFullAdvance ? 0 : (siteSettings.codCharge || 0);
+    const subtotal = quote.subtotal;
+    const shippingFee = quote.shippingFee;
+    const codFee = quote.codCharges;
+    const discountAmount = quote.couponDiscountAmount;
+    const totalAmount = quote.totalAmount;
 
-    // 5. Process Coupon Discount
-    let discountAmount = 0;
-    if (couponCode) {
-      const cleanCode = couponCode.trim().toUpperCase();
-      let allowCoupon = true;
-
-      if (cleanCode === WEAROMNIA_CAMPAIGN.code) {
-        const campaignCheck = validatePreOrderCampaignCoupon(cleanCode);
-        if (!campaignCheck.valid) {
-          allowCoupon = false;
-        }
-      }
-
-      if (allowCoupon) {
-        const coupon = await prisma.coupon.findUnique({
-          where: { code: cleanCode },
-        });
-
-        if (
-          coupon &&
-          coupon.isActive &&
-          (!coupon.expiryDate || new Date() <= coupon.expiryDate) &&
-          subtotal >= coupon.minOrderAmount
-        ) {
-          if (coupon.discountType === 'PERCENTAGE') {
-            discountAmount = (subtotal * coupon.discountValue) / 100;
-            if (coupon.maxDiscountAmount && discountAmount > coupon.maxDiscountAmount) {
-              discountAmount = coupon.maxDiscountAmount;
-            }
-          } else {
-            discountAmount = coupon.discountValue;
-          }
-          discountAmount = Math.min(discountAmount, subtotal);
-
-          await prisma.coupon.update({
-            where: { id: coupon.id },
-            data: { usedCount: { increment: 1 } },
-          });
-        }
-      }
+    if (quote.couponValid && quote.couponCode) {
+      await prisma.coupon.update({
+        where: { code: quote.couponCode },
+        data: { usedCount: { increment: 1 } },
+      }).catch(() => {});
     }
-
-    const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee + codFee);
 
     // 4. Customer linkage
     let customer = await prisma.customer.findUnique({ where: { phone: finalPhone } });
@@ -272,7 +252,13 @@ export async function POST(req: Request) {
             amountPaid: 0,
             paymentMethod: resolvedPaymentMethod,
             status: isFullAdvance ? 'PAYMENT_REVIEW_PENDING' : 'PENDING',
-            couponCode: couponCode || null,
+            couponCode: quote.couponCode || null,
+            campaignId: quote.primaryCampaignId,
+            campaignName: quote.primaryCampaignName,
+            campaignSlug: quote.primaryCampaignSlug,
+            campaignIds: quote.campaignIds,
+            campaignDiscountAmount: quote.campaignDiscountAmount,
+            couponDiscountAmount: quote.couponDiscountAmount,
             isPreOrder: false,
             preOrderPaymentStatus: isFullAdvance ? 'PAYMENT_REVIEW_PENDING' : null,
             preOrderPaymentMethodName: isFullAdvance ? activePaymentMethodRecord.displayName : null,
@@ -281,14 +267,17 @@ export async function POST(req: Request) {
             preOrderAdvanceAmount: isFullAdvance ? totalAmount : null,
             preOrderRemainingAmount: isFullAdvance ? 0 : null,
             items: {
-              create: items.map((i: any) => ({
+              create: quote.items.map((i) => ({
                 productId: i.productId,
-                productTitle: i.title || i.productTitle || 'Product',
-                variantInfo: i.variantInfo || (i.size || i.color ? `Size: ${i.size || '-'}, Color: ${i.color || '-'}` : 'Standard'),
-                unitPrice: i.price,
-                originalPrice: i.basePrice || i.price,
+                productTitle: i.productTitle,
+                variantInfo: i.variantInfo,
+                unitPrice: i.unitPrice,
+                originalPrice: i.originalPrice,
+                campaignId: i.campaignId,
+                campaignName: i.campaignName,
+                campaignDiscountPerUnit: i.campaignDiscountPerUnit,
                 quantity: i.quantity,
-                subtotal: i.price * i.quantity,
+                subtotal: i.subtotal,
               })),
             },
             timeline: {

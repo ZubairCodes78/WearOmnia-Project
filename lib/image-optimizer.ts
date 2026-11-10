@@ -231,3 +231,54 @@ export async function optimizePaymentProofImage(buffer: Buffer): Promise<{
     };
   }
 }
+
+/**
+ * Optimizes seasonal campaign banners:
+ * - Desktop: up to 1920x900
+ * - Mobile: up to 1080x1350
+ * - Converts to WebP (quality 85) with smart subsampling
+ */
+export async function optimizeCampaignBanner(
+  buffer: Buffer,
+  variant: 'desktop' | 'mobile' = 'desktop'
+): Promise<ImageOptimizationResult> {
+  const originalSize = buffer.length;
+  const maxWidth = variant === 'mobile' ? 1080 : 1920;
+  const maxHeight = variant === 'mobile' ? 1350 : 900;
+
+  const image = sharp(buffer).rotate();
+  const metadata = await image.metadata();
+
+  let pipeline = image;
+  if (
+    (metadata.width && metadata.width > maxWidth) ||
+    (metadata.height && metadata.height > maxHeight)
+  ) {
+    pipeline = pipeline.resize({
+      width: maxWidth,
+      height: maxHeight,
+      fit: 'inside',
+      withoutEnlargement: true,
+    });
+  }
+
+  const optimizedBuffer = await pipeline
+    .webp({
+      quality: 85,
+      effort: 4,
+      smartSubsample: true,
+    })
+    .toBuffer();
+
+  const optimizedMeta = await sharp(optimizedBuffer).metadata();
+
+  return {
+    buffer: optimizedBuffer,
+    mimeType: 'image/webp',
+    extension: '.webp',
+    width: optimizedMeta.width,
+    height: optimizedMeta.height,
+    originalSize,
+    optimizedSize: optimizedBuffer.length,
+  };
+}

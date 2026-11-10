@@ -13,6 +13,7 @@ import { ToastProvider } from '@/components/layout/ToastProvider';
 import { FlyToCartProvider } from '@/components/cart/FlyToCartProvider';
 import { getPublicSiteSettings } from '@/lib/settings';
 import { getCampaignPhase } from '@/lib/preorder';
+import { getLiveCampaigns } from '@/lib/campaigns';
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics';
 
 // ─── Fonts via next/font (self-hosted, no render-blocking external requests) ──
@@ -148,7 +149,17 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const initialSettings = await getPublicSiteSettings();
+  const [initialSettings, liveCampaigns] = await Promise.all([
+    getPublicSiteSettings(),
+    getLiveCampaigns(),
+  ]);
+
+  const campaignAnnouncements = liveCampaigns
+    .filter((c) => c.announcementEnabled && (c.announcementText || c.publicTitle))
+    .map((c) => ({
+      text: c.announcementText || `${c.publicTitle} — ${c.discountType === 'PERCENTAGE' ? `${c.discountValue}% OFF` : `Rs. ${c.discountValue} OFF`}`,
+      href: c.ctaLink || `/sale/${c.slug}`,
+    }));
 
   // ── Coming Soon: stripped layout — no Header / Footer / Cart ──────────────
   if (isComingSoonMode()) {
@@ -203,7 +214,7 @@ export default async function RootLayout({
             <WishlistProvider>
               <ToastProvider>
                 <FlyToCartProvider>
-                  <Header />
+                  <Header campaignAnnouncements={campaignAnnouncements} />
                   <main className="flex-1">{children}</main>
                   <CartDrawer />
                   <WhatsAppFloat />

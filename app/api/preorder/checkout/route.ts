@@ -8,8 +8,8 @@ import { getSiteSettings, getPreOrderSettings } from '@/lib/settings';
 import { normalizePhone, validatePhone } from '@/lib/phone';
 import { generateNextOrderNumber } from '@/lib/order-number';
 import { calculatePreOrderAmounts } from '@/lib/preorder';
-import { validateCouponServer } from '@/lib/coupons';
 import { paymentProofExists } from '@/lib/storage';
+import { calculateServerCartQuote } from '@/lib/campaigns';
 
 export const runtime = 'nodejs';
 
@@ -30,6 +30,7 @@ export async function POST(req: Request) {
       items,
       screenshotKey,
       selectedPaymentMethodId,
+      expectedTotalAmount,
     } = body;
 
     // 1. Basic validation
@@ -156,56 +157,56 @@ export async function POST(req: Request) {
       }
     }
 
-    // 8. Server-side totals calculation
-    let subtotal = 0;
-    const validatedItems = items.map((item: any) => {
-      const prod = productMap.get(item.productId);
-      const unitPrice = prod ? (prod.discountPrice ?? prod.basePrice) : item.price;
-      const originalPrice = prod ? prod.basePrice : item.price;
-      const itemSubtotal = unitPrice * item.quantity;
-      subtotal += itemSubtotal;
-
-      return {
-        productId: item.productId,
-        productTitle: prod ? prod.title : item.title,
-        variantInfo: `Size: ${item.size || 'Standard'}, Color: ${item.color || 'Standard'}`,
-        unitPrice,
-        originalPrice,
-        quantity: item.quantity,
-        subtotal: itemSubtotal,
-      };
+    // 8. Server-authoritative totals, pre-order campaign eligibility & coupon stacking
+    const quote = await calculateServerCartQuote({
+      items,
+      couponCode: couponCode || null,
+      isPreOrderOrder: true,
+      city,
+      paymentMethod: 'PRE_ORDER_ADVANCE',
+      now: new Date(),
     });
 
-    // 9. Shipping Fee
-    const siteSettings = await getSiteSettings();
-    let shippingFee = typeof siteSettings.flatShippingFee === 'number' ? siteSettings.flatShippingFee : 250;
-    const rule = await prisma.shippingRule.findUnique({ where: { city } });
-    if (rule) {
-      shippingFee = subtotal >= rule.freeShippingMinAmount ? 0 : rule.charge;
-    } else if (subtotal >= (typeof siteSettings.freeShippingThreshold === 'number' ? siteSettings.freeShippingThreshold : 10000)) {
-      shippingFee = 0;
+    if (
+      expectedTotalAmount !== undefined &&
+      expectedTotalAmount !== null &&
+      Math.round(Number(expectedTotalAmount)) !== quote.totalAmount
+    ) {
+      return NextResponse.json(
+        {
+          error:
+            'Campaign pricing or order totals changed while checking out. Please review your refreshed summary before confirming.',
+          code: 'PRICE_CHANGED',
+          quote,
+        },
+        { status: 409 }
+      );
     }
 
-    // 10. Coupon calculation via central server validation
-    let discountAmount = 0;
-    if (couponCode) {
-      const couponValidation = await validateCouponServer({
-        code: couponCode,
-        subtotal,
-        isPreOrder: true,
-        now: new Date(),
-      });
+    const subtotal = quote.subtotal;
+    const shippingFee = quote.shippingFee;
+    const discountAmount = quote.couponDiscountAmount;
+    const totalAmount = quote.totalAmount;
 
-      if (couponValidation.valid && couponValidation.calculatedDiscount) {
-        discountAmount = couponValidation.calculatedDiscount;
-        await prisma.coupon.update({
-          where: { code: couponValidation.code! },
-          data: { usedCount: { increment: 1 } },
-        });
-      }
+    if (quote.couponValid && quote.couponCode) {
+      await prisma.coupon.update({
+        where: { code: quote.couponCode },
+        data: { usedCount: { increment: 1 } },
+      }).catch(() => {});
     }
 
-    const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee);
+    const validatedItems = quote.items.map((i) => ({
+      productId: i.productId,
+      productTitle: i.productTitle,
+      variantInfo: i.variantInfo,
+      unitPrice: i.unitPrice,
+      originalPrice: i.originalPrice,
+      campaignId: i.campaignId,
+      campaignName: i.campaignName,
+      campaignDiscountPerUnit: i.campaignDiscountPerUnit,
+      quantity: i.quantity,
+      subtotal: i.subtotal,
+    }));
 
     // 11. Calculate Pre-Order Advance and Remaining Amounts
     const { advanceAmount, remainingAmount } = calculatePreOrderAmounts(totalAmount, advancePercent);
@@ -285,7 +286,13 @@ export async function POST(req: Request) {
             amountPaid: 0, // Rs. 0 until Admin verifies and approves payment proof
             paymentMethod: 'PRE_ORDER_ADVANCE',
             status: 'PENDING',
-            couponCode: couponCode || null,
+            couponCode: quote.couponCode || null,
+            campaignId: quote.primaryCampaignId,
+            campaignName: quote.primaryCampaignName,
+            campaignSlug: quote.primaryCampaignSlug,
+            campaignIds: quote.campaignIds,
+            campaignDiscountAmount: quote.campaignDiscountAmount,
+            couponDiscountAmount: quote.couponDiscountAmount,
             isPreOrder: true,
             preOrderPaymentStatus: isAdvanceEnabled ? 'PAYMENT_REVIEW_PENDING' : 'PAYMENT_APPROVED',
             preOrderPaymentMethodName: paymentMethod?.displayName || (isAdvanceEnabled ? 'Bank/Wallet Transfer' : 'Cash On Delivery'),
