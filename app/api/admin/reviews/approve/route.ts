@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminSession } from '@/lib/auth';
+import { revalidateCatalogCaches } from '@/lib/storefront-cache';
 
 export async function POST(req: Request) {
   const isAuthenticated = await verifyAdminSession();
@@ -20,6 +21,7 @@ export async function POST(req: Request) {
       });
     }
 
+    revalidateCatalogCaches();
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Review approval error:', error);

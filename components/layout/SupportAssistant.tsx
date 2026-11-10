@@ -200,9 +200,9 @@ export const SupportAssistant = () => {
       return {
         id: Date.now().toString(),
         sender: 'bot',
-        text: 'Our garments come in high-grade unstitched fabrics as well as standard sizes (S, M, L, XL). All suits include extra margins for custom tailormade fitting.',
+        text: 'Our stitched modest wear comes in standard sizes (S, M, L, XL) with detailed measurements on each product page and our Size Guide.',
         timestamp: time,
-        actionLink: { label: 'View Size Guide', url: '/shop' },
+        actionLink: { label: 'View Size Guide', url: '/size-guide' },
         quickReplies: ['Exchange Policy', 'Contact Concierge'],
       };
     }
@@ -241,10 +241,13 @@ export const SupportAssistant = () => {
     }
 
     if (q.includes('payment') || q.includes('card') || q.includes('online') || q.includes('bank')) {
+      const paymentText = settings.full_advance_payment_enabled
+        ? 'We offer Cash On Delivery (COD) across Pakistan as well as 100% Full Advance Payment via Bank Transfer, Easypaisa, JazzCash, or Raast (selected at checkout with payment screenshot verification).'
+        : 'We offer Cash On Delivery (COD) across Pakistan, allowing you to pay in cash upon delivery.';
       return {
         id: Date.now().toString(),
         sender: 'bot',
-        text: 'We currently offer Cash On Delivery (COD) for all orders across Pakistan. This allows you to inspect your package before payment. No advance payment required!',
+        text: paymentText,
         timestamp: time,
         quickReplies: ['Shipping Info', 'Exchange Policy'],
       };
@@ -341,7 +344,8 @@ export const SupportAssistant = () => {
             type="button"
             onClick={() => setIsOpen((prev) => !prev)}
             title="WearOMNIA Customer Support Chat"
-            aria-label="Open WearOMNIA Customer Support Chat"
+            aria-label={isOpen ? 'Close WearOMNIA Customer Support Chat' : 'Open WearOMNIA Customer Support Chat'}
+            aria-expanded={isOpen}
             className="flex items-center justify-center w-12 h-12 sm:w-13 sm:h-13 rounded-full bg-[#06191B] text-[#D4AF37] border border-[#D4AF37]/50 shadow-lg hover:border-[#D4AF37] hover:bg-[#0D2F33] hover:shadow-[#D4AF37]/25 transition-all duration-200 hover:scale-105 active:scale-95 motion-reduce:transform-none cursor-pointer"
           >
             {isOpen ? (
@@ -466,6 +470,7 @@ export const SupportAssistant = () => {
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                   placeholder="Type your message..."
+                  aria-label="Type your support message"
                   className="flex-1 bg-[#0A0A0A] border border-[#262626] rounded-lg px-4 py-2.5 text-sm text-[#FAF8F5] focus:outline-none focus:border-[#D4AF37]"
                 />
                 <button

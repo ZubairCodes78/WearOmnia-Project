@@ -11,6 +11,7 @@ import {
   filterProductsForCampaign,
   resolveProductCampaignPricing,
 } from '@/lib/campaigns';
+import { getPublishedProductsCached } from '@/lib/storefront-cache';
 import { getCanonicalUrl, generateBreadcrumbSchema, PRODUCTION_DOMAIN } from '@/lib/seo';
 import { CampaignBanner } from '@/components/campaigns/CampaignBanner';
 import { CampaignCountdown } from '@/components/campaigns/CampaignCountdown';
@@ -169,16 +170,7 @@ export default async function CampaignLandingPage({ params, searchParams }: Sale
   }
 
   // 3. Live Campaign Landing Page OR Authorized Admin Preview
-  const allPublished = await prisma.product.findMany({
-    where: { status: 'PUBLISHED' },
-    include: {
-      images: { orderBy: { displayOrder: 'asc' } },
-      variants: true,
-      category: true,
-      collection: true,
-    },
-    orderBy: { createdAt: 'desc' },
-  });
+  const allPublished = await getPublishedProductsCached();
 
   const eligibleRaw = filterProductsForCampaign(allPublished, campaign);
   // On preview mode, calculate pricing explicitly against this campaign even if status is DRAFT/SCHEDULED

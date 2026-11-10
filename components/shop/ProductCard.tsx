@@ -10,6 +10,7 @@ import { useWishlist } from '@/context/WishlistContext';
 import { useSettings } from '@/context/SettingsContext';
 import { useFlyToCart } from '@/components/cart/FlyToCartProvider';
 import { getEffectiveSellingPrice, calculateDiscountPercent } from '@/lib/pricing';
+import { trackAddToCart, trackSelectItem } from '@/lib/analytics';
 import type { ProductCampaignPricingResult } from '@/lib/campaign-math';
 
 export interface ProductCardProps {
@@ -28,6 +29,8 @@ export interface ProductCardProps {
   categoryName?: string;
   variants: { size: string; color: string; stock: number }[];
   campaignPricing?: ProductCampaignPricingResult | null;
+  listName?: string;
+  index?: number;
   onQuickView?: () => void;
 }
 
@@ -47,6 +50,8 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   categoryName,
   variants,
   campaignPricing,
+  listName = 'WearOMNIA Catalog',
+  index,
   onQuickView,
 }) => {
   const { addToCart } = useCart();
@@ -107,8 +112,28 @@ export const ProductCard: React.FC<ProductCardProps> = ({
         maxStock: effectivePreOrder ? 999 : stockQuantity,
         isPreOrder: Boolean(effectivePreOrder),
       });
+      trackAddToCart({
+        item_id: id,
+        item_name: title,
+        price: activePrice,
+        quantity: 1,
+        item_category: categoryName,
+        item_variant: `${firstVariant.size} / ${firstVariant.color}`,
+      });
       setAddState('added');
       setTimeout(() => setAddState('idle'), 800);
+    });
+  };
+
+  const handleProductClick = () => {
+    trackSelectItem(listName, {
+      item_id: id,
+      item_name: title,
+      price: activePrice,
+      quantity: 1,
+      item_category: categoryName,
+      item_list_name: listName,
+      ...(typeof index === 'number' ? { index } : {}),
     });
   };
 
@@ -124,7 +149,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       <div>
         {/* Image Container with Smooth Crossfade Hover and 3D Depth */}
         <div className="relative aspect-[3/4] w-full bg-sand/40 overflow-hidden rounded-xl border border-sand/60 transition-all duration-500 group-hover:border-champagne/50 group-hover:shadow-lg group-hover:shadow-champagne/10">
-          <Link href={`/product/${slug}`} className="block w-full h-full relative" aria-label={`View ${title}`}>
+          <Link href={`/product/${slug}`} onClick={handleProductClick} className="block w-full h-full relative" aria-label={`View ${title}`}>
             {/* Primary Image */}
             <Image
               src={primaryImage}
@@ -214,7 +239,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           <span className="text-[9px] uppercase tracking-[0.2em] font-bold text-champagne-700 block truncate">
             {categoryName || (isNewArrival ? 'New Arrivals' : 'Ready-to-Wear')}
           </span>
-          <Link href={`/product/${slug}`} className="block">
+          <Link href={`/product/${slug}`} onClick={handleProductClick} className="block">
             <h3 className="font-serif text-sm sm:text-base font-bold text-teal group-hover:text-champagne-700 transition-colors duration-300 line-clamp-1">
               {title}
             </h3>

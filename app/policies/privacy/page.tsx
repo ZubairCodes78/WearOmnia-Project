@@ -37,10 +37,10 @@ export default function PrivacyPolicyPage() {
         </div>
         <div className="editorial-dossier font-sans">
           <p>
-            At WearOMNIA, we value customer privacy. Because we operate on a <strong>Guest Checkout Only</strong> model, we only collect information required to fulfill your Cash On Delivery orders across Pakistan (Full Name, Delivery Address, Phone Number).
+            At WearOMNIA, we value customer privacy. Because we operate on a <strong>Guest Checkout Only</strong> model, we collect only the contact and shipping details needed to fulfill your Cash On Delivery and Full Advance orders across Pakistan (Full Name, Delivery Address, Phone/WhatsApp Number).
           </p>
           <p>
-            We never store passwords, credit card credentials, or personal tracking cookies for third-party resale. Your contact info is strictly used for order dispatch, courier coordination, and WhatsApp delivery notifications.
+            Payment verification screenshots uploaded for advance orders are stored strictly in private object storage accessible only to authorized store administrators for manual verification, and are never published on public URLs. We never store customer passwords, card numbers, or sell personal information to third parties.
           </p>
         </div>
       </div>

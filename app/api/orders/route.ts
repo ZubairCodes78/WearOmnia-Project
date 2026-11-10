@@ -11,6 +11,7 @@ import { generateNextOrderNumber } from '@/lib/order-number';
 import { WEAROMNIA_CAMPAIGN, validatePreOrderCampaignCoupon } from '@/lib/preorder';
 import { paymentProofExists } from '@/lib/storage';
 import { calculateServerCartQuote } from '@/lib/campaigns';
+import { revalidateCatalogCaches } from '@/lib/storefront-cache';
 
 export async function POST(req: Request) {
   try {
@@ -331,6 +332,7 @@ export async function POST(req: Request) {
         }
       }
     }
+    revalidateCatalogCaches();
 
     // 8. Dispatch Official Phase 4 WhatsApp Order Confirmation & Real-Time SSE
     try {

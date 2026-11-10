@@ -42,20 +42,20 @@ export default function RefundPolicyPage() {
 
         <div className="editorial-dossier font-sans">
           <div className="space-y-3">
-            <h3 className="font-serif text-xl font-bold text-teal flex items-center gap-2">
-              <Banknote className="w-5 h-5 text-champagne-700" /> 1. Cash On Delivery Refunds
-            </h3>
+            <h2 className="font-serif text-xl font-bold text-teal flex items-center gap-2">
+              <Banknote className="w-5 h-5 text-champagne-700" /> 1. Cash On Delivery &amp; Advance Payment Refunds
+            </h2>
             <p>
-              As all purchases are completed via Cash On Delivery, eligible refunds for defective items or canceled orders prior to dispatch are processed via online bank transfer, EasyPaisa, or JazzCash to the customer's verified phone number/bank within 3 to 5 business days.
+              Eligible refunds for defective items or orders cancelled prior to dispatch (across both Cash On Delivery and verified Full Advance / Pre-Order advance payments) are processed via bank transfer, EasyPaisa, or JazzCash to the customer&apos;s verified account within 3 to 5 business days based on the actual charged amount.
             </p>
           </div>
 
           <div className="space-y-3 pt-4 border-t border-sand">
-            <h3 className="font-serif text-xl font-bold text-teal flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-champagne-700" /> 2. Store Credit & Replacements
-            </h3>
+            <h2 className="font-serif text-xl font-bold text-teal flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-champagne-700" /> 2. Store Credit &amp; Replacements
+            </h2>
             <p>
-              Alternatively, customers may opt for store credit coupons of equal value for immediate use on future WearOMNIA luxury releases.
+              Alternatively, customers may opt for store credit coupons or size replacements of equal value for immediate use on WearOMNIA collections.
             </p>
           </div>
         </div>

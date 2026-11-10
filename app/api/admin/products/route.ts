@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminSession } from '@/lib/auth';
 import { deleteFile } from '@/lib/storage';
+import { revalidateCatalogCaches } from '@/lib/storefront-cache';
 
 export async function GET() {
   try {
@@ -105,6 +106,7 @@ export async function POST(req: Request) {
         },
       });
 
+      revalidateCatalogCaches(duplicated.slug);
       return NextResponse.json({ success: true, product: duplicated });
     }
 
@@ -213,6 +215,8 @@ export async function POST(req: Request) {
       });
     }
 
+    revalidateCatalogCaches(product.slug);
+
     return NextResponse.json({
       success: true,
       product: {
@@ -229,6 +233,11 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
   try {
+    const isAuthenticated = await verifyAdminSession();
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     const body = await req.json();
     const {
       id,
@@ -400,6 +409,8 @@ export async function PUT(req: Request) {
       where: { productId: id, altText: 'SIZE_GUIDE' },
     });
 
+    revalidateCatalogCaches(updated.slug);
+
     return NextResponse.json({
       success: true,
       product: {
@@ -416,6 +427,11 @@ export async function PUT(req: Request) {
 
 export async function DELETE(req: Request) {
   try {
+    const isAuthenticated = await verifyAdminSession();
+    if (!isAuthenticated) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     let id: string | null = null;
     try {
       const body = await req.json();
@@ -450,6 +466,7 @@ export async function DELETE(req: Request) {
       }
     }
 
+    revalidateCatalogCaches();
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Product delete error:', error);

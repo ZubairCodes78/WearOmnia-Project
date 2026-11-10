@@ -34,7 +34,7 @@ export default function ContactClient() {
             Contact WearOMNIA
           </h1>
           <p className="text-xs sm:text-sm text-charcoal-muted max-w-md mx-auto leading-relaxed">
-            Our customer support team is happy to assist you with sizing advice, custom requests, dispatch details, and Cash On Delivery inquiries.
+            Our customer support team is happy to assist you with sizing advice, order tracking, payment verification, and nationwide delivery inquiries.
           </p>
         </div>
 
@@ -42,9 +42,9 @@ export default function ContactClient() {
           {/* Left Info Cards */}
           <div className="lg:col-span-5 space-y-6">
             <div className="editorial-surface p-6 sm:p-8 space-y-6">
-              <h3 className="font-serif text-xl font-bold text-teal border-b border-sand pb-3">
+              <h2 className="font-serif text-xl font-bold text-teal border-b border-sand pb-3">
                 Contact Information
-              </h3>
+              </h2>
 
               <div className="space-y-4 text-xs text-charcoal">
                 <div className="flex items-start gap-3">
@@ -52,7 +52,7 @@ export default function ContactClient() {
                     <Phone className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-teal">Phone &amp; WhatsApp Support</h4>
+                    <h3 className="font-bold text-teal">Phone &amp; WhatsApp Support</h3>
                     <a href={`tel:${phoneTel}`} className="text-charcoal-muted hover:text-teal transition-colors">
                       {rawPhone} ({supportHours})
                     </a>
@@ -64,7 +64,7 @@ export default function ContactClient() {
                     <Mail className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-teal">Email Inquiries</h4>
+                    <h3 className="font-bold text-teal">Email Inquiries</h3>
                     <a href={`mailto:${storeEmail}`} className="text-charcoal-muted hover:text-teal transition-colors">
                       {storeEmail}
                     </a>
@@ -76,7 +76,7 @@ export default function ContactClient() {
                     <Clock className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-teal">Business Hours</h4>
+                    <h3 className="font-bold text-teal">Business Hours</h3>
                     <p className="text-charcoal-muted">{supportHours}</p>
                   </div>
                 </div>
@@ -86,7 +86,7 @@ export default function ContactClient() {
                     <MapPin className="w-4 h-4" />
                   </div>
                   <div>
-                    <h4 className="font-bold text-teal">Location</h4>
+                    <h3 className="font-bold text-teal">Location</h3>
                     <p className="text-charcoal-muted">{storeAddress}</p>
                   </div>
                 </div>
@@ -105,7 +105,7 @@ export default function ContactClient() {
 
             {/* Social Media Links */}
             <div className="editorial-surface p-6 sm:p-8 space-y-4">
-              <h3 className="font-serif text-xl font-bold text-teal">Follow Us</h3>
+              <h2 className="font-serif text-xl font-bold text-teal">Follow Us</h2>
               <div className="flex flex-col gap-3">
                 <a href={settings.instagramUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 text-teal hover:text-champagne-700 transition-colors">
                   <span className="w-8 h-8 rounded-full bg-teal text-champagne flex items-center justify-center text-xs font-bold">IG</span>
@@ -125,15 +125,15 @@ export default function ContactClient() {
 
           {/* Right Form */}
           <div className="lg:col-span-7 editorial-surface p-6 sm:p-10 space-y-6">
-            <h3 className="font-serif text-2xl font-bold text-teal">Send Us A Message</h3>
+            <h2 className="font-serif text-2xl font-bold text-teal">Send Us A Message</h2>
             <p className="text-xs text-charcoal-muted font-sans">
-              Fill out the form below and an WearOMNIA styling specialist will respond within 24 hours.
+              Fill out the form below and a WearOMNIA client support specialist will respond within 24 hours.
             </p>
 
             {submitted ? (
               <div className="bg-teal text-champagne p-8 rounded-2xl border border-champagne/40 text-center space-y-3">
                 <CheckCircle2 className="w-12 h-12 text-champagne mx-auto" />
-                <h4 className="font-serif text-2xl text-offwhite font-bold">Message Received</h4>
+                <h3 className="font-serif text-2xl text-offwhite font-bold">Message Received</h3>
                 <p className="text-xs text-offwhite/80 max-w-sm mx-auto">
                   Thank you for reaching out to WearOMNIA. Our customer support team will contact you shortly via phone or WhatsApp.
                 </p>
@@ -142,8 +142,9 @@ export default function ContactClient() {
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="text-xs uppercase font-semibold text-charcoal block mb-1">Your Full Name *</label>
+                    <label htmlFor="contact-name" className="text-xs uppercase font-semibold text-charcoal block mb-1">Your Full Name *</label>
                     <input
+                      id="contact-name"
                       type="text"
                       required
                       placeholder="e.g. Zainab Chaudhry"
@@ -153,8 +154,9 @@ export default function ContactClient() {
                     />
                   </div>
                   <div>
-                    <label className="text-xs uppercase font-semibold text-charcoal block mb-1">Phone / WhatsApp *</label>
+                    <label htmlFor="contact-phone" className="text-xs uppercase font-semibold text-charcoal block mb-1">Phone / WhatsApp *</label>
                     <input
+                      id="contact-phone"
                       type="tel"
                       required
                       placeholder="0300-1234567"
@@ -166,8 +168,9 @@ export default function ContactClient() {
                 </div>
 
                 <div>
-                  <label className="text-xs uppercase font-semibold text-charcoal block mb-1">Email Address</label>
+                  <label htmlFor="contact-email" className="text-xs uppercase font-semibold text-charcoal block mb-1">Email Address</label>
                   <input
+                    id="contact-email"
                     type="email"
                     placeholder="zainab@example.com"
                     value={formData.email}
@@ -177,11 +180,12 @@ export default function ContactClient() {
                 </div>
 
                 <div>
-                  <label className="text-xs uppercase font-semibold text-charcoal block mb-1">Your Message *</label>
+                  <label htmlFor="contact-message" className="text-xs uppercase font-semibold text-charcoal block mb-1">Your Message *</label>
                   <textarea
+                    id="contact-message"
                     required
                     rows={5}
-                    placeholder="Inquire about suit availability, custom size stitching, or delivery timeline..."
+                    placeholder="Inquire about outfit availability, sizing measurements, or delivery timeline..."
                     value={formData.message}
                     onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     className="w-full px-4 py-3 bg-sand rounded-xl text-xs text-charcoal border border-sand focus:outline-none focus:ring-2 focus:ring-teal"

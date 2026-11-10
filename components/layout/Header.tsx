@@ -10,8 +10,12 @@ import { useWishlist } from '@/context/WishlistContext';
 import { useSettings } from '@/context/SettingsContext';
 import { AnnouncementTicker, CampaignAnnouncementItem } from '@/components/layout/AnnouncementTicker';
 
-export const Header: React.FC<{ campaignAnnouncements?: CampaignAnnouncementItem[] }> = ({
+export const Header: React.FC<{
+  campaignAnnouncements?: CampaignAnnouncementItem[];
+  initialCategories?: { id: string; name: string; slug: string }[];
+}> = ({
   campaignAnnouncements = [],
+  initialCategories = [],
 }) => {
   const pathname = usePathname();
   const { settings } = useSettings();
@@ -22,7 +26,7 @@ export const Header: React.FC<{ campaignAnnouncements?: CampaignAnnouncementItem
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [categories, setCategories] = useState<{ id: string; name: string; slug: string }[]>([]);
+  const categories = initialCategories;
   const [cartBouncing, setCartBouncing] = useState(false);
 
   const cartCount = cart.reduce((total, item) => total + item.quantity, 0);
@@ -47,17 +51,6 @@ export const Header: React.FC<{ campaignAnnouncements?: CampaignAnnouncementItem
     };
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => {
-    fetch('/api/admin/categories')
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.categories && data.categories.length > 0) {
-          setCategories(data.categories);
-        }
-      })
-      .catch(() => { });
   }, []);
 
   if (isAdmin) {
@@ -89,8 +82,10 @@ export const Header: React.FC<{ campaignAnnouncements?: CampaignAnnouncementItem
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="lg:hidden text-teal hover:text-champagne-700 transition-colors p-2 rounded-xl hover:bg-sand/60"
-            aria-label="Toggle menu"
+            className="lg:hidden text-teal hover:text-champagne-700 transition-colors p-2 rounded-xl hover:bg-sand/60 min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Toggle navigation menu"
+            aria-expanded={mobileMenuOpen}
+            aria-controls="mobile-nav-drawer"
           >
             <Menu className="w-6 h-6" />
           </motion.button>
@@ -233,7 +228,12 @@ export const Header: React.FC<{ campaignAnnouncements?: CampaignAnnouncementItem
                 }}
                 className="w-full bg-transparent text-sm sm:text-base text-teal placeholder-charcoal-muted focus:outline-none font-serif"
               />
-              <button onClick={() => setSearchOpen(false)} className="p-1 text-teal shrink-0 hover:text-champagne-700 transition-colors">
+              <button
+                type="button"
+                aria-label="Close search"
+                onClick={() => setSearchOpen(false)}
+                className="p-2 text-teal shrink-0 hover:text-champagne-700 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -254,6 +254,10 @@ export const Header: React.FC<{ campaignAnnouncements?: CampaignAnnouncementItem
               onClick={() => setMobileMenuOpen(false)}
             />
             <motion.div
+              id="mobile-nav-drawer"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Mobile Navigation"
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
@@ -266,9 +270,11 @@ export const Header: React.FC<{ campaignAnnouncements?: CampaignAnnouncementItem
                     Wear<span className="text-champagne-700">OMNIA</span>
                   </span>
                   <motion.button
+                    type="button"
+                    aria-label="Close navigation menu"
                     whileTap={{ scale: 0.9 }}
                     onClick={() => setMobileMenuOpen(false)}
-                    className="p-1 text-teal"
+                    className="p-2 text-teal min-h-[44px] min-w-[44px] flex items-center justify-center"
                   >
                     <X className="w-6 h-6" />
                   </motion.button>

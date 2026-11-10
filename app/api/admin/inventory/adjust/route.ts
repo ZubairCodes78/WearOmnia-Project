@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminSession } from '@/lib/auth';
 import { recordAuditLog } from '@/lib/audit';
+import { revalidateCatalogCaches } from '@/lib/storefront-cache';
 
 export async function POST(req: Request) {
   try {
@@ -73,6 +74,8 @@ export async function POST(req: Request) {
       productId,
       `Adjusted stock by ${changeQuantity > 0 ? `+${changeQuantity}` : changeQuantity} (Reason: ${reason}). New balance: ${newProductStock} units.`
     );
+
+    revalidateCatalogCaches(product.slug);
 
     return NextResponse.json({
       success: true,

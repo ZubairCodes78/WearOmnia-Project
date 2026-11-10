@@ -1,8 +1,44 @@
 import React from 'react';
+import type { Metadata } from 'next';
 
 import { getCampaignPhase } from '@/lib/preorder';
 import { getLiveCampaigns, applyCampaignsToProducts } from '@/lib/campaigns';
+import { getPublishedProductsCached } from '@/lib/storefront-cache';
 import { CampaignBanner } from '@/components/campaigns/CampaignBanner';
+import { PRODUCTION_DOMAIN, getCanonicalUrl } from '@/lib/seo';
+
+export const metadata: Metadata = {
+  title: 'WearOMNIA | Premium Modest Fashion',
+  description:
+    "Discover WearOMNIA's modest fashion collection, thoughtfully designed for everyday style and comfort.",
+  alternates: {
+    canonical: getCanonicalUrl('/'),
+  },
+  openGraph: {
+    title: 'WearOMNIA | Premium Modest Fashion',
+    description:
+      "Discover WearOMNIA's modest fashion collection, thoughtfully designed for everyday style and comfort.",
+    url: getCanonicalUrl('/'),
+    siteName: 'WearOMNIA',
+    locale: 'en_PK',
+    type: 'website',
+    images: [
+      {
+        url: `${PRODUCTION_DOMAIN}/images/og-image.jpg`,
+        width: 1200,
+        height: 630,
+        alt: 'WearOMNIA — Premium Modest Fashion',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'WearOMNIA | Premium Modest Fashion',
+    description:
+      "Discover WearOMNIA's modest fashion collection, thoughtfully designed for everyday style and comfort.",
+    images: [`${PRODUCTION_DOMAIN}/images/og-image.jpg`],
+  },
+};
 
 // ─── Coming Soon Mode ────────────────────────────────────────────────────────
 // Enabled when COMING_SOON/NEXT_PUBLIC_COMING_SOON is set and before campaign start (29 Sep 2026).
@@ -19,7 +55,6 @@ function checkIsComingSoon(): boolean {
 import { ComingSoonPage } from '@/components/ComingSoonPage';
 
 // ─── Live Storefront imports (only used when coming soon is false) ────────
-import { prisma } from '@/lib/prisma';
 import { HeroSlider } from '@/components/home/HeroSlider';
 import { ProductCard } from '@/components/shop/ProductCard';
 import { BrandStory } from '@/components/home/BrandStory';
@@ -29,20 +64,8 @@ import { NewsletterSection } from '@/components/home/NewsletterSection';
 import { PageTransition } from '@/components/layout/PageTransition';
 
 async function getLaunchProducts() {
-  try {
-    return await prisma.product.findMany({
-      where: { status: 'PUBLISHED' },
-      include: {
-        images: { orderBy: { displayOrder: 'asc' } },
-        variants: true,
-        category: true,
-      },
-      take: 4,
-    });
-  } catch (error) {
-    console.error('Failed to fetch products:', error);
-    return [];
-  }
+  const products = await getPublishedProductsCached();
+  return products.slice(0, 4);
 }
 
 export const dynamic = 'force-dynamic';

@@ -1,6 +1,5 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
-import { prisma } from '@/lib/prisma';
 import { ProductClient } from './ProductClient';
 import { generateProductMetadata, generateProductSchema, generateBreadcrumbSchema } from '@/lib/seo';
 import {
@@ -8,6 +7,11 @@ import {
   resolveProductCampaignPricing,
   applyCampaignsToProducts,
 } from '@/lib/campaigns';
+import {
+  getPublishedProductBySlugCached,
+  getPublishedProductsCached,
+} from '@/lib/storefront-cache';
+import { getPreOrderSettings, getPublicSiteSettings } from '@/lib/settings';
 
 interface ProductPageProps {
   params: Promise<{ slug: string }>;
@@ -15,62 +19,38 @@ interface ProductPageProps {
 
 export async function generateMetadata({ params }: ProductPageProps) {
   const { slug } = await params;
-  const product = await prisma.product.findUnique({
-    where: { slug },
-    include: { images: true, category: true },
-  });
+  const product = await getPublishedProductBySlugCached(slug);
   if (!product) return {};
-  return generateProductMetadata(product);
+  const meta = generateProductMetadata(product);
+  if (product.status !== 'PUBLISHED') {
+    return { ...meta, robots: { index: false, follow: false } };
+  }
+  return meta;
 }
 
 export const dynamic = 'force-dynamic';
 
-import { getPreOrderSettings } from '@/lib/settings';
-
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
   const now = new Date();
-  const [preOrderSettings, liveCampaigns] = await Promise.all([
-    getPreOrderSettings(),
-    getLiveCampaigns(now),
-  ]);
-
-  const product = await prisma.product.findUnique({
-    where: { slug },
-    include: {
-      images: { orderBy: { displayOrder: 'asc' } },
-      variants: true,
-      category: true,
-      collection: true,
-      reviews: {
-        where: { isApproved: true },
-        orderBy: { createdAt: 'desc' },
-      },
-    },
-  });
+  const [preOrderSettings, publicSiteSettings, liveCampaigns, product, allPublished] =
+    await Promise.all([
+      getPreOrderSettings(),
+      getPublicSiteSettings(),
+      getLiveCampaigns(now),
+      getPublishedProductBySlugCached(slug),
+      getPublishedProductsCached(),
+    ]);
 
   if (!product) {
     notFound();
   }
 
-  // Fetch related products in same category if categoryId exists
-  let relatedProducts: any[] = [];
-  if (product.categoryId) {
-    relatedProducts = await prisma.product.findMany({
-      where: {
-        categoryId: product.categoryId,
-        id: { not: product.id },
-        status: 'PUBLISHED',
-      },
-      include: {
-        images: { orderBy: { displayOrder: 'asc' } },
-        variants: true,
-        category: true,
-        collection: true,
-      },
-      take: 4,
-    });
-  }
+  const relatedProducts = product.categoryId
+    ? allPublished
+        .filter((p) => p.categoryId === product.categoryId && p.id !== product.id)
+        .slice(0, 4)
+    : [];
 
   const rawImages = Array.isArray(product.images) ? product.images : [];
   const sizeGuideImage = rawImages.find((img: any) => img.altText === 'SIZE_GUIDE')?.url || null;
@@ -94,13 +74,19 @@ export default async function ProductPage({ params }: ProductPageProps) {
   }));
   const sanitizedRelated = applyCampaignsToProducts(sanitizedRelatedRaw, liveCampaigns);
 
-  const productSchema = generateProductSchema({
-    ...sanitizedProduct,
-    discountPrice:
-      productCampaignPricing.effectiveSellingPrice < product.basePrice
-        ? productCampaignPricing.effectiveSellingPrice
-        : product.discountPrice,
-  });
+  const productSchema = generateProductSchema(
+    {
+      ...sanitizedProduct,
+      discountPrice:
+        productCampaignPricing.effectiveSellingPrice < product.basePrice
+          ? productCampaignPricing.effectiveSellingPrice
+          : product.discountPrice,
+    },
+    {
+      flatShippingFee: publicSiteSettings.flatShippingFee,
+      freeShippingThreshold: publicSiteSettings.freeShippingThreshold,
+    }
+  );
 
   const breadcrumbs = [
     { name: 'Home', url: '/' },

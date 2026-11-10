@@ -1,8 +1,8 @@
 import React from 'react';
-import { prisma } from '@/lib/prisma';
 import { CatalogClient } from '@/components/shop/CatalogClient';
 import { generateCategoryMetadata, generateBreadcrumbSchema } from '@/lib/seo';
 import { getLiveCampaigns, applyCampaignsToProducts } from '@/lib/campaigns';
+import { getPublishedProductsCached, getCategoriesCached } from '@/lib/storefront-cache';
 
 interface ShopPageProps {
   searchParams: Promise<{
@@ -45,19 +45,8 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
   const now = new Date();
 
   const [rawProducts, categories, liveCampaigns] = await Promise.all([
-    prisma.product.findMany({
-      where: { status: 'PUBLISHED' },
-      include: {
-        images: { orderBy: { displayOrder: 'asc' } },
-        variants: true,
-        category: true,
-        collection: true,
-      },
-      orderBy: { createdAt: 'desc' },
-    }),
-    prisma.category.findMany({
-      select: { id: true, name: true, slug: true },
-    }),
+    getPublishedProductsCached(),
+    getCategoriesCached(),
     getLiveCampaigns(now),
   ]);
 

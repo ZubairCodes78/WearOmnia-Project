@@ -1,10 +1,12 @@
 'use client';
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ProductCard } from './ProductCard';
 import { QuickViewModal } from './QuickViewModal';
 import { ChevronLeft, ChevronRight, Grid2X2, Grid3X3, Heart, LayoutGrid, X, Search } from 'lucide-react';
 import { useWishlist } from '@/context/WishlistContext';
+import { trackViewItemList } from '@/lib/analytics';
+import { getEffectiveSellingPrice } from '@/lib/pricing';
 import type { ProductCampaignPricingResult } from '@/lib/campaign-math';
 
 interface ProductItem {
@@ -150,6 +152,34 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
     (currentPage - 1) * productsPerPage,
     currentPage * productsPerPage,
   );
+  const lastTrackedListKey = useRef<string>('');
+  const activeListName = showWishlistOnly
+    ? 'Wishlist'
+    : showPreOrderOnly
+    ? 'Pre-Order Collection'
+    : selectedCategory
+    ? `Category: ${selectedCategory}`
+    : 'Shop All Outfits';
+
+  useEffect(() => {
+    if (visibleProducts.length === 0) return;
+    const key = `${activeListName}|${currentPage}|${visibleProducts.map((p) => p.id).join(',')}`;
+    if (lastTrackedListKey.current === key) return;
+    lastTrackedListKey.current = key;
+    trackViewItemList(
+      activeListName,
+      visibleProducts.map((p, idx) => ({
+        item_id: p.id,
+        item_name: p.title,
+        price:
+          p.campaignPricing?.effectiveSellingPrice ??
+          getEffectiveSellingPrice({ basePrice: p.basePrice, discountPrice: p.discountPrice }),
+        item_category: p.category?.name,
+        item_list_name: activeListName,
+        index: (currentPage - 1) * productsPerPage + idx,
+      }))
+    );
+  }, [activeListName, currentPage, visibleProducts]);
   const pageNumbers = Array.from(
     new Set([1, currentPage - 1, currentPage, currentPage + 1, totalPages]),
   )
@@ -359,7 +389,7 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
         </div>
       ) : (
         <div className={`grid ${gridClass} gap-6 sm:gap-8`}>
-          {visibleProducts.map((product) => (
+          {visibleProducts.map((product, idx) => (
             <ProductCard
               key={product.id}
               id={product.id}
@@ -377,6 +407,8 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
               categoryName={product.category?.name}
               variants={product.variants}
               campaignPricing={product.campaignPricing}
+              listName={activeListName}
+              index={(currentPage - 1) * productsPerPage + idx}
               onQuickView={() => setQuickViewProduct(product)}
             />
           ))}

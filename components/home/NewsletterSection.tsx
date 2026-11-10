@@ -52,6 +52,7 @@ export const NewsletterSection = () => {
               <input
                 type="email"
                 placeholder="Enter your email address..."
+                aria-label="Email address for VIP newsletter"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}

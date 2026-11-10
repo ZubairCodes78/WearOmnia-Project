@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminSession } from '@/lib/auth';
+import { revalidateCatalogCaches } from '@/lib/storefront-cache';
 
 export async function GET() {
   try {
@@ -38,6 +39,7 @@ export async function POST(req: Request) {
       },
     });
 
+    revalidateCatalogCaches();
     return NextResponse.json({ success: true, category });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Failed to create category' }, { status: 500 });
@@ -67,6 +69,7 @@ export async function PUT(req: Request) {
       },
     });
 
+    revalidateCatalogCaches();
     return NextResponse.json({ success: true, category });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Failed to update category' }, { status: 500 });
@@ -106,6 +109,7 @@ export async function DELETE(req: Request) {
 
     await prisma.category.delete({ where: { id } });
 
+    revalidateCatalogCaches();
     return NextResponse.json({ success: true, message: `Category "${category.name}" deleted successfully.` });
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Failed to delete category' }, { status: 500 });

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
@@ -28,6 +28,7 @@ import { SizeGuideModal } from '@/components/shop/SizeGuideModal';
 import { ProductImageZoom } from '@/components/shop/ProductImageZoom';
 import { useSettings } from '@/context/SettingsContext';
 import { getEffectiveSellingPrice, calculateDiscountPercent } from '@/lib/pricing';
+import { trackViewItem, trackAddToCart } from '@/lib/analytics';
 import { CampaignCountdown } from '@/components/campaigns/CampaignCountdown';
 import type { ProductCampaignPricingResult } from '@/lib/campaign-math';
 
@@ -53,8 +54,11 @@ export const ProductClient: React.FC<ProductClientProps> = ({
   const rawVariants = Array.isArray(product?.variants) ? product.variants : [];
   const rawImages = Array.isArray(product?.images) && product.images.length > 0
     ? product.images.filter(Boolean)
-    : [{ url: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?q=80&w=800&auto=format&fit=crop' }];
+    : [{ url: '/images/og-image.jpg' }];
   const reviews = Array.isArray(product?.reviews) ? product.reviews.filter(Boolean) : [];
+  const averageRating = reviews.length > 0
+    ? reviews.reduce((sum: number, r: any) => sum + (Number(r?.rating) || 0), 0) / reviews.length
+    : 0;
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -104,6 +108,17 @@ export const ProductClient: React.FC<ProductClientProps> = ({
     ? (currentVariant.stock ?? 0)
     : (typeof product?.stockQuantity === 'number' ? product.stockQuantity : 0);
 
+  useEffect(() => {
+    if (!product?.id) return;
+    trackViewItem({
+      item_id: product.id,
+      item_name: product.title,
+      price: activePrice,
+      quantity: 1,
+      item_category: product.category?.name,
+    });
+  }, [product?.id, product?.title, product?.category?.name, activePrice]);
+
   const handleAddToCart = () => {
     const currentImgSrc = images[selectedImageIndex]?.url || images[0]?.url || '';
     const imgEl = mainImageRef.current?.querySelector('img') || mainImageRef.current;
@@ -122,6 +137,14 @@ export const ProductClient: React.FC<ProductClientProps> = ({
         quantity,
         maxStock: isPreOrder ? 999 : currentStock,
         isPreOrder,
+      });
+      trackAddToCart({
+        item_id: product?.id || '',
+        item_name: product?.title || 'WearOMNIA Garment',
+        price: activePrice,
+        quantity,
+        item_category: product?.category?.name,
+        item_variant: `${selectedSize} / ${selectedColor}`,
       });
       setAddedToast(true);
       setTimeout(() => setAddedToast(false), 1200);
@@ -142,6 +165,14 @@ export const ProductClient: React.FC<ProductClientProps> = ({
       quantity,
       maxStock: product.isPreOrder ? 999 : currentStock,
       isPreOrder: Boolean(product.isPreOrder),
+    });
+    trackAddToCart({
+      item_id: product.id,
+      item_name: product.title,
+      price: activePrice,
+      quantity,
+      item_category: product.category?.name,
+      item_variant: `${selectedSize} / ${selectedColor}`,
     });
     window.location.href = '/checkout';
   };
@@ -300,12 +331,23 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                 </div>
 
                 <div className="flex items-center gap-1.5 text-champagne text-xs font-bold">
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-current text-champagne" />
-                    ))}
-                  </div>
-                  <span className="text-charcoal-muted font-sans font-medium">({reviews.length} Verified Reviews)</span>
+                  {reviews.length > 0 ? (
+                    <>
+                      <div className="flex" aria-label={`Rated ${averageRating.toFixed(1)} out of 5`}>
+                        {[...Array(5)].map((_, i) => (
+                          <Star
+                            key={i}
+                            className={`w-4 h-4 ${i < Math.round(averageRating) ? 'fill-current text-champagne' : 'text-sand-dark'}`}
+                          />
+                        ))}
+                      </div>
+                      <span className="text-charcoal-muted font-sans font-medium">
+                        {averageRating.toFixed(1)} ({reviews.length} {reviews.length === 1 ? 'Review' : 'Reviews'})
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-charcoal-muted font-sans font-medium">No customer reviews yet</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -518,7 +560,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                 <Zap className="w-4 h-4 text-teal fill-current" />
                 {isPreOrder
                   ? (isAdvanceRequired ? `Pre-Order Now (${advancePercent}% Advance)` : 'Pre-Order Now')
-                  : 'Buy Now (Cash On Delivery)'}
+                  : 'Buy Now'}
               </button>
             </div>
 
@@ -560,7 +602,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({
 
             {/* Description */}
             <div className="space-y-2.5 pt-4 border-t border-sand/80">
-              <h3 className="font-serif text-base font-bold text-teal">Description</h3>
+              <h2 className="font-serif text-base font-bold text-teal">Description</h2>
               <div className="space-y-2 text-xs text-charcoal-muted leading-relaxed font-sans">
                 {product.description
                   ?.split(/\n+/)
@@ -573,7 +615,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({
 
             {/* Details */}
             <div className="space-y-2.5 pt-4 border-t border-sand/80">
-              <h3 className="font-serif text-base font-bold text-teal">Product Details</h3>
+              <h2 className="font-serif text-base font-bold text-teal">Product Details</h2>
               <div className="divide-y divide-sand/70 rounded-xl border border-sand/70 bg-sand/30 overflow-hidden text-xs">
                 {product.fabricDetails && (
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between p-3 gap-1">

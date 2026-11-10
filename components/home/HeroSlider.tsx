@@ -5,6 +5,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { ArrowRight, Scissors, ShieldCheck, Truck, RotateCcw } from 'lucide-react';
+import { useSettings } from '@/context/SettingsContext';
 
 interface SlideData {
   id: number;
@@ -50,21 +51,29 @@ const SLIDES: SlideData[] = [
 ];
 
 export const HeroSlider: React.FC = () => {
+  const { settings } = useSettings();
+  const activeSlides = React.useMemo(
+    () => (settings.preorder_enabled ? SLIDES : SLIDES.filter((s) => s.id !== 3)),
+    [settings.preorder_enabled]
+  );
+
   const [current, setCurrent] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const prefersReducedMotion = useReducedMotion();
 
+  const safeIndex = current % activeSlides.length;
+
   const nextSlide = useCallback(() => {
-    setCurrent((prev) => (prev + 1) % SLIDES.length);
-  }, []);
+    setCurrent((prev) => (prev + 1) % activeSlides.length);
+  }, [activeSlides.length]);
 
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused || activeSlides.length <= 1) return;
     const timer = setInterval(nextSlide, 6500);
     return () => clearInterval(timer);
-  }, [isPaused, nextSlide]);
+  }, [isPaused, nextSlide, activeSlides.length]);
 
-  const slide = SLIDES[current];
+  const slide = activeSlides[safeIndex] || activeSlides[0];
 
   return (
     <section
@@ -77,8 +86,8 @@ export const HeroSlider: React.FC = () => {
     >
       {/* Responsive Aspect Ratio Stage - Exact 1920x800 (2.4:1) banner ratio to eliminate cropping */}
       <div className="relative w-full aspect-[1920/800] max-h-[800px] overflow-hidden">
-        {/* Background Slides */}
-        <AnimatePresence mode="wait">
+        {/* Background Slides - initial={false} ensures slide 1 paints immediately for optimal LCP */}
+        <AnimatePresence initial={false} mode="wait">
           <motion.div
             key={slide.id}
             initial={{ opacity: prefersReducedMotion ? 1 : 0 }}
@@ -92,6 +101,7 @@ export const HeroSlider: React.FC = () => {
               alt={slide.alt}
               fill
               priority={slide.id === 1}
+              fetchPriority={slide.id === 1 ? 'high' : 'auto'}
               sizes="100vw"
               quality={85}
               className={`object-cover ${slide.objectPosition}`}
@@ -101,7 +111,7 @@ export const HeroSlider: React.FC = () => {
 
         {/* Real HTML CTA Button - Positioned Intelligently per Artwork */}
         <div className={`absolute z-20 ${slide.ctaPositionClasses}`}>
-          <AnimatePresence mode="wait">
+          <AnimatePresence initial={false} mode="wait">
             <motion.div
               key={slide.id}
               initial={{ opacity: 0, y: 6 }}
@@ -121,20 +131,20 @@ export const HeroSlider: React.FC = () => {
 
         {/* Slide Indicators */}
         <div className="absolute bottom-2 sm:bottom-4 left-3 sm:left-8 z-20 flex items-center gap-1.5 sm:gap-2">
-          {SLIDES.map((s, idx) => (
+          {activeSlides.map((s, idx) => (
             <button
               key={s.id}
               onClick={() => setCurrent(idx)}
               aria-label={`Go to slide ${idx + 1}`}
               className={`h-1 sm:h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                current === idx
+                safeIndex === idx
                   ? 'w-5 sm:w-8 bg-champagne'
                   : 'w-1.5 sm:w-2.5 bg-white/40 hover:bg-white/70'
               }`}
             />
           ))}
           <span className="text-[9px] sm:text-[10px] font-mono text-champagne/80 font-bold ml-1 hidden sm:inline-block">
-            0{current + 1} / 0{SLIDES.length}
+            0{safeIndex + 1} / 0{activeSlides.length}
           </span>
         </div>
       </div>

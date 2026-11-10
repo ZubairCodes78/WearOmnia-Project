@@ -56,9 +56,13 @@ export const SITE_METADATA_DEFAULTS = {
 export function generateProductMetadata(product: any): Metadata {
   const title = product?.title ? `${product.title} | WearOMNIA` : SITE_METADATA_DEFAULTS.title;
   const rawDesc = typeof product?.description === 'string' ? product.description.replace(/\s+/g, ' ').trim() : '';
-  const description = rawDesc.length > 155 ? `${rawDesc.slice(0, 152)}...` : (rawDesc || SITE_METADATA_DEFAULTS.description);
+  const fabricPrefix = product?.fabricDetails ? `${product.fabricDetails} • ` : '';
+  const combinedDesc = rawDesc ? `${fabricPrefix}${rawDesc}` : SITE_METADATA_DEFAULTS.description;
+  const description = combinedDesc.length > 158 ? `${combinedDesc.slice(0, 155)}...` : combinedDesc;
 
-  const images = Array.isArray(product?.images) ? product.images : [];
+  const images = Array.isArray(product?.images)
+    ? product.images.filter((img: any) => img?.altText !== 'SIZE_GUIDE')
+    : [];
   const primaryImg = images[0]?.url || `${PRODUCTION_DOMAIN}/images/og-image.jpg`;
   const canonicalUrl = getCanonicalUrl(`/product/${product?.slug || ''}`);
 
@@ -168,8 +172,13 @@ export function generateCategoryMetadata(
  * Comprehensive Product & Variant (ProductGroup) Schema (JSON-LD)
  * Fully compliant with Google Shopping / Merchant / Rich Snippets
  */
-export function generateProductSchema(product: any) {
-  const images = Array.isArray(product?.images) ? product.images : [];
+export function generateProductSchema(
+  product: any,
+  shippingConfig?: { flatShippingFee?: number; freeShippingThreshold?: number }
+) {
+  const images = Array.isArray(product?.images)
+    ? product.images.filter((img: any) => img?.altText !== 'SIZE_GUIDE')
+    : [];
   const imageUrls = images.map((img: any) => img.url).filter(Boolean);
   if (imageUrls.length === 0) {
     imageUrls.push(`${PRODUCTION_DOMAIN}/images/og-image.jpg`);
@@ -183,6 +192,16 @@ export function generateProductSchema(product: any) {
   const sku = product?.sku || `OMN-${product?.id?.slice(0, 8) || '0001'}`;
   const canonicalUrl = getCanonicalUrl(`/product/${product?.slug || ''}`);
   const inStock = Boolean(product?.inStock && (product?.stockQuantity ?? 1) > 0);
+  const threshold =
+    typeof shippingConfig?.freeShippingThreshold === 'number'
+      ? shippingConfig.freeShippingThreshold
+      : 10000;
+  const flatFee =
+    typeof shippingConfig?.flatShippingFee === 'number' ? shippingConfig.flatShippingFee : 250;
+  const computedShippingRate = threshold > 0 && currentPrice >= threshold ? 0 : threshold === 0 ? 0 : flatFee;
+  const campaignEndIso = product?.campaignPricing?.appliedCampaign?.endDate
+    ? String(product.campaignPricing.appliedCampaign.endDate).split('T')[0]
+    : '2027-12-31';
 
   // Return Policy (Standard 7-Day Exchange Pakistan)
   const returnPolicy = {
@@ -199,7 +218,7 @@ export function generateProductSchema(product: any) {
     '@type': 'OfferShippingDetails',
     shippingRate: {
       '@type': 'MonetaryAmount',
-      value: currentPrice >= 10000 ? 0 : 250,
+      value: computedShippingRate,
       currency: 'PKR',
     },
     shippingDestination: {
@@ -231,7 +250,7 @@ export function generateProductSchema(product: any) {
     price: currentPrice,
     itemCondition: 'https://schema.org/NewCondition',
     availability: inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
-    priceValidUntil: '2027-12-31',
+    priceValidUntil: campaignEndIso,
     seller: {
       '@type': 'Organization',
       name: 'WearOMNIA',
@@ -410,7 +429,7 @@ export function generateFounderSchema() {
         name: 'WearOMNIA',
         url: PRODUCTION_DOMAIN,
       },
-      image: `${PRODUCTION_DOMAIN}/images/founder.png`,
+      image: `${PRODUCTION_DOMAIN}/images/founder.webp`,
       sameAs: [SITE_METADATA_DEFAULTS.socials.founderInstagram],
       description:
         'Founder of WearOMNIA, bringing modern modest fashion, purposeful silhouettes, and enduring craftsmanship to contemporary Pakistani women.',

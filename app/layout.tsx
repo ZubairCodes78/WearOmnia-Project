@@ -14,6 +14,7 @@ import { FlyToCartProvider } from '@/components/cart/FlyToCartProvider';
 import { getPublicSiteSettings } from '@/lib/settings';
 import { getCampaignPhase } from '@/lib/preorder';
 import { getLiveCampaigns } from '@/lib/campaigns';
+import { getCategoriesCached } from '@/lib/storefront-cache';
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics';
 
 // ─── Fonts via next/font (self-hosted, no render-blocking external requests) ──
@@ -149,9 +150,10 @@ export default async function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [initialSettings, liveCampaigns] = await Promise.all([
+  const [initialSettings, liveCampaigns, categories] = await Promise.all([
     getPublicSiteSettings(),
     getLiveCampaigns(),
+    getCategoriesCached(),
   ]);
 
   const campaignAnnouncements = liveCampaigns
@@ -214,7 +216,10 @@ export default async function RootLayout({
             <WishlistProvider>
               <ToastProvider>
                 <FlyToCartProvider>
-                  <Header campaignAnnouncements={campaignAnnouncements} />
+                  <Header
+                    campaignAnnouncements={campaignAnnouncements}
+                    initialCategories={categories}
+                  />
                   <main className="flex-1">{children}</main>
                   <CartDrawer />
                   <WhatsAppFloat />

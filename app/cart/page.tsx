@@ -1,12 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ShoppingBag, Trash2, Plus, Minus, ArrowRight, ShieldCheck, Tag, ArrowLeft, CheckCircle2, Heart } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useSettings } from '@/context/SettingsContext';
 import { calculateDiscountPercent } from '@/lib/pricing';
+import { trackViewCart } from '@/lib/analytics';
 
 export default function CartPage() {
   const {
@@ -34,6 +35,23 @@ export default function CartPage() {
   const hasPreOrderItems = cart.some((i) => i.isPreOrder);
   const hasRegularItems = cart.some((i) => !i.isPreOrder);
   const isMixedCart = hasPreOrderItems && hasRegularItems;
+  const viewCartTrackedRef = useRef(false);
+
+  useEffect(() => {
+    if (!viewCartTrackedRef.current && cart.length > 0) {
+      viewCartTrackedRef.current = true;
+      trackViewCart(
+        cart.map((item) => ({
+          item_id: item.productId,
+          item_name: item.title,
+          price: item.price,
+          quantity: item.quantity,
+          item_variant: `${item.size} / ${item.color}`,
+        })),
+        grandTotal
+      );
+    }
+  }, [cart, grandTotal]);
 
   const handleKeepOnlyPreOrder = () => {
     cart.filter((i) => !i.isPreOrder).forEach((i) => removeFromCart(i.id));
@@ -342,7 +360,7 @@ export default function CartPage() {
                   <span>
                     {hasPreOrderItems
                       ? '50% Advance Bank/Wallet Transfer Required with Screenshot Verification'
-                      : 'Cash On Delivery Available Nationwide Across Pakistan'}
+                      : 'Cash On Delivery & 100% Full Advance Payment Available Nationwide'}
                   </span>
                 </div>
               </div>

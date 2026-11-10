@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -8,6 +8,7 @@ import { X, Trash2, Plus, Minus, ShoppingBag, ArrowRight, Tag, Lock, ShieldCheck
 import { useCart } from '@/context/CartContext';
 import { useSettings } from '@/context/SettingsContext';
 import { calculateDiscountPercent } from '@/lib/pricing';
+import { trackViewCart } from '@/lib/analytics';
 
 export const CartDrawer: React.FC = () => {
   const {
@@ -27,6 +28,7 @@ export const CartDrawer: React.FC = () => {
   const [couponInput, setCouponInput] = useState('');
   const [couponError, setCouponError] = useState('');
   const [couponLoading, setCouponLoading] = useState(false);
+  const wasOpenRef = useRef(false);
 
   const freeShippingThreshold = typeof settings.freeShippingThreshold === 'number' ? settings.freeShippingThreshold : 10000;
   const flatShippingFee = typeof settings.flatShippingFee === 'number' ? settings.flatShippingFee : 250;
@@ -34,6 +36,22 @@ export const CartDrawer: React.FC = () => {
   const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
   const shippingFee = subtotal >= freeShippingThreshold || cart.length === 0 ? 0 : flatShippingFee;
   const totalAmount = Math.max(0, subtotal - discountAmount + shippingFee);
+
+  useEffect(() => {
+    if (isCartOpen && !wasOpenRef.current && cart.length > 0) {
+      trackViewCart(
+        cart.map((item) => ({
+          item_id: item.productId,
+          item_name: item.title,
+          price: item.price,
+          quantity: item.quantity,
+          item_variant: `${item.size} / ${item.color}`,
+        })),
+        totalAmount
+      );
+    }
+    wasOpenRef.current = isCartOpen;
+  }, [isCartOpen, cart, totalAmount]);
 
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,6 +95,9 @@ export const CartDrawer: React.FC = () => {
 
           {/* Slide-over Cart Drawer Panel */}
           <motion.aside
+            role="dialog"
+            aria-modal="true"
+            aria-label="Shopping Bag"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
@@ -180,9 +201,9 @@ export const CartDrawer: React.FC = () => {
                         <div className="flex-1 min-w-0 flex flex-col justify-between py-0.5">
                           <div>
                             <div className="flex items-start justify-between gap-2">
-                              <h4 className="font-serif text-xs font-bold text-teal line-clamp-1 min-w-0 flex-1">
+                              <h3 className="font-serif text-xs font-bold text-teal line-clamp-1 min-w-0 flex-1">
                                 {item.title}
-                              </h4>
+                              </h3>
                               <motion.button
                                 whileTap={{ scale: 0.85 }}
                                 onClick={() => removeFromCart(item.id)}
@@ -319,13 +340,13 @@ export const CartDrawer: React.FC = () => {
                     className="w-full min-h-[48px] bg-teal text-champagne py-3.5 px-4 rounded-xl text-xs uppercase font-extrabold tracking-widest hover:bg-teal-900 transition-all duration-300 shadow-xl flex items-center justify-center gap-2 group cursor-pointer border border-champagne/20 select-none"
                   >
                     <Lock className="w-4 h-4 text-champagne shrink-0" />
-                    <span className="truncate">Instant Checkout (Cash On Delivery)</span>
+                    <span className="truncate">Proceed to Checkout</span>
                     <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform duration-300 text-champagne shrink-0" />
                   </motion.div>
                 </Link>
 
                 <p className="text-[10.5px] text-center text-charcoal-muted flex items-center justify-center gap-1.5 font-medium select-none">
-                  <ShieldCheck className="w-3.5 h-3.5 text-teal shrink-0" /> Stealth COD Delivery • 7-Day Hassle-Free Exchange
+                  <ShieldCheck className="w-3.5 h-3.5 text-teal shrink-0" /> COD &amp; Advance Payment • 7-Day Hassle-Free Exchange
                 </p>
               </div>
             )}

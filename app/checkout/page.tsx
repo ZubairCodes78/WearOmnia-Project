@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
@@ -26,6 +26,11 @@ import {
 import { PageTransition } from '@/components/layout/PageTransition';
 import { normalizePhone, validatePhone } from '@/lib/phone';
 import { calculateDiscountPercent } from '@/lib/pricing';
+import {
+  trackBeginCheckout,
+  trackAddShippingInfo,
+  trackAddPaymentInfo,
+} from '@/lib/analytics';
 
 const PROVINCES = [
   'Punjab',
@@ -230,6 +235,25 @@ export default function CheckoutPage() {
     : cart.reduce((acc, item) => acc + ((item.basePrice || item.price) * item.quantity), 0);
   const youSaveDiscount = Math.max(0, totalOriginalPrice - effectiveSubtotal);
 
+  const beginCheckoutTrackedRef = useRef(false);
+  useEffect(() => {
+    if (!beginCheckoutTrackedRef.current && cart.length > 0) {
+      beginCheckoutTrackedRef.current = true;
+      trackBeginCheckout(
+        cart.map((i) => ({
+          item_id: i.productId,
+          item_name: i.title,
+          price: i.price,
+          quantity: i.quantity,
+          item_variant: `${i.size} / ${i.color}`,
+        })),
+        totalAmount,
+        'PKR',
+        appliedCoupon?.code
+      );
+    }
+  }, [cart, totalAmount, appliedCoupon?.code]);
+
   const handleApplyCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!couponInput.trim()) return;
@@ -424,6 +448,17 @@ export default function CheckoutPage() {
         payload.screenshotKey = screenshotKey;
         payload.selectedPaymentMethodId = selectedMethodId;
       }
+
+      const gaItems = cart.map((i) => ({
+        item_id: i.productId,
+        item_name: i.title,
+        price: i.price,
+        quantity: i.quantity,
+        item_variant: `${i.size} / ${i.color}`,
+      }));
+      const shippingTierLabel = shippingFee === 0 ? 'Free Express Courier' : 'Standard Nationwide Courier';
+      trackAddShippingInfo(gaItems, totalAmount, shippingTierLabel, 'PKR', appliedCoupon?.code);
+      trackAddPaymentInfo(gaItems, totalAmount, payload.paymentMethod, 'PKR', appliedCoupon?.code);
 
       const res = await fetch(endpoint, {
         method: 'POST',

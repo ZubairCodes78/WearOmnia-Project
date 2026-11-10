@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { CheckCircle2, Truck, ArrowRight, MessageSquare, ShieldCheck, MapPin, Package, Clock, AlertTriangle } from 'lucide-react';
 import { OrderSuccessConfetti } from './OrderSuccessConfetti';
+import { OrderSuccessTracker } from './OrderSuccessTracker';
 import { PreOrderResubmitProof } from './PreOrderResubmitProof';
 import { getSiteSettings } from '@/lib/settings';
 import { formatOrderPlacementTime, formatPlacedOnDate, formatOrderPlacedComma } from '@/lib/date';
@@ -50,6 +51,19 @@ export default async function OrderSuccessPage({ params }: OrderSuccessPageProps
   return (
     <div className="editorial-page">
       <OrderSuccessConfetti />
+      <OrderSuccessTracker
+        orderNumber={order.orderNumber}
+        totalAmount={order.totalAmount}
+        shippingFee={order.shippingFee}
+        couponCode={order.couponCode}
+        items={order.items.map((item) => ({
+          item_id: item.productId || item.id,
+          item_name: item.productTitle,
+          price: item.unitPrice,
+          quantity: item.quantity,
+          item_variant: item.variantInfo || undefined,
+        }))}
+      />
 
       <div className="max-w-3xl mx-auto px-4 sm:px-6">
         {/* Success Header Box */}

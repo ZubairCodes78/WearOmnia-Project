@@ -39,6 +39,8 @@ model Category {
   products     Product[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  @@index([displayOrder])
 }
 
 model Collection {
@@ -51,6 +53,8 @@ model Collection {
   products     Product[]
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  @@index([displayOrder])
 }
 
 model Product {
@@ -237,6 +241,7 @@ model Order {
   @@index([deliveredWhatsAppSentAt])
   @@index([deliveredAt])
   @@index([campaignId])
+  @@index([paymentMethod, status])
 }
 
 model Shipment {
@@ -467,6 +472,8 @@ model SizeGuideEntry {
   displayOrder Int       @default(0)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+
+  @@index([displayOrder])
 }
 
 // ─────────────────────────────────────────────────────

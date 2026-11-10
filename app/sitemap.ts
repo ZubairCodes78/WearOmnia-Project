@@ -1,23 +1,19 @@
 import { MetadataRoute } from 'next';
-import { prisma } from '@/lib/prisma';
 import { PRODUCTION_DOMAIN } from '@/lib/seo';
 import { getLiveCampaigns } from '@/lib/campaigns';
+import { getPublishedProductsCached } from '@/lib/storefront-cache';
 
 export const dynamic = 'force-dynamic';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = PRODUCTION_DOMAIN;
 
-  let products: { slug: string; updatedAt: Date }[] = [];
+  let products: { slug: string; updatedAt: Date | string }[] = [];
   let campaignUrls: MetadataRoute.Sitemap = [];
 
   try {
     const [prodRows, liveCampaigns] = await Promise.all([
-      prisma.product.findMany({
-        where: { status: 'PUBLISHED' },
-        select: { slug: true, updatedAt: true },
-        orderBy: { updatedAt: 'desc' },
-      }),
+      getPublishedProductsCached(),
       getLiveCampaigns(),
     ]);
     products = prodRows;
@@ -35,13 +31,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
   // Find most recent product update timestamp for dynamic collections
   const latestProductUpdate = products.length > 0 && products[0]?.updatedAt
-    ? products[0].updatedAt
+    ? new Date(products[0].updatedAt)
     : new Date('2026-09-30T19:57:54.000Z');
 
   // Dynamic published product pages (each with its authentic DB updatedAt)
   const productUrls: MetadataRoute.Sitemap = products.map((p) => ({
     url: `${baseUrl}/product/${p.slug}`,
-    lastModified: p.updatedAt,
+    lastModified: new Date(p.updatedAt),
     changeFrequency: 'weekly',
     priority: 0.9,
   }));

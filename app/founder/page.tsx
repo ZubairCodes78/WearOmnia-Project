@@ -32,7 +32,7 @@ export const metadata: Metadata = {
     locale: 'en_PK',
     images: [
       {
-        url: `${PRODUCTION_DOMAIN}/images/founder.png`,
+        url: `${PRODUCTION_DOMAIN}/images/founder.webp`,
         width: 1181,
         height: 1332,
         alt: 'Virago Baji, Founder of WearOMNIA',
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     title: 'Virago Baji — Founder & Creative Vision | WearOMNIA',
     description:
       'Meet Virago Baji, founder of WearOMNIA. Discover the story and philosophy behind modern modest fashion.',
-    images: [`${PRODUCTION_DOMAIN}/images/founder.png`],
+    images: [`${PRODUCTION_DOMAIN}/images/founder.webp`],
   },
 };
 
@@ -94,7 +94,7 @@ export default function FounderPage() {
                 <div className="w-full max-w-sm sm:max-w-md">
                   <div className="relative aspect-[1181/1332] rounded-3xl overflow-hidden shadow-2xl border-2 border-champagne/40 bg-[#06191B] group">
                     <Image
-                      src="/images/founder.png"
+                      src="/images/founder.webp"
                       alt="Virago Baji, Founder of WearOMNIA"
                       fill
                       priority

@@ -56,7 +56,34 @@ export interface GAItem {
   quantity?: number;
   item_category?: string;
   item_variant?: string;
+  item_list_name?: string;
+  index?: number;
 }
+
+export const trackViewItemList = (
+  listName: string,
+  items: GAItem[],
+  listId?: string
+) => {
+  if (!items || items.length === 0) return;
+  event('view_item_list', {
+    item_list_id: listId || listName.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+    item_list_name: listName,
+    items,
+  });
+};
+
+export const trackSelectItem = (
+  listName: string,
+  item: GAItem,
+  listId?: string
+) => {
+  event('select_item', {
+    item_list_id: listId || listName.toLowerCase().replace(/[^a-z0-9]+/g, '_'),
+    item_list_name: listName,
+    items: [item],
+  });
+};
 
 export const trackViewItem = (item: GAItem, currency: string = 'PKR') => {
   event('view_item', {
@@ -74,10 +101,68 @@ export const trackAddToCart = (item: GAItem, currency: string = 'PKR') => {
   });
 };
 
-export const trackBeginCheckout = (items: GAItem[], totalValue: number, currency: string = 'PKR') => {
+export const trackRemoveFromCart = (item: GAItem, currency: string = 'PKR') => {
+  event('remove_from_cart', {
+    currency,
+    value: (item.price ?? 0) * (item.quantity ?? 1),
+    items: [item],
+  });
+};
+
+export const trackViewCart = (
+  items: GAItem[],
+  totalValue: number,
+  currency: string = 'PKR'
+) => {
+  event('view_cart', {
+    currency,
+    value: totalValue,
+    items,
+  });
+};
+
+export const trackBeginCheckout = (
+  items: GAItem[],
+  totalValue: number,
+  currency: string = 'PKR',
+  coupon?: string
+) => {
   event('begin_checkout', {
     currency,
     value: totalValue,
+    ...(coupon ? { coupon } : {}),
+    items,
+  });
+};
+
+export const trackAddShippingInfo = (
+  items: GAItem[],
+  totalValue: number,
+  shippingTier: string = 'Standard Courier',
+  currency: string = 'PKR',
+  coupon?: string
+) => {
+  event('add_shipping_info', {
+    currency,
+    value: totalValue,
+    shipping_tier: shippingTier,
+    ...(coupon ? { coupon } : {}),
+    items,
+  });
+};
+
+export const trackAddPaymentInfo = (
+  items: GAItem[],
+  totalValue: number,
+  paymentType: string,
+  currency: string = 'PKR',
+  coupon?: string
+) => {
+  event('add_payment_info', {
+    currency,
+    value: totalValue,
+    payment_type: paymentType,
+    ...(coupon ? { coupon } : {}),
     items,
   });
 };
@@ -87,13 +172,27 @@ export const trackPurchase = (
   totalValue: number,
   items: GAItem[],
   shipping: number = 0,
-  currency: string = 'PKR'
+  currency: string = 'PKR',
+  coupon?: string
 ) => {
+  if (typeof window !== 'undefined' && transactionId) {
+    try {
+      const storageKey = `wearomnia_ga_purchased_${transactionId}`;
+      if (window.sessionStorage.getItem(storageKey)) {
+        return;
+      }
+      window.sessionStorage.setItem(storageKey, '1');
+    } catch {
+      // Ignore sessionStorage restrictions cleanly
+    }
+  }
+
   event('purchase', {
     transaction_id: transactionId,
     value: totalValue,
     currency,
     shipping,
+    ...(coupon ? { coupon } : {}),
     items,
   });
 };

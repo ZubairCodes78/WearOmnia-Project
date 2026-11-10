@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { FlyToCartAnimation, FlyingImage } from '@/components/cart/FlyToCartAnimation';
+import { trackRemoveFromCart } from '@/lib/analytics';
 
 export interface CartItem {
   id: string;
@@ -93,6 +94,16 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const removeFromCart = (id: string) => {
+    const target = cart.find((i) => i.id === id);
+    if (target) {
+      trackRemoveFromCart({
+        item_id: target.productId,
+        item_name: target.title,
+        price: target.price,
+        quantity: target.quantity,
+        item_variant: `${target.size} / ${target.color}`,
+      });
+    }
     setCart((prev) => prev.filter((i) => i.id !== id));
   };
 

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { ChevronDown, Search, HelpCircle, Heart, Clock, Truck, Scissors, ShieldCheck } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
 
@@ -32,53 +33,19 @@ const FUNNY_FAQS = [
   },
 ];
 
-export default function FaqClient() {
+interface FaqItemProp {
+  question: string;
+  answer: string;
+}
+
+export default function FaqClient({ faqs: serverFaqs = [] }: { faqs?: FaqItemProp[] }) {
   const { settings } = useSettings();
   const [openIdx, setOpenIdx] = useState<number | null>(0);
   const [searchQuery, setSearchQuery] = useState('');
 
-  const freeThresholdStr = settings.freeShippingThreshold > 0
-    ? `Rs. ${settings.freeShippingThreshold.toLocaleString()} or above`
-    : 'all orders';
+  const normalizedFaqs = serverFaqs.map((f) => ({ q: f.question, a: f.answer }));
 
-  const faqs = [
-    {
-      q: 'Do I need an account to place an order?',
-      a: 'No! WearOMNIA enforces a strict Guest Checkout model. You never need to register or create an account. Simply add items to your bag, enter your shipping details, and place your order in seconds.',
-    },
-    {
-      q: 'What payment methods do you accept?',
-      a: 'We strictly offer Cash On Delivery (COD) across 200+ cities in Pakistan. You pay in cash to the courier representative when your parcel is handed over.',
-    },
-    {
-      q: 'How long does delivery take?',
-      a: `Nationwide delivery takes ${settings.estimatedDeliveryTime || '2-4 business days'}. Major cities receive deliveries within 2-3 business days.`,
-    },
-    {
-      q: 'Is shipping free?',
-      a: settings.freeShippingThreshold > 0
-        ? `Yes, nationwide shipping is completely FREE on all orders of ${freeThresholdStr}. For orders under Rs. ${settings.freeShippingThreshold.toLocaleString()}, a flat delivery fee of Rs. ${settings.flatShippingFee} is added.`
-        : 'Yes, nationwide shipping is completely FREE on all orders with no minimum purchase required.',
-    },
-    {
-      q: 'What is the unstitched suit fabric composition?',
-      a: 'Our unstitched lawn collections feature high-count 80/80 printed lawn shirts, schiffli embroidered neck patches, and 100% Bamber chiffon or pure silk dupattas.',
-    },
-    {
-      q: 'Can I exchange an item if it doesn’t fit?',
-      a: `Yes, we provide a 7-day hassle-free exchange window. Simply contact our WhatsApp concierge (${settings.whatsappNumber || '03180633323'}) or email us at ${settings.supportEmail || 'wearomniaa@gmail.com'} with your order number.`,
-    },
-    {
-      q: 'What is WearOMNIA’s design philosophy?',
-      a: 'Our core philosophy is "Modesty With Functionality." We design clothing that honors graceful modest coverage while providing the everyday practicality women need — breathable fabrics, comfortable movement, and thoughtful details.',
-    },
-    {
-      q: 'Do your garments have pockets?',
-      a: 'Yes, on styles that genuinely have them! For example, our palazzo trousers and select shirts feature two functional side pockets. We clearly indicate pockets in product descriptions only when the garment truly includes them.',
-    },
-  ];
-
-  const filteredFaqs = faqs.filter(
+  const filteredFaqs = normalizedFaqs.filter(
     (f) =>
       f.q.toLowerCase().includes(searchQuery.toLowerCase()) ||
       f.a.toLowerCase().includes(searchQuery.toLowerCase())
@@ -95,50 +62,83 @@ export default function FaqClient() {
             Frequently Asked Questions
           </h1>
           <p className="text-xs sm:text-sm text-charcoal-muted max-w-md mx-auto">
-            Find quick, clear answers regarding nationwide delivery, sizing, returns, and Cash On Delivery.
+            Direct answers about Cash on Delivery, Full Advance Payment verification, sizing, tracking, and 7-day exchanges across Pakistan.
           </p>
         </div>
 
         {/* Search */}
         <div className="relative max-w-lg mx-auto">
+          <label htmlFor="faq-search-input" className="sr-only">
+            Search Frequently Asked Questions
+          </label>
           <input
+            id="faq-search-input"
             type="text"
-            placeholder="Search questions..."
+            placeholder="Search questions (COD, full advance, delivery, size)..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="w-full pl-12 pr-4 py-3.5 bg-offwhite rounded-lg text-xs text-charcoal border border-champagne/50 focus:outline-none focus:ring-2 focus:ring-teal shadow-sm"
           />
-          <Search className="w-5 h-5 text-teal absolute left-4 top-3.5" />
+          <Search className="w-5 h-5 text-teal absolute left-4 top-3.5" aria-hidden="true" />
         </div>
 
         {/* Accordions */}
         <div className="space-y-4">
-          {filteredFaqs.map((faq, idx) => (
-            <div
-              key={idx}
-              className="editorial-faq-item overflow-hidden transition-all"
-            >
-              <button
-                onClick={() => setOpenIdx(openIdx === idx ? null : idx)}
-                className="w-full p-6 text-left flex items-center justify-between gap-4 font-serif text-base font-semibold text-teal"
+          {filteredFaqs.map((faq, idx) => {
+            const isOpen = openIdx === idx;
+            const panelId = `faq-panel-${idx}`;
+            return (
+              <div
+                key={idx}
+                className="editorial-faq-item overflow-hidden transition-all"
               >
-                <span className="flex items-center gap-3">
-                  <HelpCircle className="w-5 h-5 text-champagne-700 shrink-0" />
-                  {faq.q}
-                </span>
-                <ChevronDown
-                  className={`w-5 h-5 text-teal transition-transform ${openIdx === idx ? 'rotate-180 text-champagne-700' : ''
-                    }`}
-                />
-              </button>
+                <button
+                  type="button"
+                  aria-expanded={isOpen}
+                  aria-controls={panelId}
+                  onClick={() => setOpenIdx(isOpen ? null : idx)}
+                  className="w-full p-6 text-left flex items-center justify-between gap-4 font-serif text-base font-semibold text-teal cursor-pointer min-h-[44px]"
+                >
+                  <span className="flex items-center gap-3">
+                    <HelpCircle className="w-5 h-5 text-champagne-700 shrink-0" aria-hidden="true" />
+                    {faq.q}
+                  </span>
+                  <ChevronDown
+                    aria-hidden="true"
+                    className={`w-5 h-5 text-teal transition-transform shrink-0 ${isOpen ? 'rotate-180 text-champagne-700' : ''}`}
+                  />
+                </button>
 
-              {openIdx === idx && (
-                <div className="px-6 pb-6 text-xs text-charcoal-muted font-sans leading-relaxed border-t border-sand/60 pt-4">
-                  {faq.a}
-                </div>
-              )}
-            </div>
-          ))}
+                {isOpen && (
+                  <div
+                    id={panelId}
+                    className="px-6 pb-6 text-xs text-charcoal-muted font-sans leading-relaxed border-t border-sand/60 pt-4"
+                  >
+                    {faq.a}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Helpful Direct Internal Links */}
+        <div className="flex flex-wrap items-center justify-center gap-3 text-xs font-semibold">
+          <Link href="/shop" className="px-4 py-2 rounded-xl bg-teal text-champagne hover:bg-teal-900 transition-colors">
+            Browse Collection
+          </Link>
+          <Link href="/track-order" className="px-4 py-2 rounded-xl bg-sand text-teal hover:border-champagne border border-sand transition-colors">
+            Track Order
+          </Link>
+          <Link href="/size-guide" className="px-4 py-2 rounded-xl bg-sand text-teal hover:border-champagne border border-sand transition-colors">
+            Size Guide
+          </Link>
+          <Link href="/policies/shipping" className="px-4 py-2 rounded-xl bg-sand text-teal hover:border-champagne border border-sand transition-colors">
+            Shipping Policy
+          </Link>
+          <Link href="/policies/returns" className="px-4 py-2 rounded-xl bg-sand text-teal hover:border-champagne border border-sand transition-colors">
+            Returns Policy
+          </Link>
         </div>
 
         {/* Hilarious Unofficial Real-Talk FAQs */}

@@ -42,31 +42,31 @@ export default function ReturnsPolicyPage() {
 
         <div className="editorial-dossier font-sans">
           <div className="space-y-3">
-            <h3 className="font-serif text-xl font-bold text-teal flex items-center gap-2">
+            <h2 className="font-serif text-xl font-bold text-teal flex items-center gap-2">
               <RotateCcw className="w-5 h-5 text-champagne-700" /> 1. 7-Day Exchange Window
-            </h3>
+            </h2>
             <p>
               WearOMNIA offers a 7-day hassle-free exchange window for size alterations or garment exchanges from the date of package delivery.
             </p>
           </div>
 
           <div className="space-y-3 pt-4 border-t border-sand">
-            <h3 className="font-serif text-xl font-bold text-teal flex items-center gap-2">
+            <h2 className="font-serif text-xl font-bold text-teal flex items-center gap-2">
               <CheckCircle2 className="w-5 h-5 text-champagne-700" /> 2. Eligibility Criteria
-            </h3>
+            </h2>
             <ul className="list-disc pl-5 space-y-1 text-charcoal-muted">
-              <li>The suit/garment must be unworn, unwashed, and unstitched (if purchased as unstitched lawn).</li>
+              <li>The garment must be unworn, unwashed, and in its original condition without stains or damage.</li>
               <li>All original brand tags, neck cards, and packaging must remain intact.</li>
-              <li>Stitched garments with custom modifications requested by customer are non-exchangeable unless defective upon arrival.</li>
+              <li>Stitched garments with custom alterations requested by customer are non-exchangeable unless defective upon arrival.</li>
             </ul>
           </div>
 
           <div className="space-y-3 pt-4 border-t border-sand">
-            <h3 className="font-serif text-xl font-bold text-teal flex items-center gap-2">
+            <h2 className="font-serif text-xl font-bold text-teal flex items-center gap-2">
               <ShieldCheck className="w-5 h-5 text-champagne-700" /> 3. Exchange Procedure
-            </h3>
+            </h2>
             <p>
-              To initiate an exchange, message our WhatsApp Support at <strong>03180633323</strong> or email <a href="mailto:wearomniaa@gmail.com" className="underline font-bold">wearomniaa@gmail.com</a> with your Order Number (#OMNIA-XXXXX) and clear photos of the item. Our team will arrange reverse pickup or provide courier return details.
+              To initiate an exchange, message our WhatsApp Support at <strong>03180633323</strong> or email <a href="mailto:wearomniaa@gmail.com" className="underline font-bold">wearomniaa@gmail.com</a> with your Order Number (#0001 / OMNIA order ID) and clear photos of the item. Our team will arrange reverse pickup or provide courier return instructions.
             </p>
           </div>
         </div>

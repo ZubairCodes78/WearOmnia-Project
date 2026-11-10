@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     type: 'website',
     images: [
       {
-        url: `${PRODUCTION_DOMAIN}/images/our-story-atelier.webp`,
+        url: `${PRODUCTION_DOMAIN}/images/og-image.jpg`,
         width: 1200,
         height: 630,
         alt: 'WearOMNIA Modest Fashion Craftsmanship & Story',
@@ -44,8 +44,8 @@ export const metadata: Metadata = {
     card: 'summary_large_image',
     title: 'Our Story & Craftsmanship Heritage | WearOMNIA Modest Couture',
     description:
-      'Discover the journey of WearOMNIA. Handcrafted in Pakistan with pure raw silks, delicate organzas, and artisanal embroidery designed for timeless modest elegance.',
-    images: [`${PRODUCTION_DOMAIN}/images/our-story-atelier.webp`],
+      'Discover the story of WearOMNIA — Modesty With Functionality. Thoughtfully designed stitched clothing combining graceful coverage, real-life practicality, and everyday comfort.',
+    images: [`${PRODUCTION_DOMAIN}/images/og-image.jpg`],
   },
 };
 
@@ -60,9 +60,9 @@ export default function OurStoryPage() {
     '@type': 'AboutPage',
     '@id': `${CANONICAL_URL}#aboutpage`,
     url: CANONICAL_URL,
-    name: 'Our Story & Craftsmanship Heritage | WearOMNIA Modest Couture',
+    name: 'Our Story & Heritage | WearOMNIA — Modesty With Functionality',
     description:
-      'Discover the journey of WearOMNIA. Handcrafted in Pakistan with pure raw silks, delicate organzas, and artisanal embroidery designed for timeless modest elegance.',
+      'Discover the story of WearOMNIA — Modesty With Functionality. Thoughtfully designed stitched clothing combining graceful coverage, real-life practicality, and everyday comfort.',
     inLanguage: 'en',
     isPartOf: {
       '@type': 'WebSite',
