@@ -57,12 +57,12 @@ export default async function FAQPage() {
     {
       question: 'What payment options are available?',
       answer:
-        'For regular in-stock orders delivered across Pakistan, WearOMNIA offers two secure checkout payment methods: 1) Cash on Delivery (COD), allowing you to pay the courier in cash upon arrival, and 2) 100% Full Advance Payment via official Pakistani bank transfer or mobile wallet (Easypaisa / JazzCash / Nayapay) with instant receipt upload.',
+        'For regular in-stock orders delivered across Pakistan, WearOMNIA offers two secure checkout payment methods: 1) Cash on Delivery (COD), allowing you to pay the courier in cash upon arrival, and 2) 100% Full Advance Payment via official Pakistani bank transfer or mobile wallet accounts (such as SadaPay and Easypaisa, as configured in checkout) with instant receipt upload.',
     },
     {
       question: 'Is Cash on Delivery (COD) available?',
       answer:
-        'Yes. Cash on Delivery (COD) is available nationwide across all cities, towns, and regions in Pakistan serviced by our courier partners (including PostEx, TCS, and Leopards). Simply select "Cash on Delivery" at checkout, and you pay the exact order total in cash directly to the courier rider at your doorstep.',
+        'Yes. Cash on Delivery (COD) is available nationwide across all cities, towns, and regions in Pakistan serviced by our courier partners (including our integrated courier PostEx and domestic delivery networks). Simply select "Cash on Delivery" at checkout, and you pay the exact order total in cash directly to the courier rider at your doorstep.',
     },
     {
       question: 'How does Full Advance Payment work?',

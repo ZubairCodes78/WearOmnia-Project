@@ -219,15 +219,15 @@ async function main() {
     for (const rt of redirectTests) {
       const res = await fetch(`${BASE_URL}${rt.from}`, { redirect: 'manual' });
       assert(
-        res.status === 301 || res.status === 307 || res.status === 308,
-        `${rt.from} returned status ${res.status} instead of a redirect`
+        res.status === 301 || res.status === 308,
+        `${rt.from} returned status ${res.status} instead of a permanent 301/308 redirect`
       );
       const loc = res.headers.get('location') || '';
       assert(
         loc === rt.expectedTo || loc.endsWith(rt.expectedTo),
         `${rt.from} redirected to "${loc}" instead of expected "${rt.expectedTo}"`
       );
-      console.log(`PASS ${rt.from} -> HTTP ${res.status} -> ${loc}`);
+      console.log(`PASS ${rt.from} -> HTTP ${res.status} (Permanent) -> ${loc}`);
     }
 
     const retiredProductRes = await fetch(`${BASE_URL}/product/the-sovereign-velvet-kaftan`, { redirect: 'manual' });

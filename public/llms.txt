@@ -30,12 +30,12 @@ WearOMNIA specializes in ready-to-wear stitched modest Pakistani women's apparel
 - Checkout Workflow: 1-Click Guest Checkout. No compulsory account registration, password creation, or email verification required.
 - Supported Payment Methods:
   1. Cash on Delivery (COD): Standard payment model across Pakistan; pay courier in cash upon physical delivery.
-  2. Full Advance Payment (100%): Customer pays order total via official bank transfer or mobile wallets (Easypaisa, JazzCash, Nayapay) and uploads transaction screenshot at checkout.
+  2. Full Advance Payment (100%): Customer pays order total via official bank transfer or mobile wallets (such as SadaPay and Easypaisa, as configured in checkout) and uploads transaction screenshot at checkout.
 - Payment Verification Process: Orders with advance payment are assigned `PAYMENT_REVIEW_PENDING`. WearOMNIA's operations team manually cross-references the transaction ID and receipt against bank statements before confirming. If verification fails or screenshot is unclear, the customer can resubmit payment proof directly from their order page without creating duplicate orders.
 - Pre-Order Workflow: Limited advance collections may offer pre-order reservations with dedicated advance deposit or full advance terms, manually verified prior to production dispatch.
 
 ## Logistics, Delivery & Returns
-- Courier Partners: PostEx, TCS, Leopards, and premier domestic logistics providers.
+- Courier Partners: Integrated express courier PostEx and leading domestic logistics networks.
 - Delivery Timelines: Standard transit of 2–4 business days across major urban centers (Lahore, Karachi, Islamabad, Rawalpindi, Faisalabad, Multan, Peshawar, Quetta) and 3–5 days for other regions.
 - Real-Time Tracking: Real-time parcel tracking is available at https://www.wearomnia.com/track-order using the WearOMNIA Order Number (e.g. WO-1001) or courier tracking number.
 - Exchange Policy: 7-day exchange window from confirmed delivery date for unworn, unwashed items in original packaging with intact security tags.

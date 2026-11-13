@@ -42,6 +42,20 @@ export function middleware(req: NextRequest) {
     );
   }
 
+  // ── Permanent Collection Migration (308 Permanent: /shop?category=slug -> /collection/slug) ──
+  if (pathname === '/shop' && req.nextUrl.searchParams.has('category')) {
+    const category = req.nextUrl.searchParams.get('category');
+    const search = req.nextUrl.searchParams.get('search');
+    const wishlist = req.nextUrl.searchParams.get('wishlist');
+    const preorder = req.nextUrl.searchParams.get('preorder');
+    if (category && !search && wishlist !== 'true' && preorder !== 'true') {
+      const dest = req.nextUrl.clone();
+      dest.pathname = `/collection/${category}`;
+      dest.search = '';
+      return NextResponse.redirect(dest, { status: 308 });
+    }
+  }
+
   // Allow access to admin login page
   if (pathname === '/admin/login') {
     return NextResponse.next();

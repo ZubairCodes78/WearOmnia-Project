@@ -1,5 +1,5 @@
 import React from 'react';
-import { redirect } from 'next/navigation';
+import { permanentRedirect } from 'next/navigation';
 import { CatalogClient } from '@/components/shop/CatalogClient';
 import { generateCategoryMetadata, generateBreadcrumbSchema } from '@/lib/seo';
 import { getLiveCampaigns, applyCampaignsToProducts } from '@/lib/campaigns';
@@ -47,7 +47,7 @@ export default async function ShopPage({ searchParams }: ShopPageProps) {
   const params = await searchParams;
 
   if (params.category && !params.search && params.wishlist !== 'true' && params.preorder !== 'true') {
-    redirect(`/collection/${params.category}`);
+    permanentRedirect(`/collection/${params.category}`);
   }
 
   const now = new Date();
