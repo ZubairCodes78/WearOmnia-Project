@@ -215,7 +215,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({
           {product.category && (
             <>
               <ChevronRight className="w-3.5 h-3.5" />
-              <Link href={`/shop?category=${product.category.slug}`} className="hover:text-teal">
+              <Link href={`/collection/${product.category.slug}`} className="hover:text-teal">
                 {product.category.name}
               </Link>
             </>

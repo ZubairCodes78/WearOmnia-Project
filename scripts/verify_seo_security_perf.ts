@@ -85,6 +85,7 @@ async function main() {
     const publicRoutes = [
       '/',
       '/shop',
+      '/collection/new-arrivals',
       '/our-story',
       '/founder',
       '/contact',
@@ -145,8 +146,19 @@ async function main() {
 
       if (route === '/faq') {
         const faqSchema = jsonLdBlocks.find((b) => b['@type'] === 'FAQPage');
-        assert(faqSchema && Array.isArray(faqSchema.mainEntity) && faqSchema.mainEntity.length >= 5, '/faq missing FAQPage JSON-LD');
+        assert(faqSchema && Array.isArray(faqSchema.mainEntity) && faqSchema.mainEntity.length >= 10, '/faq missing comprehensive FAQPage JSON-LD');
         assert(!r.text.includes('strictly offer Cash On Delivery'), '/faq contains outdated COD-only claim');
+        assert(r.text.includes('Full Advance Payment'), '/faq must describe Full Advance Payment');
+        assert(r.text.includes('PAYMENT_REVIEW_PENDING'), '/faq must detail PAYMENT_REVIEW_PENDING verification');
+      }
+
+      if (route.startsWith('/collection/')) {
+        const collectionSchema = jsonLdBlocks.find((b) => b['@type'] === 'CollectionPage');
+        assert(collectionSchema, `${route} missing CollectionPage JSON-LD`);
+        const itemListSchema = jsonLdBlocks.find(
+          (b) => b['@type'] === 'ItemList' || b.mainEntity?.['@type'] === 'ItemList'
+        );
+        assert(itemListSchema, `${route} missing ItemList JSON-LD`);
       }
 
       console.log(`PASS ${route} | 200 OK | ${(r.byteSize / 1024).toFixed(1)} KB HTML | ${r.elapsedMs}ms local SSR | JSON-LD blocks: ${jsonLdBlocks.length} | canonical: ${canonical}`);
@@ -178,6 +190,53 @@ async function main() {
     const ogJpg = await fetch(`${BASE_URL}/images/og-image.jpg`);
     assert.strictEqual(ogJpg.status, 200, '/images/og-image.jpg must return 200');
     console.log('PASS /images/founder.webp & /images/og-image.jpg | 200 OK');
+
+    console.log('\n--- 2b. URL Remediation: 301 Redirects & 410 Gone Verification ---');
+    const redirectTests = [
+      { from: '/about', expectedTo: '/our-story' },
+      { from: '/about-us', expectedTo: '/our-story' },
+      { from: '/collections', expectedTo: '/shop' },
+      { from: '/products', expectedTo: '/shop' },
+      { from: '/shipping', expectedTo: '/policies/shipping' },
+      { from: '/returns', expectedTo: '/policies/returns' },
+      { from: '/refund-policy', expectedTo: '/policies/refund' },
+      { from: '/privacy-policy', expectedTo: '/policies/privacy' },
+      { from: '/terms-of-service', expectedTo: '/policies/terms' },
+      {
+        from: '/product/midnight-bloom-slub-khaddar-angrakha-3-piece-suit',
+        expectedTo: '/product/midnight-bloom-slub-khaddar-angrakha-3-piece-suit-588e',
+      },
+      {
+        from: '/product/sea-mist-textured-winter-cotton-shirt',
+        expectedTo: '/product/sea-mist-textured-winter-cotton-shirt-71a4',
+      },
+      {
+        from: '/shop?category=new-arrivals',
+        expectedTo: '/collection/new-arrivals',
+      },
+    ];
+
+    for (const rt of redirectTests) {
+      const res = await fetch(`${BASE_URL}${rt.from}`, { redirect: 'manual' });
+      assert(
+        res.status === 301 || res.status === 307 || res.status === 308,
+        `${rt.from} returned status ${res.status} instead of a redirect`
+      );
+      const loc = res.headers.get('location') || '';
+      assert(
+        loc === rt.expectedTo || loc.endsWith(rt.expectedTo),
+        `${rt.from} redirected to "${loc}" instead of expected "${rt.expectedTo}"`
+      );
+      console.log(`PASS ${rt.from} -> HTTP ${res.status} -> ${loc}`);
+    }
+
+    const retiredProductRes = await fetch(`${BASE_URL}/product/the-sovereign-velvet-kaftan`, { redirect: 'manual' });
+    assert.strictEqual(
+      retiredProductRes.status,
+      410,
+      `/product/the-sovereign-velvet-kaftan returned status ${retiredProductRes.status} instead of 410 Gone`
+    );
+    console.log('PASS /product/the-sovereign-velvet-kaftan -> HTTP 410 Gone (retired seed product)');
 
     console.log('\n--- 3. Live Unauthenticated Security & Secret Scrubbing Checks ---');
     const protectedEndpoints: Array<{ method: string; path: string; body?: string }> = [

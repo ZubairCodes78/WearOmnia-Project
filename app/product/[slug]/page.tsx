@@ -95,7 +95,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   if (product.category?.name && product.category?.slug) {
     breadcrumbs.push({
       name: product.category.name,
-      url: `/shop?category=${product.category.slug}`,
+      url: `/collection/${product.category.slug}`,
     });
   }
   breadcrumbs.push({

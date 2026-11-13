@@ -13,6 +13,7 @@ export default function robots(): MetadataRoute.Robots {
         allow: [
           '/',
           '/shop',
+          '/collection/',
           '/product/',
           '/sale/',
           '/our-story',

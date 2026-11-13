@@ -1,4 +1,5 @@
 import React from 'react';
+import { redirect } from 'next/navigation';
 import { CatalogClient } from '@/components/shop/CatalogClient';
 import { generateCategoryMetadata, generateBreadcrumbSchema } from '@/lib/seo';
 import { getLiveCampaigns, applyCampaignsToProducts } from '@/lib/campaigns';
@@ -34,14 +35,21 @@ export async function generateMetadata({ searchParams }: ShopPageProps) {
     description = 'Your saved WearOMNIA favorite outfits and coordinates.';
   }
 
+  const isPureCategory = Boolean(category && !search && wishlist !== 'true' && preorder !== 'true');
+  const canonicalPath = isPureCategory ? `/collection/${category}` : '/shop';
   const isFiltered = Boolean(search || wishlist === 'true');
-  return generateCategoryMetadata(title, description, '/shop', isFiltered);
+  return generateCategoryMetadata(title, description, canonicalPath, isFiltered);
 }
 
 export const dynamic = 'force-dynamic';
 
 export default async function ShopPage({ searchParams }: ShopPageProps) {
   const params = await searchParams;
+
+  if (params.category && !params.search && params.wishlist !== 'true' && params.preorder !== 'true') {
+    redirect(`/collection/${params.category}`);
+  }
+
   const now = new Date();
 
   const [rawProducts, categories, liveCampaigns] = await Promise.all([

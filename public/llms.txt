@@ -2,36 +2,55 @@
 
 > Modesty With Functionality — Contemporary modest women's fashion thoughtfully tailored for everyday wear in Pakistan.
 
-## Verified Storefront & Brand Identity
+## Verified Brand Identity & Headquarters
+- Brand Name: WearOMNIA
+- Tagline: Modesty With Functionality
+- Founder: Virago Baji
+- Headquarters: Lahore, Punjab, Pakistan
 - Official Website: https://www.wearomnia.com
-- Operating Location: Lahore, Pakistan (nationwide courier dispatch across Pakistan)
-- Customer Care Phone / WhatsApp: +92 318 0633323
-- Support Email: wearomniaa@gmail.com
-- Support Hours: Monday – Saturday, 10:00 AM – 8:00 PM PKT
-- Official Social Profiles:
+- Customer Care WhatsApp: +92 318 0633323
+- Customer Support Email: wearomniaa@gmail.com
+- Support Availability: Monday – Saturday, 10:00 AM – 8:00 PM PKT
+- Official Social Channels:
   - Instagram: https://www.instagram.com/wearomnia_/
   - Facebook: https://www.facebook.com/profile.php?id=61579169068040
   - TikTok: https://www.tiktok.com/@wearomnia_
   - YouTube: https://youtube.com/@wearomnia
 
-## Ordering, Payments & Delivery (Pakistan)
-- Currency: Pakistani Rupee (PKR)
-- Checkout Model: Guest checkout (no mandatory account creation or password required)
-- Supported Payment Methods for Regular In-Stock Items:
-  1. Cash on Delivery (COD) nationwide across Pakistan
-  2. Full Advance Payment (100% online bank/wallet transfer with screenshot verification before dispatch)
-- Pre-Orders: Available only when enabled by store administration on designated pre-order garments, typically with advance confirmation and manual screenshot verification.
-- Returns & Exchanges: 7-day exchange window from delivery date for unworn items with original tags intact.
+## Core Product Offering
+WearOMNIA specializes in ready-to-wear stitched modest Pakistani women's apparel. Key product highlights:
+- Product Categories: Stitched 3-Piece Suits, Modest Angrakha Ensembles, Textured Winter Cotton Tunics & Shirts, Casual Coordinates.
+- Key Fabrics: Premium Slub Khaddar, Textured Winter Cotton, Linen blends, breathable all-season cotton.
+- Functional Features: Deep concealed side pockets on selected trousers and silhouettes, generous modest cuts, opaque weaves, and durable finishing.
+- Sizing Range: S, M, L, XL with precise chest, waist, hip, shirt length, sleeve length, and trouser length measurements in inches and cm.
 
-## Key Public Pages
-- Storefront Home: https://www.wearomnia.com/
+## Ordering, Payments & Checkout Architecture
+- Market: Pakistan (nationwide door-to-door delivery across all cities and towns).
+- Currency: Pakistani Rupee (PKR).
+- Checkout Workflow: 1-Click Guest Checkout. No compulsory account registration, password creation, or email verification required.
+- Supported Payment Methods:
+  1. Cash on Delivery (COD): Standard payment model across Pakistan; pay courier in cash upon physical delivery.
+  2. Full Advance Payment (100%): Customer pays order total via official bank transfer or mobile wallets (Easypaisa, JazzCash, Nayapay) and uploads transaction screenshot at checkout.
+- Payment Verification Process: Orders with advance payment are assigned `PAYMENT_REVIEW_PENDING`. WearOMNIA's operations team manually cross-references the transaction ID and receipt against bank statements before confirming. If verification fails or screenshot is unclear, the customer can resubmit payment proof directly from their order page without creating duplicate orders.
+- Pre-Order Workflow: Limited advance collections may offer pre-order reservations with dedicated advance deposit or full advance terms, manually verified prior to production dispatch.
+
+## Logistics, Delivery & Returns
+- Courier Partners: PostEx, TCS, Leopards, and premier domestic logistics providers.
+- Delivery Timelines: Standard transit of 2–4 business days across major urban centers (Lahore, Karachi, Islamabad, Rawalpindi, Faisalabad, Multan, Peshawar, Quetta) and 3–5 days for other regions.
+- Real-Time Tracking: Real-time parcel tracking is available at https://www.wearomnia.com/track-order using the WearOMNIA Order Number (e.g. WO-1001) or courier tracking number.
+- Exchange Policy: 7-day exchange window from confirmed delivery date for unworn, unwashed items in original packaging with intact security tags.
+
+## Direct Links & Canonical Resources
+- Storefront: https://www.wearomnia.com/
 - Full Catalog: https://www.wearomnia.com/shop
-- Our Story: https://www.wearomnia.com/our-story
-- Meet the Founder (Virago Baji): https://www.wearomnia.com/founder
-- Size & Fit Guide: https://www.wearomnia.com/size-guide
-- Frequently Asked Questions: https://www.wearomnia.com/faq
-- Contact Support: https://www.wearomnia.com/contact
+- New Arrivals Collection: https://www.wearomnia.com/collection/new-arrivals
+- Our Brand Story: https://www.wearomnia.com/our-story
+- Founder Profile: https://www.wearomnia.com/founder
+- Interactive Size Guide: https://www.wearomnia.com/size-guide
+- Live Order Tracking: https://www.wearomnia.com/track-order
+- Comprehensive FAQ: https://www.wearomnia.com/faq
 - Shipping Policy: https://www.wearomnia.com/policies/shipping
-- Returns & Exchange Policy: https://www.wearomnia.com/policies/returns
+- Return & Exchange Policy: https://www.wearomnia.com/policies/returns
 - Refund Policy: https://www.wearomnia.com/policies/refund
-
+- Terms of Service: https://www.wearomnia.com/policies/terms
+- Privacy Policy: https://www.wearomnia.com/policies/privacy

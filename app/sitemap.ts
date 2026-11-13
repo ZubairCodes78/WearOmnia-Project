@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next';
 import { PRODUCTION_DOMAIN } from '@/lib/seo';
 import { getLiveCampaigns } from '@/lib/campaigns';
-import { getPublishedProductsCached } from '@/lib/storefront-cache';
+import { getPublishedProductsCached, getCategoriesCached } from '@/lib/storefront-cache';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,14 +9,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = PRODUCTION_DOMAIN;
 
   let products: { slug: string; updatedAt: Date | string }[] = [];
+  let categories: { id: string; name: string; slug: string }[] = [];
   let campaignUrls: MetadataRoute.Sitemap = [];
 
   try {
-    const [prodRows, liveCampaigns] = await Promise.all([
+    const [prodRows, catRows, liveCampaigns] = await Promise.all([
       getPublishedProductsCached(),
+      getCategoriesCached(),
       getLiveCampaigns(),
     ]);
     products = prodRows;
+    categories = catRows;
     campaignUrls = liveCampaigns
       .filter((c) => c.landingPageEnabled)
       .map((c) => ({
@@ -40,6 +43,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     lastModified: new Date(p.updatedAt),
     changeFrequency: 'weekly',
     priority: 0.9,
+  }));
+
+  // Dynamic published collection pages
+  const collectionUrls: MetadataRoute.Sitemap = categories.map((c) => ({
+    url: `${baseUrl}/collection/${c.slug}`,
+    lastModified: latestProductUpdate,
+    changeFrequency: 'daily',
+    priority: 0.85,
   }));
 
   // Core public indexable pages with stable, authentic last modified dates
@@ -118,5 +129,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  return [...corePages, ...campaignUrls, ...productUrls];
+  return [...corePages, ...collectionUrls, ...campaignUrls, ...productUrls];
 }

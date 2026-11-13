@@ -60,7 +60,7 @@ export const Header: React.FC<{
   const navLinks = [
     { name: 'Home', href: '/' },
     { name: 'Shop All', href: '/shop' },
-    ...categories.map((c) => ({ name: c.name, href: `/shop?category=${c.slug}` })),
+    ...categories.map((c) => ({ name: c.name, href: `/collection/${c.slug}` })),
     { name: 'Our Story', href: '/our-story' },
     { name: 'Contact Us', href: '/contact' },
   ];

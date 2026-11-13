@@ -53,7 +53,7 @@ const nextConfig = {
     optimizePackageImports: ['lucide-react', 'framer-motion'],
   },
   devIndicators: false,
-  // Permanent 301 redirects for legacy favicon requests to new canonical icons
+  // Permanent 301 redirects for legacy routes, canonical aliases, and moved slugs
   async redirects() {
     return [
       {
@@ -64,6 +64,78 @@ const nextConfig = {
       {
         source: '/favicon.png',
         destination: '/icon-32x32.png',
+        permanent: true,
+      },
+      // Standard e-commerce & brand path aliases
+      {
+        source: '/about',
+        destination: '/our-story',
+        permanent: true,
+      },
+      {
+        source: '/about-us',
+        destination: '/our-story',
+        permanent: true,
+      },
+      {
+        source: '/collections',
+        destination: '/shop',
+        permanent: true,
+      },
+      {
+        source: '/collections/:slug',
+        destination: '/collection/:slug',
+        permanent: true,
+      },
+      {
+        source: '/products',
+        destination: '/shop',
+        permanent: true,
+      },
+      {
+        source: '/shipping',
+        destination: '/policies/shipping',
+        permanent: true,
+      },
+      {
+        source: '/shipping-policy',
+        destination: '/policies/shipping',
+        permanent: true,
+      },
+      {
+        source: '/returns',
+        destination: '/policies/returns',
+        permanent: true,
+      },
+      {
+        source: '/return-policy',
+        destination: '/policies/returns',
+        permanent: true,
+      },
+      {
+        source: '/refund-policy',
+        destination: '/policies/refund',
+        permanent: true,
+      },
+      {
+        source: '/privacy-policy',
+        destination: '/policies/privacy',
+        permanent: true,
+      },
+      {
+        source: '/terms-of-service',
+        destination: '/policies/terms',
+        permanent: true,
+      },
+      // Permanent redirects for original unhashed product slugs
+      {
+        source: '/product/midnight-bloom-slub-khaddar-angrakha-3-piece-suit',
+        destination: '/product/midnight-bloom-slub-khaddar-angrakha-3-piece-suit-588e',
+        permanent: true,
+      },
+      {
+        source: '/product/sea-mist-textured-winter-cotton-shirt',
+        destination: '/product/sea-mist-textured-winter-cotton-shirt-71a4',
         permanent: true,
       },
     ];

@@ -60,8 +60,10 @@ export const SettingsProvider: React.FC<{
   }, []);
 
   useEffect(() => {
-    // Refresh on mount to guarantee 100% synchronization against any stale CDN/prerendered cache
-    refreshSettings();
+    // Only fetch on mount if initialSettings was not provided via SSR
+    if (!initialSettings || Object.keys(initialSettings).length === 0) {
+      refreshSettings();
+    }
 
     // Listen for custom settings update events across tabs / components
     const handleSettingsUpdated = () => {

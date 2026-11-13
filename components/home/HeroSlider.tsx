@@ -102,7 +102,7 @@ export const HeroSlider: React.FC = () => {
               fill
               priority={slide.id === 1}
               fetchPriority={slide.id === 1 ? 'high' : 'auto'}
-              sizes="100vw"
+              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 100vw, 1920px"
               quality={85}
               className={`object-cover ${slide.objectPosition}`}
             />

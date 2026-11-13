@@ -28,6 +28,20 @@ export function middleware(req: NextRequest) {
     return NextResponse.redirect(canonicalUrl, { status: 301 });
   }
 
+  // ── Permanently Retired Products (410 Gone for search engines to drop cleanly) ──
+  if (pathname === '/product/the-sovereign-velvet-kaftan') {
+    return new NextResponse(
+      '<!DOCTYPE html><html><head><title>410 Gone | WearOMNIA</title><meta name="robots" content="noindex, nofollow"></head><body style="font-family:sans-serif;text-align:center;padding:50px;background:#FAF8F5;color:#103D42;"><h1>410 - Garment Retired</h1><p>This design has been permanently retired from our collection.</p><p><a href="/shop" style="color:#103D42;font-weight:bold;">Browse Current Outfits &rarr;</a></p></body></html>',
+      {
+        status: 410,
+        headers: {
+          'Content-Type': 'text/html; charset=utf-8',
+          'Cache-Control': 'public, max-age=604800, s-maxage=604800',
+        },
+      }
+    );
+  }
+
   // Allow access to admin login page
   if (pathname === '/admin/login') {
     return NextResponse.next();

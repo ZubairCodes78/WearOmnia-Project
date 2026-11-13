@@ -42,49 +42,69 @@ export default async function FAQPage() {
     {
       question: 'What is WearOMNIA?',
       answer:
-        'WearOMNIA is a Pakistani modest women’s fashion brand built around "Modesty With Functionality." We design stitched modest outfits tailored for everyday comfort, practical wearability, and thoughtful details such as functional side pockets on select silhouettes.',
+        'WearOMNIA is a modern Pakistani modest women’s fashion brand built around the philosophy of "Modesty With Functionality." Founded by Virago Baji in Lahore, Pakistan, WearOMNIA designs premium stitched pret and ready-to-wear silhouettes that combine graceful modest coverage, breathability, and practical daily utility (such as concealed functional pockets on select styles).',
     },
     {
-      question: 'Do I need an account to place an order?',
+      question: 'What type of clothing does WearOMNIA sell?',
       answer:
-        'No. WearOMNIA uses a Guest Checkout model. You can add garments to your bag, fill in your delivery details, choose your payment option, and complete your order without creating a password or account.',
+        'WearOMNIA specializes in stitched modest pret wear for women, featuring contemporary Pakistani silhouettes such as Slub Khaddar Angrakha 3-piece suits (complete with matching trousers and dupattas) and textured winter cotton tunics and shirts. Every garment is crafted with premium natural fabrics, durable stitching, and tailored cuts suitable for university, professional workplaces, family gatherings, and everyday elegance.',
+    },
+    {
+      question: 'How can I order from WearOMNIA?',
+      answer:
+        'Ordering is fast and effortless through our 1-click Guest Checkout model. Simply browse our collection (/shop), choose your size using our detailed measurement charts, add items to your bag, enter your shipping address and contact number, and select your preferred payment method (Cash on Delivery or 100% Full Advance Payment). No account registration or password creation is required.',
     },
     {
       question: 'What payment options are available?',
       answer:
-        'For regular in-stock products across Pakistan, you can choose either Cash on Delivery (COD) or 100% Full Advance Payment via our official bank or mobile wallet accounts listed at checkout. When designated pre-order drops are enabled, pre-order advance booking terms apply.',
+        'For regular in-stock orders delivered across Pakistan, WearOMNIA offers two secure checkout payment methods: 1) Cash on Delivery (COD), allowing you to pay the courier in cash upon arrival, and 2) 100% Full Advance Payment via official Pakistani bank transfer or mobile wallet (Easypaisa / JazzCash / Nayapay) with instant receipt upload.',
     },
     {
-      question: 'How does Full Advance Payment and screenshot verification work?',
+      question: 'Is Cash on Delivery (COD) available?',
       answer:
-        'If you select Full Advance Payment (100%) at checkout, transfer 100% of the payable order total (including applicable discounts and shipping) to one of our official payment accounts shown at checkout and upload your transaction screenshot. Your order starts with status PAYMENT_REVIEW_PENDING while our team manually verifies the screenshot before confirmation and dispatch. If a screenshot cannot be verified, you can resubmit a clearer proof on your order page without placing a duplicate order.',
+        'Yes. Cash on Delivery (COD) is available nationwide across all cities, towns, and regions in Pakistan serviced by our courier partners (including PostEx, TCS, and Leopards). Simply select "Cash on Delivery" at checkout, and you pay the exact order total in cash directly to the courier rider at your doorstep.',
     },
     {
-      question: 'How do I track my WearOMNIA order?',
+      question: 'How does Full Advance Payment work?',
       answer:
-        'Visit our Track Your Order page (/track-order) and enter your order number or courier tracking ID along with your mobile number to view real-time status and courier updates.',
+        'When you select Full Advance Payment (100%) at checkout, the system calculates 100% of your final payable order amount (including any active discount campaigns, coupon codes, and shipping charges). Our official bank account and mobile wallet details along with payment instructions are displayed. Transfer the exact amount via your banking app, upload your transaction screenshot or receipt, and submit your order.',
     },
     {
-      question: 'What are the delivery timelines and shipping charges?',
+      question: 'How does pre-order payment work?',
+      answer:
+        'For limited-edition or advance launch collections where pre-ordering is enabled by store administration, customers can reserve garments ahead of public release. Pre-orders specify dedicated advance booking terms (such as an advance reservation deposit or full advance booking as indicated on the product page), with manual payment verification and scheduled dispatch upon production completion.',
+    },
+    {
+      question: 'How are payment screenshots verified?',
+      answer:
+        'When an order is placed with Full Advance Payment or pre-order advance booking, it is assigned the status PAYMENT_REVIEW_PENDING. Our finance team manually reviews the uploaded banking screenshot against our official account statements to verify the transaction ID, sender details, and amount. Once verified, the order status updates to CONFIRMED and proceeds to fulfillment. If a screenshot is illegible or incorrect, customers are notified and can resubmit a clear screenshot directly on their order status page without placing a duplicate order.',
+    },
+    {
+      question: 'How can customers track their orders?',
+      answer:
+        'You can track your parcel in real time by visiting our dedicated Track Your Order page (/track-order). Enter your WearOMNIA order number (e.g., WO-1001) or courier tracking ID along with your phone number to view live courier tracking updates, dispatch status, and estimated delivery dates.',
+    },
+    {
+      question: 'What are the shipping policies and delivery timelines?',
       answer:
         settings.freeShippingThreshold > 0
-          ? `Nationwide courier delivery across Pakistan typically takes ${settings.estimatedDeliveryTime || '2-4 business days'}. Shipping is FREE on orders of ${thresholdStr}, while orders below that carry a flat delivery fee of Rs. ${settings.flatShippingFee}.`
-          : `Nationwide courier delivery across Pakistan typically takes ${settings.estimatedDeliveryTime || '2-4 business days'}, with FREE shipping on all orders.`,
+          ? `Nationwide delivery across Pakistan typically takes ${settings.estimatedDeliveryTime || '2-4 business days'}. Shipping is completely FREE on orders of ${thresholdStr}, while orders below that threshold carry a transparent flat delivery fee of Rs. ${settings.flatShippingFee}. Tracking details are shared via SMS and WhatsApp upon courier booking.`
+          : `Nationwide delivery across Pakistan typically takes ${settings.estimatedDeliveryTime || '2-4 business days'}, with FREE shipping on all orders nationwide. Tracking details are shared via SMS and WhatsApp upon courier booking.`,
     },
     {
-      question: 'Can I exchange an item if the size does not fit?',
+      question: 'What are the return and exchange policies?',
       answer:
-        `Yes. WearOMNIA offers a 7-day exchange window from the date of delivery for unworn, unwashed garments with all original tags and packaging intact. Reach out on WhatsApp (${settings.whatsappNumber || '03180633323'}) or email ${settings.storeEmail || 'wearomniaa@gmail.com'} with your order number.`,
+        `WearOMNIA offers a hassle-free 7-day exchange window from the date your parcel is delivered. If you need a different size or wish to exchange an item, contact our customer support team on WhatsApp (${settings.whatsappNumber || '03180633323'}) or email ${settings.storeEmail || 'wearomniaa@gmail.com'} within 7 days. Garments must be unworn, unwashed, and in their original packaging with all tags attached.`,
     },
     {
-      question: 'How can I find my correct size before ordering?',
+      question: 'How can customers select their correct size?',
       answer:
-        'Check our Size Guide (/size-guide) or click the Size Guide link on any product page to inspect exact chest, waist, hip, and length charts. Our WhatsApp support team can also assist with fit questions.',
+        'Each product page features a link to our detailed Size Guide (/size-guide) with exact measurements for Small, Medium, Large, and Extra Large across bust/chest, waist, hips, shirt length, sleeve length, and trouser length in both inches and centimeters. We strongly recommend comparing these measurements against a well-fitting outfit you already own. If you are between sizes, our WhatsApp styling team is available to assist you with personalized sizing recommendations.',
     },
     {
       question: 'Do WearOMNIA garments have pockets?',
       answer:
-        'Select WearOMNIA designs include functional side pockets (for example, specific trousers and silhouettes). Each product page lists pockets only when that specific garment includes them.',
+        'Yes! True to our "Modesty With Functionality" ethos, select WearOMNIA trousers and silhouettes feature deep, functional side pockets designed to securely hold your smartphone, keys, or cards. Each product page explicitly states whether pockets are included for that specific garment.',
     },
   ];
 
