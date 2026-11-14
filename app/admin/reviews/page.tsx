@@ -12,7 +12,18 @@ export default async function AdminReviewsPage() {
           id: true,
           title: true,
           sku: true,
+          slug: true,
           images: { take: 1, orderBy: { displayOrder: 'asc' } },
+        },
+      },
+      order: {
+        select: {
+          id: true,
+          orderNumber: true,
+          customerPhone: true,
+          customerWhatsapp: true,
+          status: true,
+          deliveredAt: true,
         },
       },
     },

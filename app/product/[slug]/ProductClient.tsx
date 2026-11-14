@@ -30,6 +30,7 @@ import { useSettings } from '@/context/SettingsContext';
 import { getEffectiveSellingPrice, calculateDiscountPercent } from '@/lib/pricing';
 import { trackViewItem, trackAddToCart } from '@/lib/analytics';
 import { CampaignCountdown } from '@/components/campaigns/CampaignCountdown';
+import { ProductReviews } from '@/components/product/ProductReviews';
 import type { ProductCampaignPricingResult } from '@/lib/campaign-math';
 
 interface ProductClientProps {
@@ -67,12 +68,6 @@ export const ProductClient: React.FC<ProductClientProps> = ({
   const [quantity, setQuantity] = useState(1);
   const [addedToast, setAddedToast] = useState(false);
   const [activeTab, setActiveTab] = useState<'fabric' | 'care' | 'shipping' | 'returns'>('fabric');
-
-  // Review Form state
-  const [reviewName, setReviewName] = useState('');
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewComment, setReviewComment] = useState('');
-  const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   const images = rawImages;
   const basePrice = typeof product?.basePrice === 'number'
@@ -175,31 +170,6 @@ export const ProductClient: React.FC<ProductClientProps> = ({
       item_variant: `${selectedSize} / ${selectedColor}`,
     });
     window.location.href = '/checkout';
-  };
-
-  const handleReviewSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!reviewName || !reviewComment) return;
-
-    try {
-      const res = await fetch('/api/reviews', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          productId: product.id,
-          customerName: reviewName,
-          rating: reviewRating,
-          comment: reviewComment,
-        }),
-      });
-      if (res.ok) {
-        setReviewSubmitted(true);
-        setReviewName('');
-        setReviewComment('');
-      }
-    } catch (e) {
-      console.error(e);
-    }
   };
 
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
@@ -330,7 +300,10 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                   )}
                 </div>
 
-                <div className="flex items-center gap-1.5 text-champagne text-xs font-bold">
+                <a
+                  href="#reviews"
+                  className="flex items-center gap-1.5 text-champagne text-xs font-bold hover:opacity-85 transition-opacity"
+                >
                   {reviews.length > 0 ? (
                     <>
                       <div className="flex" aria-label={`Rated ${averageRating.toFixed(1)} out of 5`}>
@@ -341,14 +314,16 @@ export const ProductClient: React.FC<ProductClientProps> = ({
                           />
                         ))}
                       </div>
-                      <span className="text-charcoal-muted font-sans font-medium">
+                      <span className="text-charcoal-muted font-sans font-medium underline underline-offset-2">
                         {averageRating.toFixed(1)} ({reviews.length} {reviews.length === 1 ? 'Review' : 'Reviews'})
                       </span>
                     </>
                   ) : (
-                    <span className="text-charcoal-muted font-sans font-medium">No customer reviews yet</span>
+                    <span className="text-charcoal-muted font-sans font-medium text-[11px] underline underline-offset-2">
+                      Verified Reviews (0)
+                    </span>
                   )}
-                </div>
+                </a>
               </div>
             </div>
 
@@ -658,102 +633,11 @@ export const ProductClient: React.FC<ProductClientProps> = ({
           </div>
         </div>
 
-        {/* Customer Reviews Section */}
-        <div className="mt-20 pt-12 border-t border-sand">
-          <div className="text-center max-w-2xl mx-auto mb-10 space-y-1">
-            <span className="font-calligraphy text-xs sm:text-sm text-champagne-700 block tracking-[0.2em]">
-              Customer Reflections
-            </span>
-            <h2 className="font-serif text-3xl sm:text-4xl font-black text-teal">
-              Customer Reviews &amp; Ratings
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-            {/* Reviews List */}
-            <div className="lg:col-span-7 space-y-4">
-              {reviews.length === 0 ? (
-                <div className="bg-sand/40 p-8 rounded-2xl text-center text-xs text-charcoal-muted">
-                  No approved reviews yet for this product. Be the first to leave your feedback!
-                </div>
-              ) : (
-                reviews.map((rev: any) => (
-                  <div key={rev.id} className="bg-offwhite p-6 rounded-2xl border border-sand space-y-2">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-serif font-bold text-teal text-sm">{rev.customerName}</h4>
-                      <div className="flex text-champagne">
-                        {[...Array(rev.rating)].map((_, i) => (
-                          <Star key={i} className="w-3.5 h-3.5 fill-current" />
-                        ))}
-                      </div>
-                    </div>
-                    <p className="text-xs text-charcoal-muted font-sans leading-relaxed">"{rev.comment}"</p>
-                    <span className="text-[10px] text-charcoal-muted block">
-                      {new Date(rev.createdAt).toLocaleDateString()} • Verified Buyer
-                    </span>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Write a Review Form */}
-            <div className="lg:col-span-5 bg-sand/60 p-6 rounded-3xl border border-sand space-y-4">
-              <h3 className="font-serif text-xl font-bold text-teal">Write a Review</h3>
-
-              {reviewSubmitted ? (
-                <div className="bg-teal text-champagne p-4 rounded-xl text-xs font-semibold text-center">
-                  Thank you! Your review has been submitted for admin approval.
-                </div>
-              ) : (
-                <form onSubmit={handleReviewSubmit} className="space-y-3">
-                  <div>
-                    <label className="text-xs font-semibold uppercase text-charcoal block mb-1">Your Name</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="e.g. Maryam Ali"
-                      value={reviewName}
-                      onChange={(e) => setReviewName(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-offwhite border border-sand rounded-xl focus:outline-none focus:ring-1 focus:ring-teal"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold uppercase text-charcoal block mb-1">Rating</label>
-                    <select
-                      value={reviewRating}
-                      onChange={(e) => setReviewRating(Number(e.target.value))}
-                      className="w-full px-3 py-2 text-xs bg-offwhite border border-sand rounded-xl focus:outline-none focus:ring-1 focus:ring-teal"
-                    >
-                      <option value={5}>5 Stars - Exceptional</option>
-                      <option value={4}>4 Stars - Very Good</option>
-                      <option value={3}>3 Stars - Average</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-xs font-semibold uppercase text-charcoal block mb-1">Your Review</label>
-                    <textarea
-                      required
-                      rows={3}
-                      placeholder="Tell us about the fabric quality, stitching, and delivery..."
-                      value={reviewComment}
-                      onChange={(e) => setReviewComment(e.target.value)}
-                      className="w-full px-3 py-2 text-xs bg-offwhite border border-sand rounded-xl focus:outline-none focus:ring-1 focus:ring-teal"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="w-full bg-teal text-champagne py-3 rounded-xl text-xs uppercase font-bold tracking-widest hover:bg-teal-900 transition-colors shadow"
-                  >
-                    Submit Review
-                  </button>
-                </form>
-              )}
-            </div>
-          </div>
-        </div>
+        {/* Verified Customer Reviews Section */}
+        <ProductReviews
+          productTitle={product.title}
+          reviews={reviews}
+        />
 
         {/* Related Products Carousel */}
         {relatedProducts.length > 0 && (

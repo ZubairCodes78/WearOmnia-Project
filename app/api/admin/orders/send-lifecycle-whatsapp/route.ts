@@ -6,6 +6,7 @@ import { recordAuditLog } from '@/lib/audit';
 import { NotificationService } from '@/lib/notifications/notification-service';
 import { validatePhone, normalizePhone } from '@/lib/phone';
 import { BulkRecipientResult, BulkWhatsAppResponse } from '@/lib/notifications/types';
+import { getOrCreateOrderReviewToken } from '@/lib/reviews';
 
 export const runtime = 'nodejs';
 
@@ -297,16 +298,9 @@ export async function POST(req: NextRequest) {
           sendResult = await NotificationService.sendStatusUpdate(order, 'DELIVERED');
 
           if (sendResult?.success) {
-            const firstItem = order.items?.[0];
-            const product = firstItem?.productId
-              ? await prisma.product.findUnique({ where: { id: firstItem.productId } })
-              : null;
-            const reviewLink = product?.slug
-              ? `https://www.wearomnia.com/product/${product.slug}#reviews`
-              : 'https://www.wearomnia.com/shop';
-
             try {
-              await NotificationService.sendReviewRequest(order, reviewLink);
+              const { reviewUrl } = await getOrCreateOrderReviewToken(order.id);
+              await NotificationService.sendReviewRequest(order, reviewUrl);
             } catch (revErr) {
               console.warn('[Review Request Notification Warning]', revErr);
             }

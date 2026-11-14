@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getSiteSettings } from '@/lib/settings';
 import { NotificationService } from '@/lib/notifications/notification-service';
+import { getOrCreateOrderReviewToken } from '@/lib/reviews';
 
 export async function POST(req: Request) {
   try {
@@ -138,12 +139,7 @@ export async function POST(req: Request) {
         // Trigger Review Request only on DELIVERED and only once
         if (isNowDelivered && !wasDelivered) {
           try {
-            const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://wearomnia.com';
-            const firstProductSlug = updatedOrder.items?.[0]?.product?.slug;
-            const reviewUrl = firstProductSlug
-              ? `${siteUrl}/product/${firstProductSlug}#reviews`
-              : `${siteUrl}/order-success/${updatedOrder.orderNumber}`;
-
+            const { reviewUrl } = await getOrCreateOrderReviewToken(updatedOrder.id);
             await NotificationService.sendReviewRequest(updatedOrder, reviewUrl);
           } catch (e) {
             console.error('[WhatsApp Review Request Error from Webhook]', e);

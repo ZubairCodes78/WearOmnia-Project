@@ -589,20 +589,12 @@ export class WhatsAppProvider implements INotificationProvider {
   }
 
   /**
-   * Send Post-Delivery Review Request with real product review link
+   * Send Post-Delivery Review Request with unique cryptographic per-order review link
    */
   public async sendReviewRequest(order: any, reviewLink: string, settings: WhatsAppSettings): Promise<NotificationResult> {
     const phone = order.customerWhatsapp || order.customerPhone;
 
-    const text =
-      `WearOMNIA\n\n` +
-      `Assalam-o-Alaikum ${order.customerName},\n\n` +
-      `We would love to hear how you liked your WearOMNIA order #${order.orderNumber}.\n\n` +
-      `Please leave your review here:\n` +
-      `${reviewLink}\n\n` +
-      `Thank you for choosing WearOMNIA.\n\n` +
-      `WearOMNIA\n` +
-      `Modesty With Functionality.`;
+    const text = buildReviewRequestWhatsAppMessage(order.customerName, order.orderNumber, reviewLink);
 
     const messagePayload = {
       type: 'text',
@@ -611,4 +603,17 @@ export class WhatsAppProvider implements INotificationProvider {
 
     return this.sendMetaApiMessage(phone, messagePayload, settings);
   }
+}
+
+/**
+ * Format the official Post-Delivery Customer Review Request WhatsApp message
+ */
+export function buildReviewRequestWhatsAppMessage(customerName: string, orderNumber: string, reviewLink: string): string {
+  return (
+    `Assalam-o-Alaikum ${customerName || 'Customer'},\n\n` +
+    `Thank you for shopping with WearOMNIA! We hope you loved your order (#${orderNumber}). We'd appreciate it if you could share your experience with us:\n\n` +
+    `${reviewLink}\n\n` +
+    `Your feedback helps us improve.\n\n` +
+    `WearOMNIA — Modesty With Functionality.`
+  );
 }

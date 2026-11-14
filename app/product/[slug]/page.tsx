@@ -1,5 +1,5 @@
 import React from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, permanentRedirect } from 'next/navigation';
 import { ProductClient } from './ProductClient';
 import { generateProductMetadata, generateProductSchema, generateBreadcrumbSchema } from '@/lib/seo';
 import {
@@ -10,6 +10,7 @@ import {
 import {
   getPublishedProductBySlugCached,
   getPublishedProductsCached,
+  resolveProductBySlug,
 } from '@/lib/storefront-cache';
 import { getPreOrderSettings, getPublicSiteSettings } from '@/lib/settings';
 
@@ -19,7 +20,7 @@ interface ProductPageProps {
 
 export async function generateMetadata({ params }: ProductPageProps) {
   const { slug } = await params;
-  const product = await getPublishedProductBySlugCached(slug);
+  const { product } = await resolveProductBySlug(slug);
   if (!product) return {};
   const meta = generateProductMetadata(product);
   if (product.status !== 'PUBLISHED') {
@@ -33,17 +34,24 @@ export const dynamic = 'force-dynamic';
 export default async function ProductPage({ params }: ProductPageProps) {
   const { slug } = await params;
   const now = new Date();
-  const [preOrderSettings, publicSiteSettings, liveCampaigns, product, allPublished] =
+  const [preOrderSettings, publicSiteSettings, liveCampaigns, slugResolution, allPublished] =
     await Promise.all([
       getPreOrderSettings(),
       getPublicSiteSettings(),
       getLiveCampaigns(now),
-      getPublishedProductBySlugCached(slug),
+      resolveProductBySlug(slug),
       getPublishedProductsCached(),
     ]);
 
+  const { product, isCanonical, canonicalSlug } = slugResolution;
+
   if (!product) {
     notFound();
+  }
+
+  // Canonical redirect if accessed via unhashed base slug, uppercase, or special characters
+  if (!isCanonical && canonicalSlug) {
+    permanentRedirect(`/product/${canonicalSlug}`);
   }
 
   const relatedProducts = product.categoryId
