@@ -29,3 +29,4 @@ END $$;
 CREATE INDEX IF NOT EXISTS "Review_orderId_idx" ON "Review"("orderId");
 CREATE INDEX IF NOT EXISTS "Review_status_idx" ON "Review"("status");
 CREATE INDEX IF NOT EXISTS "Review_orderId_productId_idx" ON "Review"("orderId", "productId");
+

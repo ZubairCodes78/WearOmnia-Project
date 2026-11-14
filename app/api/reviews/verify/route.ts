@@ -29,3 +29,4 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Failed to verify review invitation.' }, { status: 500 });
   }
 }
+
