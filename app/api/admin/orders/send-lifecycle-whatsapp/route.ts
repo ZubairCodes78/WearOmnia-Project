@@ -310,6 +310,8 @@ export async function POST(req: NextRequest) {
               data: {
                 deliveredWhatsAppSentAt: now,
                 deliveredWhatsAppMessageId: sendResult.messageId || 'sent',
+                reviewWhatsAppSentAt: now,
+                reviewWhatsAppMessageId: sendResult.messageId || 'sent',
                 deliveredAt: order.deliveredAt || now,
                 timeline: {
                   create: {

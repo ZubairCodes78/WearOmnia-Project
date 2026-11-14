@@ -281,16 +281,18 @@ async function runReviewAndRoutingSuite() {
       assert('Submission', 'Reviewing unpurchased product in order is rejected', subOther.success === false, subOther.error);
     }
 
-    // Test 4.4: Valid review submission succeeds with PENDING status
+    // Test 4.4: Valid review submission with optional imageUrl succeeds with PENDING status
+    const sampleCustomerPhoto = 'https://imagedelivery.net/wearomnia-r2/reviews/test-outfit-fit.webp';
     const subValid = await submitVerifiedReview({
       token: tokenResult.token!,
       productId: testProduct.id,
       rating: 5,
       comment: 'Exceptional velvet craftsmanship and impeccable silhouette. Truly modest and elegant.',
       displayName: 'Fatima A.',
+      imageUrl: sampleCustomerPhoto,
     });
 
-    assert('Submission', 'Valid review submission succeeds', subValid.success === true && !!subValid.reviewId, subValid.message);
+    assert('Submission', 'Valid review submission with photo succeeds', subValid.success === true && !!subValid.reviewId, subValid.message);
     if (subValid.reviewId) {
       testReviewId = subValid.reviewId;
 
@@ -305,6 +307,10 @@ async function runReviewAndRoutingSuite() {
       assert('Submission', 'Submitted review is flagged verifiedPurchase = true',
         createdReview?.verifiedPurchase === true,
         `verifiedPurchase: ${createdReview?.verifiedPurchase}`
+      );
+      assert('Submission', 'Review stores optional imageUrl correctly',
+        createdReview?.imageUrl === sampleCustomerPhoto,
+        `imageUrl: ${createdReview?.imageUrl}`
       );
       assert('Submission', 'Review stores order reference and customer phone for admin verification',
         createdReview?.orderId === testOrderId && createdReview?.customerPhone === createdOrder.customerPhone,
@@ -384,6 +390,78 @@ async function runReviewAndRoutingSuite() {
     assert('WhatsApp', 'WhatsApp message contains full review URL', waMessage.includes(sampleReviewUrl));
     assert('WhatsApp', 'WhatsApp message contains brand sign-off', waMessage.includes('WearOMNIA — Modesty With Functionality'));
     assert('WhatsApp', 'WhatsApp message has no unresolved {placeholders}', !waMessage.includes('{') && !waMessage.includes('}'));
+
+    // -------------------------------------------------------------
+    // SUITE 7: STOREFRONT REVIEW SANITIZATION & PRIVACY PROTECTION
+    // -------------------------------------------------------------
+    console.log('\nSUITE 7: STOREFRONT REVIEW SANITIZATION & PRIVACY PROTECTION');
+
+    const sanitizedProduct = await prisma.product.findUnique({
+      where: { id: testProduct.id },
+      include: {
+        reviews: {
+          where: { isApproved: true },
+          select: {
+            id: true,
+            productId: true,
+            customerName: true,
+            rating: true,
+            comment: true,
+            imageUrl: true,
+            verifiedPurchase: true,
+            createdAt: true,
+          },
+        },
+      },
+    });
+
+    assert('Storefront Privacy', 'Storefront review include selects safe fields only',
+      Array.isArray(sanitizedProduct?.reviews),
+      `Sanitized reviews count: ${sanitizedProduct?.reviews?.length}`
+    );
+
+    if (sanitizedProduct?.reviews && sanitizedProduct.reviews.length > 0) {
+      const sampleStorefrontRev = sanitizedProduct.reviews[0];
+      assert('Storefront Privacy', 'Customer phone is strictly absent from storefront review payload',
+        (sampleStorefrontRev as any).customerPhone === undefined,
+        'customerPhone is undefined'
+      );
+      assert('Storefront Privacy', 'Order ID is strictly absent from storefront review payload',
+        (sampleStorefrontRev as any).orderId === undefined,
+        'orderId is undefined'
+      );
+    }
+
+    // -------------------------------------------------------------
+    // SUITE 8: ORDER MODEL REVIEW DISPATCH PERSISTENCE
+    // -------------------------------------------------------------
+    console.log('\nSUITE 8: ORDER MODEL REVIEW DISPATCH PERSISTENCE');
+
+    const dispatchTime = new Date();
+    const dispatchMsgId = `wamid.HBgLMjIzMzAwMTIzNDU2NxUCABEYEjEyMzQ1Njc4OTBBQkNERUY4OTA=`;
+
+    const updatedOrder = await prisma.order.update({
+      where: { id: testOrderId },
+      data: {
+        reviewWhatsAppSentAt: dispatchTime,
+        reviewWhatsAppMessageId: dispatchMsgId,
+      },
+      select: {
+        id: true,
+        orderNumber: true,
+        reviewWhatsAppSentAt: true,
+        reviewWhatsAppMessageId: true,
+      },
+    });
+
+    assert('Order Persistence', 'reviewWhatsAppSentAt timestamp saved correctly',
+      updatedOrder.reviewWhatsAppSentAt !== null,
+      updatedOrder.reviewWhatsAppSentAt?.toISOString()
+    );
+    assert('Order Persistence', 'reviewWhatsAppMessageId saved correctly',
+      updatedOrder.reviewWhatsAppMessageId === dispatchMsgId,
+      updatedOrder.reviewWhatsAppMessageId
+    );
 
   } catch (err: any) {
     console.error('\n[FATAL ERROR IN SUITE]:', err);

@@ -551,7 +551,9 @@ export class NotificationService {
    */
   public static async sendReviewRequest(order: any, reviewLink: string) {
     const settings = await this.getSettings();
-    if (!settings.whatsapp_customer_notify_enabled) return;
+    if (!settings.whatsapp_customer_notify_enabled) {
+      return { success: false, error: 'WhatsApp customer notifications are currently disabled in Admin Settings.' };
+    }
 
     // Duplicate protection: Check if review request was already sent for this order
     const existing = await prisma.notificationLog.findFirst({

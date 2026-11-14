@@ -6,7 +6,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { token, productId, rating, comment, displayName } = body;
+    const { token, productId, rating, comment, displayName, imageUrl } = body;
 
     if (!token || !productId) {
       return NextResponse.json({ error: 'Missing required parameters.' }, { status: 400 });
@@ -23,6 +23,7 @@ export async function POST(req: Request) {
       rating: Number(rating),
       comment: String(comment || ''),
       displayName: displayName ? String(displayName) : undefined,
+      imageUrl: imageUrl ? String(imageUrl) : undefined,
       ipAddress,
     });
 

@@ -223,6 +223,8 @@ model Order {
   // Review Link & Token Fields
   reviewToken                       String?   @unique
   reviewTokenExpiresAt              DateTime?
+  reviewWhatsAppSentAt              DateTime?
+  reviewWhatsAppMessageId           String?
 
   items            OrderItem[]
   reviews          Review[]
@@ -244,6 +246,7 @@ model Order {
   @@index([confirmationWhatsAppSentAt])
   @@index([trackingWhatsAppSentAt])
   @@index([deliveredWhatsAppSentAt])
+  @@index([reviewWhatsAppSentAt])
   @@index([deliveredAt])
   @@index([campaignId])
   @@index([paymentMethod, status])

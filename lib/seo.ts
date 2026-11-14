@@ -312,7 +312,7 @@ export function generateProductSchema(
 
   // ONLY attach AggregateRating and Review if genuine approved reviews exist in the database!
   const approvedReviews = Array.isArray(product?.reviews)
-    ? product.reviews.filter((r: any) => r.isApproved || r.isApproved === undefined)
+    ? product.reviews.filter((r: any) => r.isApproved === true || (r.isApproved === undefined && r.status !== 'REJECTED'))
     : [];
 
   if (approvedReviews.length > 0) {
@@ -341,6 +341,7 @@ export function generateProductSchema(
         worstRating: '1',
       },
       reviewBody: r.comment || '',
+      ...(r.imageUrl ? { image: r.imageUrl } : {}),
     }));
   }
 

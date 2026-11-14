@@ -186,9 +186,10 @@ export async function submitVerifiedReview(params: {
   rating: number;
   comment: string;
   displayName?: string;
+  imageUrl?: string;
   ipAddress?: string;
 }) {
-  const { token, productId, rating, comment, displayName, ipAddress } = params;
+  const { token, productId, rating, comment, displayName, imageUrl, ipAddress } = params;
 
   // 1. Validate inputs
   const numRating = Number(rating);
@@ -251,6 +252,7 @@ export async function submitVerifiedReview(params: {
       customerPhone: orderDetails?.customerPhone || orderDetails?.customerWhatsapp || null,
       rating: numRating,
       comment: trimmedComment,
+      imageUrl: imageUrl || null,
       isApproved: false,
       status: 'PENDING',
       verifiedPurchase: true,

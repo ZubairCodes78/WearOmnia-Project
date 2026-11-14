@@ -15,6 +15,9 @@ import {
   ExternalLink,
   Phone,
   Package,
+  Maximize2,
+  Camera,
+  Filter,
 } from 'lucide-react';
 import { DeleteConfirmModal } from '@/components/admin/DeleteConfirmModal';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -58,6 +61,8 @@ export function ReviewsClient({ initialReviews }: { initialReviews: ReviewItem[]
   const [search, setSearch] = useState('');
   const debouncedSearch = useDebounce(search, 300);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
+  const [selectedProductId, setSelectedProductId] = useState<string>('ALL');
+  const [zoomReviewImage, setZoomReviewImage] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [deleteModalReview, setDeleteModalReview] = useState<ReviewItem | null>(null);
 
@@ -68,6 +73,20 @@ export function ReviewsClient({ initialReviews }: { initialReviews: ReviewItem[]
   const pendingCount = reviews.filter((r) => !r.isApproved && r.status !== 'REJECTED').length;
   const approvedCount = reviews.filter((r) => r.isApproved).length;
   const rejectedCount = reviews.filter((r) => r.status === 'REJECTED').length;
+
+  const productsList = React.useMemo(() => {
+    const map = new Map<string, { id: string; title: string; sku?: string }>();
+    reviews.forEach((r) => {
+      if (r.product?.id) {
+        map.set(r.product.id, {
+          id: r.product.id,
+          title: r.product.title,
+          sku: r.product.sku,
+        });
+      }
+    });
+    return Array.from(map.values());
+  }, [reviews]);
 
   const handleAction = async (id: string, isApproved: boolean, action: string = 'update') => {
     setActionLoading(id);
@@ -123,7 +142,12 @@ export function ReviewsClient({ initialReviews }: { initialReviews: ReviewItem[]
     else if (statusFilter === 'APPROVED') matchesStatus = r.isApproved;
     else if (statusFilter === 'REJECTED') matchesStatus = r.status === 'REJECTED';
 
-    return matchesSearch && matchesStatus;
+    let matchesProduct = true;
+    if (selectedProductId !== 'ALL') {
+      matchesProduct = r.productId === selectedProductId;
+    }
+
+    return matchesSearch && matchesStatus && matchesProduct;
   });
 
   const totalPages = Math.ceil(filteredReviews.length / pageSize) || 1;
@@ -131,7 +155,7 @@ export function ReviewsClient({ initialReviews }: { initialReviews: ReviewItem[]
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearch, statusFilter]);
+  }, [debouncedSearch, statusFilter, selectedProductId]);
 
   return (
     <div className="space-y-6">
@@ -218,15 +242,35 @@ export function ReviewsClient({ initialReviews }: { initialReviews: ReviewItem[]
           </button>
         </div>
 
-        <div className="relative w-full md:w-72">
-          <Search className="w-4 h-4 text-[#FAF8F5]/40 absolute left-3 top-2.5" />
-          <input
-            type="text"
-            placeholder="Search customer, comment, order #..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 bg-[#06191B] rounded-lg text-xs text-[#FAF8F5] border border-white/10 focus:outline-none focus:border-[#D4AF37]/50 font-sans placeholder:text-[#FAF8F5]/30 transition-colors"
-          />
+        <div className="flex flex-col sm:flex-row items-center gap-2 w-full md:w-auto">
+          {productsList.length > 0 && (
+            <div className="relative w-full sm:w-56">
+              <select
+                value={selectedProductId}
+                onChange={(e) => setSelectedProductId(e.target.value)}
+                className="w-full bg-[#06191B] rounded-lg text-xs text-[#FAF8F5] border border-white/10 px-3 py-2 pr-8 focus:outline-none focus:border-[#D4AF37]/50 appearance-none font-sans"
+              >
+                <option value="ALL">All Products ({reviews.length})</option>
+                {productsList.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title.length > 25 ? `${p.title.slice(0, 25)}...` : p.title} ({reviews.filter((r) => r.productId === p.id).length})
+                  </option>
+                ))}
+              </select>
+              <Filter className="w-3.5 h-3.5 text-[#D4AF37] absolute right-2.5 top-2.5 pointer-events-none" />
+            </div>
+          )}
+
+          <div className="relative w-full sm:w-64">
+            <Search className="w-4 h-4 text-[#FAF8F5]/40 absolute left-3 top-2.5" />
+            <input
+              type="text"
+              placeholder="Search customer, comment, order #..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 bg-[#06191B] rounded-lg text-xs text-[#FAF8F5] border border-white/10 focus:outline-none focus:border-[#D4AF37]/50 font-sans placeholder:text-[#FAF8F5]/30 transition-colors"
+            />
+          </div>
         </div>
       </div>
 
@@ -344,15 +388,37 @@ export function ReviewsClient({ initialReviews }: { initialReviews: ReviewItem[]
 
                       {/* Review Comment */}
                       <td className="px-4 py-3 text-[#FAF8F5]/80 max-w-sm">
-                        <p className="line-clamp-2 leading-relaxed">&quot;{rev.comment}&quot;</p>
-                        <span className="text-[10px] text-white/40 block mt-0.5">
-                          Submitted on {new Date(rev.createdAt).toLocaleDateString('en-PK')}
-                        </span>
-                        {rev.rejectionReason && (
-                          <span className="text-[10px] text-rose-300/80 block mt-0.5 font-medium">
-                            Note: {rev.rejectionReason}
-                          </span>
-                        )}
+                        <div className="flex items-start gap-3">
+                          {rev.imageUrl && (
+                            <button
+                              type="button"
+                              onClick={() => setZoomReviewImage(rev.imageUrl || null)}
+                              className="relative w-12 h-12 rounded-lg overflow-hidden border border-[#D4AF37]/30 hover:border-[#D4AF37] shrink-0 group cursor-pointer transition-all bg-black/40"
+                              title="Click to enlarge customer photo"
+                            >
+                              {/* eslint-disable-next-line @next/next/no-img-element */}
+                              <img
+                                src={rev.imageUrl}
+                                alt="Customer outfit photo"
+                                className="w-full h-full object-cover group-hover:scale-110 transition-transform"
+                              />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                <Maximize2 className="w-3.5 h-3.5 text-[#D4AF37]" />
+                              </div>
+                            </button>
+                          )}
+                          <div className="min-w-0 flex-1">
+                            <p className="line-clamp-2 leading-relaxed">&quot;{rev.comment}&quot;</p>
+                            <span className="text-[10px] text-white/40 block mt-0.5">
+                              Submitted on {new Date(rev.createdAt).toLocaleDateString('en-PK')}
+                            </span>
+                            {rev.rejectionReason && (
+                              <span className="text-[10px] text-rose-300/80 block mt-0.5 font-medium">
+                                Note: {rev.rejectionReason}
+                              </span>
+                            )}
+                          </div>
+                        </div>
                       </td>
 
                       {/* Status */}
@@ -439,6 +505,33 @@ export function ReviewsClient({ initialReviews }: { initialReviews: ReviewItem[]
         itemType="Review"
         warningMessage="This will permanently remove this customer review from the database."
       />
+
+      {/* Customer Review Image Zoom Lightbox Modal */}
+      {zoomReviewImage && (
+        <div className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="relative max-w-3xl w-full max-h-[90vh] flex flex-col bg-[#0A2528] rounded-2xl border border-[#D4AF37]/30 overflow-hidden shadow-2xl">
+            <div className="flex items-center justify-between p-4 border-b border-[#D4AF37]/20 bg-[#06191B]">
+              <span className="font-serif font-bold text-sm text-[#FAF8F5] flex items-center gap-2">
+                <Camera className="w-4 h-4 text-[#D4AF37]" /> Customer Garment Photo Proof
+              </span>
+              <button
+                onClick={() => setZoomReviewImage(null)}
+                className="text-[#FAF8F5]/60 hover:text-white p-1 rounded-lg hover:bg-white/10"
+              >
+                ✕ Close
+              </button>
+            </div>
+            <div className="p-4 flex-1 overflow-auto flex items-center justify-center bg-black/40">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={zoomReviewImage}
+                alt="Customer outfit proof full view"
+                className="max-w-full max-h-[75vh] object-contain rounded-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

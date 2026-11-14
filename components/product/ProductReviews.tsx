@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { Star, ShieldCheck, CheckCircle2, MessageSquare, Sparkles } from 'lucide-react';
+import React, { useState } from 'react';
+import { Star, ShieldCheck, CheckCircle2, MessageSquare, Sparkles, Camera, Maximize2, X } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export interface ProductReviewItem {
@@ -9,6 +9,7 @@ export interface ProductReviewItem {
   customerName: string;
   rating: number;
   comment: string;
+  imageUrl?: string | null;
   verifiedPurchase?: boolean;
   createdAt: string | Date;
 }
@@ -19,6 +20,7 @@ interface ProductReviewsProps {
 }
 
 export function ProductReviews({ productTitle, reviews = [] }: ProductReviewsProps) {
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
   const approvedReviews = Array.isArray(reviews) ? reviews : [];
   const reviewCount = approvedReviews.length;
 
@@ -201,6 +203,27 @@ export function ProductReviews({ productTitle, reviews = [] }: ProductReviewsPro
                     <p className="text-xs sm:text-sm text-charcoal leading-relaxed whitespace-pre-line pt-1">
                       {rev.comment}
                     </p>
+
+                    {rev.imageUrl && (
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={() => setZoomImage(rev.imageUrl || null)}
+                          className="relative w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-sand hover:border-champagne group cursor-pointer transition-all bg-sand/20"
+                          title="Click to zoom customer photo"
+                        >
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={rev.imageUrl}
+                            alt={`${rev.customerName}'s outfit`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                          <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-[10px] font-bold">
+                            <Maximize2 className="w-3.5 h-3.5" />
+                          </div>
+                        </button>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -208,6 +231,40 @@ export function ProductReviews({ productTitle, reviews = [] }: ProductReviewsPro
           </div>
         )}
       </div>
+
+      {/* Customer Review Image Modal */}
+      {zoomImage && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={() => setZoomImage(null)}
+        >
+          <div
+            className="relative max-w-2xl w-full bg-white rounded-2xl overflow-hidden shadow-2xl p-2"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between p-3 border-b border-sand/40">
+              <span className="font-serif font-bold text-sm text-teal flex items-center gap-1.5">
+                <Camera className="w-4 h-4 text-champagne-700" /> Customer Garment Photo
+              </span>
+              <button
+                type="button"
+                onClick={() => setZoomImage(null)}
+                className="p-1 rounded-lg hover:bg-sand/40 text-charcoal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="p-3 flex items-center justify-center bg-sand/10 max-h-[75vh] overflow-hidden">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={zoomImage}
+                alt="Customer outfit preview"
+                className="max-w-full max-h-[70vh] object-contain rounded-lg"
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

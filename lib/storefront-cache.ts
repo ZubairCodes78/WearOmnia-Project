@@ -53,6 +53,16 @@ const PRODUCT_INCLUDE_TREE = {
   collection: true,
   reviews: {
     where: { isApproved: true },
+    select: {
+      id: true,
+      productId: true,
+      customerName: true,
+      rating: true,
+      comment: true,
+      imageUrl: true,
+      verifiedPurchase: true,
+      createdAt: true,
+    },
     orderBy: { createdAt: 'desc' as const },
   },
 };

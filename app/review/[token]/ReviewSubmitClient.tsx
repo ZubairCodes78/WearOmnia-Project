@@ -4,7 +4,18 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Star, CheckCircle2, ShieldCheck, ArrowRight, Loader2, MessageSquare, AlertCircle } from 'lucide-react';
+import {
+  Star,
+  CheckCircle2,
+  ShieldCheck,
+  ArrowRight,
+  Loader2,
+  MessageSquare,
+  AlertCircle,
+  Camera,
+  UploadCloud,
+  X,
+} from 'lucide-react';
 
 interface EligibleReviewItem {
   itemId: string;
@@ -38,11 +49,62 @@ export function ReviewSubmitClient({
   const [hoverRatings, setHoverRatings] = useState<Record<string, number>>({});
   const [comments, setComments] = useState<Record<string, string>>({});
   const [displayNames, setDisplayNames] = useState<Record<string, string>>({});
+  const [imageUrls, setImageUrls] = useState<Record<string, string>>({});
+  const [uploadingImage, setUploadingImage] = useState<Record<string, boolean>>({});
   const [submittingProductId, setSubmittingProductId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [successMessages, setSuccessMessages] = useState<Record<string, string>>({});
 
   const allReviewed = items.every((it) => it.hasReviewed);
+
+  const handleImageFileChange = async (productId: string, file: File | null) => {
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErrors((prev) => ({ ...prev, [productId]: 'Image exceeds 5MB limit. Please upload a smaller photo.' }));
+      return;
+    }
+
+    const validMimes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validMimes.includes(file.type)) {
+      setErrors((prev) => ({ ...prev, [productId]: 'Unsupported image format. Please select a JPG, PNG, or WebP photo.' }));
+      return;
+    }
+
+    setUploadingImage((prev) => ({ ...prev, [productId]: true }));
+    setErrors((prev) => ({ ...prev, [productId]: '' }));
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('token', token);
+      formData.append('productId', productId);
+
+      const res = await fetch('/api/reviews/upload-image', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        setErrors((prev) => ({ ...prev, [productId]: data.error || 'Failed to upload photo.' }));
+      } else {
+        setImageUrls((prev) => ({ ...prev, [productId]: data.url }));
+      }
+    } catch {
+      setErrors((prev) => ({ ...prev, [productId]: 'Network error while uploading image.' }));
+    } finally {
+      setUploadingImage((prev) => ({ ...prev, [productId]: false }));
+    }
+  };
+
+  const handleRemoveImage = (productId: string) => {
+    setImageUrls((prev) => {
+      const updated = { ...prev };
+      delete updated[productId];
+      return updated;
+    });
+  };
 
   const getRatingLabel = (rating: number): string => {
     switch (rating) {
@@ -70,6 +132,7 @@ export function ReviewSubmitClient({
     const rating = selectedRatings[productId];
     const comment = comments[productId] || '';
     const name = displayNames[productId] !== undefined ? displayNames[productId] : defaultDisplayName;
+    const uploadedImageUrl = imageUrls[productId];
 
     if (!rating) {
       setErrors((prev) => ({ ...prev, [productId]: 'Please tap a star rating (1 to 5) before submitting.' }));
@@ -94,6 +157,7 @@ export function ReviewSubmitClient({
           rating,
           comment: comment.trim(),
           displayName: name.trim() || defaultDisplayName,
+          imageUrl: uploadedImageUrl || undefined,
         }),
       });
 
@@ -340,6 +404,64 @@ export function ReviewSubmitClient({
                         <ShieldCheck className="w-3 h-3 text-champagne-700" />
                         To protect your privacy, we default your surname to an initial (e.g., {defaultDisplayName}).
                       </p>
+                    </div>
+
+                    {/* 4. Optional Photo Upload */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold uppercase tracking-wider text-teal flex items-center gap-1.5">
+                          <Camera className="w-3.5 h-3.5 text-champagne-700" />
+                          Garment Photo <span className="text-[10px] font-normal text-charcoal-muted lowercase tracking-normal">(optional)</span>
+                        </label>
+                        <span className="text-[10px] text-charcoal-muted">JPG, PNG, WebP ≤ 5MB</span>
+                      </div>
+
+                      {imageUrls[item.productId] ? (
+                        <div className="relative inline-block border-2 border-champagne/60 rounded-2xl overflow-hidden shadow-sm bg-sand/30">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={imageUrls[item.productId]}
+                            alt="Customer garment review upload"
+                            className="w-32 h-32 object-cover"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveImage(item.productId)}
+                            className="absolute top-1.5 right-1.5 p-1 bg-black/70 hover:bg-red-600 text-white rounded-full transition-colors cursor-pointer"
+                            title="Remove photo"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="border-2 border-dashed border-sand/80 hover:border-teal rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-3 cursor-pointer bg-sand/10 hover:bg-sand/30 transition-all">
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            className="sr-only"
+                            disabled={uploadingImage[item.productId]}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0] || null;
+                              handleImageFileChange(item.productId, file);
+                            }}
+                          />
+                          <div className="w-10 h-10 rounded-xl bg-champagne-100 text-teal flex items-center justify-center shrink-0">
+                            {uploadingImage[item.productId] ? (
+                              <Loader2 className="w-5 h-5 animate-spin text-champagne-700" />
+                            ) : (
+                              <UploadCloud className="w-5 h-5 text-champagne-700" />
+                            )}
+                          </div>
+                          <div className="text-center sm:text-left text-xs">
+                            <span className="font-bold text-teal block">
+                              {uploadingImage[item.productId] ? 'Uploading & optimizing photo...' : 'Click to upload a real photo of your outfit'}
+                            </span>
+                            <span className="text-[11px] text-charcoal-muted block mt-0.5">
+                              Show others the true fabric drape, styling, and modest fit in person.
+                            </span>
+                          </div>
+                        </label>
+                      )}
                     </div>
 
                     {/* Error Notice */}

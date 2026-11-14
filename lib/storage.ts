@@ -31,6 +31,7 @@ const PROOF_STORAGE_DIR = path.join(process.cwd(), 'uploads', 'payment-proofs');
 const QR_STORAGE_DIR = path.join(process.cwd(), 'uploads', 'qr-codes');
 const PRODUCT_IMAGES_DIR = path.join(process.cwd(), 'public', 'uploads', 'products');
 const CAMPAIGN_IMAGES_DIR = path.join(process.cwd(), 'public', 'uploads', 'campaigns');
+const REVIEWS_STORAGE_DIR = path.join(process.cwd(), 'public', 'uploads', 'reviews');
 
 async function ensureDir(dirPath: string) {
   try {
@@ -331,6 +332,87 @@ export async function saveProductImage(
     return {
       success: false,
       error: `Failed to save product image locally: ${err?.message || 'Filesystem error'}`,
+    };
+  }
+}
+
+/**
+ * Validates and saves an uploaded customer review photo.
+ * Uses Cloudflare R2 under `reviews/` prefix for production, with local disk storage for development.
+ */
+export async function saveReviewImage(
+  buffer: Buffer,
+  mimeType: string,
+  reviewRef?: string
+): Promise<{ success: boolean; url?: string; error?: string }> {
+  // 1. Validate image format, dimensions and corruption (max 5MB)
+  const validation = await validateImageBuffer(buffer, mimeType, 5 * 1024 * 1024);
+  if (!validation.valid) {
+    return { success: false, error: validation.error || 'Invalid review image file.' };
+  }
+
+  // 2. Automatically optimize (resize oversized customer photos to max 1200px, compress to WebP)
+  let optimizedBuffer = buffer;
+  let finalMime = 'image/webp';
+  let finalExt = '.webp';
+
+  try {
+    const optRes = await optimizeProductImage(buffer);
+    optimizedBuffer = optRes.buffer;
+    finalMime = optRes.mimeType;
+    finalExt = optRes.extension;
+  } catch (optErr) {
+    console.warn('[Image Optimizer] Processing error, continuing with validated original:', optErr);
+    const fallbackExt = ALLOWED_MIME_TYPES[mimeType.toLowerCase()] || '.jpg';
+    finalExt = fallbackExt;
+    finalMime = mimeType;
+  }
+
+  // 3. Cloudflare R2 upload if configured
+  if (isR2Configured()) {
+    const uuid = crypto.randomUUID();
+    const folderPrefix = reviewRef
+      ? `reviews/${reviewRef.replace(/^\/+|\/+$/g, '')}`
+      : 'reviews';
+    const key = `${folderPrefix}/rev_${uuid}${finalExt}`;
+
+    const r2Res = await uploadFile({
+      buffer: optimizedBuffer,
+      key,
+      mimeType: finalMime,
+      cacheControl: 'public, max-age=31536000, immutable',
+    });
+
+    if (r2Res.success && r2Res.url) {
+      return { success: true, url: r2Res.url };
+    }
+
+    if (isServerless) {
+      return {
+        success: false,
+        error: `Cloudflare R2 upload failed: ${r2Res.error}`,
+      };
+    }
+  } else if (isServerless) {
+    return {
+      success: false,
+      error: 'Cloudflare R2 storage is not configured for customer photo uploads.',
+    };
+  }
+
+  // 4. Local development fallback in public/uploads/reviews/
+  try {
+    await ensureDir(REVIEWS_STORAGE_DIR);
+    const uuid = crypto.randomUUID();
+    const filename = `rev_${uuid}${finalExt}`;
+    const filePath = path.join(REVIEWS_STORAGE_DIR, filename);
+
+    await fs.writeFile(filePath, optimizedBuffer);
+    return { success: true, url: `/uploads/reviews/${filename}` };
+  } catch (err: any) {
+    return {
+      success: false,
+      error: `Failed to save review image locally: ${err?.message || 'Filesystem error'}`,
     };
   }
 }

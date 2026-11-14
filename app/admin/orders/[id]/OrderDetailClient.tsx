@@ -31,6 +31,7 @@ import {
   Maximize2,
   Eye,
   AlertTriangle,
+  Star,
 } from 'lucide-react';
 import { getValidNextStatuses, STATUS_LABELS } from '@/lib/order-status';
 import { normalizePhone } from '@/lib/phone';
@@ -79,6 +80,92 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
 
   const [confirmingOrder, setConfirmingOrder] = useState(false);
   const [sendingLifecycleWa, setSendingLifecycleWa] = useState(false);
+
+  // Customer Review WhatsApp Invitation State
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [loadingReviewPreview, setLoadingReviewPreview] = useState(false);
+  const [sendingReviewWa, setSendingReviewWa] = useState(false);
+  const [reviewCopySuccess, setReviewCopySuccess] = useState(false);
+  const [reviewPreviewData, setReviewPreviewData] = useState<{
+    reviewUrl: string;
+    reviewToken?: string;
+    recipientPhone: string;
+    messageText: string;
+    directWhatsAppUrl?: string;
+    reviewWhatsAppSentAt?: string | null;
+    reviewWhatsAppMessageId?: string | null;
+  } | null>(null);
+
+  const handleOpenReviewModal = async () => {
+    setShowReviewModal(true);
+    setLoadingReviewPreview(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/orders/${order.id}/send-review-whatsapp`);
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Failed to generate review invitation');
+        setShowReviewModal(false);
+      } else {
+        setReviewPreviewData({
+          reviewUrl: data.order?.reviewUrl,
+          reviewToken: data.order?.reviewToken,
+          recipientPhone: data.preview?.recipientPhone || order.customerPhone,
+          messageText: data.preview?.messageText || '',
+          directWhatsAppUrl: data.preview?.directWhatsAppUrl,
+          reviewWhatsAppSentAt: data.order?.reviewWhatsAppSentAt || order.reviewWhatsAppSentAt,
+          reviewWhatsAppMessageId: data.order?.reviewWhatsAppMessageId || order.reviewWhatsAppMessageId,
+        });
+      }
+    } catch {
+      setError('Network error fetching review details');
+      setShowReviewModal(false);
+    } finally {
+      setLoadingReviewPreview(false);
+    }
+  };
+
+  const handleSendReviewRequest = async () => {
+    setSendingReviewWa(true);
+    setError('');
+    try {
+      const res = await fetch(`/api/admin/orders/${order.id}/send-review-whatsapp`, {
+        method: 'POST',
+      });
+      const data = await res.json();
+      if (!res.ok || !data.sent) {
+        setError(data.error || 'Failed to dispatch WhatsApp review request');
+      } else {
+        const sentAt = data.reviewWhatsAppSentAt || new Date().toISOString();
+        setOrder((prev: any) => ({
+          ...prev,
+          reviewWhatsAppSentAt: sentAt,
+          reviewWhatsAppMessageId: data.reviewWhatsAppMessageId,
+        }));
+        if (reviewPreviewData) {
+          setReviewPreviewData({
+            ...reviewPreviewData,
+            reviewWhatsAppSentAt: sentAt,
+            reviewWhatsAppMessageId: data.reviewWhatsAppMessageId,
+          });
+        }
+        setShipmentMessage(`Customer review request sent successfully via WhatsApp to ${order.customerName}.`);
+        setShowReviewModal(false);
+        router.refresh();
+      }
+    } catch {
+      setError('Network error dispatching review request');
+    } finally {
+      setSendingReviewWa(false);
+    }
+  };
+
+  const handleCopyReviewLink = (url: string) => {
+    if (!url) return;
+    navigator.clipboard.writeText(url);
+    setReviewCopySuccess(true);
+    setTimeout(() => setReviewCopySuccess(false), 2000);
+  };
 
   const handleConfirmOrder = async () => {
     setConfirmingOrder(true);
@@ -555,6 +642,18 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
               </button>
             );
           })()}
+
+          {/* Manual Review Invitation Trigger for Delivered Orders */}
+          {order.status === 'DELIVERED' && (
+            <button
+              onClick={handleOpenReviewModal}
+              className="bg-[#D4AF37] hover:bg-white text-black px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 shadow cursor-pointer"
+              title="Send manual WhatsApp review invitation to customer"
+            >
+              <Star className="w-3.5 h-3.5 fill-black" />
+              {order.reviewWhatsAppSentAt ? 'Resend Review Request' : 'Send Review Request'}
+            </button>
+          )}
 
           {isPostExActive ? (
             <Link
@@ -1144,6 +1243,54 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             )}
           </div>
 
+          {/* Customer Review Invitation Card (DELIVERED Orders) */}
+          {order.status === 'DELIVERED' && (
+            <div className="bg-[#0A2528] border border-[#D4AF37]/30 rounded-2xl p-6 space-y-4 shadow-xl">
+              <div className="flex items-center justify-between border-b border-[#D4AF37]/15 pb-3">
+                <h2 className="font-serif text-base font-bold text-[#FAF8F5] flex items-center gap-2">
+                  <Star className="w-4 h-4 text-[#D4AF37] fill-[#D4AF37]" /> Customer Review Invitation
+                </h2>
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                  order.reviewWhatsAppSentAt
+                    ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/40'
+                    : 'bg-amber-950 text-amber-300 border border-amber-800/40'
+                }`}>
+                  {order.reviewWhatsAppSentAt ? 'Dispatched' : 'Awaiting Request'}
+                </span>
+              </div>
+
+              <p className="text-xs text-[#FAF8F5]/70 leading-relaxed">
+                Send a secure, tokenized review invitation via WhatsApp to <strong className="text-white">{order.customerName}</strong> ({order.customerPhone}) to collect verified buyer feedback.
+              </p>
+
+              {order.reviewWhatsAppSentAt && (
+                <div className="bg-[#06191B] p-3 rounded-xl border border-emerald-500/20 text-xs text-emerald-300/90 space-y-1">
+                  <div className="flex items-center gap-1.5 font-bold">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Review Request Dispatched
+                  </div>
+                  <div className="text-[10px] text-[#FAF8F5]/50">
+                    Sent at: {new Date(order.reviewWhatsAppSentAt).toLocaleString('en-PK')}
+                  </div>
+                  {order.reviewWhatsAppMessageId && (
+                    <div className="text-[10px] font-mono text-[#D4AF37]/70 truncate">
+                      Msg ID: {order.reviewWhatsAppMessageId}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <button
+                  onClick={handleOpenReviewModal}
+                  className="w-full bg-[#D4AF37] hover:bg-[#FAF8F5] text-black font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow cursor-pointer"
+                >
+                  <MessageSquare className="w-3.5 h-3.5" />
+                  {order.reviewWhatsAppSentAt ? 'Resend Review Request' : 'Send Review Request'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Payment & Order Summary */}
           <div className="bg-[#0A2528] border border-[#D4AF37]/20 rounded-2xl p-6 space-y-3">
             <h2 className="font-serif text-base font-bold text-[#FAF8F5] flex items-center gap-2 border-b border-[#D4AF37]/15 pb-3">
@@ -1301,6 +1448,117 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 Confirm Rejection
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Review WhatsApp Invitation Modal */}
+      {showReviewModal && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#0A2528] border border-[#D4AF37]/40 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-[#D4AF37]/20 pb-3">
+              <div className="flex items-center gap-2.5 text-[#D4AF37]">
+                <Star className="w-5 h-5 fill-[#D4AF37]" />
+                <h3 className="font-serif font-bold text-base text-[#FAF8F5]">Customer Review Invitation</h3>
+              </div>
+              <button
+                onClick={() => setShowReviewModal(false)}
+                className="text-[#FAF8F5]/60 hover:text-white p-1 rounded-lg hover:bg-white/10"
+              >
+                ✕ Close
+              </button>
+            </div>
+
+            {loadingReviewPreview ? (
+              <div className="py-12 flex flex-col items-center justify-center gap-3 text-xs text-[#FAF8F5]/70">
+                <Loader2 className="w-6 h-6 animate-spin text-[#D4AF37]" />
+                <span>Generating secure review token and message preview...</span>
+              </div>
+            ) : reviewPreviewData ? (
+              <div className="space-y-4">
+                <div className="bg-[#06191B] p-3 rounded-xl border border-[#D4AF37]/15 space-y-2 text-xs">
+                  <div className="flex justify-between items-center text-[#FAF8F5]/70">
+                    <span>Recipient Customer:</span>
+                    <strong className="text-white">{order.customerName}</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-[#FAF8F5]/70">
+                    <span>Phone Number:</span>
+                    <strong className="font-mono text-emerald-400">{reviewPreviewData.recipientPhone}</strong>
+                  </div>
+                  {order.reviewWhatsAppSentAt && (
+                    <div className="flex justify-between items-center text-emerald-400 text-[11px] pt-1 border-t border-white/5">
+                      <span>Last Dispatched:</span>
+                      <span>{new Date(order.reviewWhatsAppSentAt).toLocaleString('en-PK')}</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Tokenized URL Copy Field */}
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[10px] uppercase font-bold text-[#D4AF37] tracking-wider">Secure Review URL</span>
+                    <button
+                      onClick={() => handleCopyReviewLink(reviewPreviewData.reviewUrl)}
+                      className="text-[11px] text-[#D4AF37] hover:underline flex items-center gap-1 cursor-pointer"
+                    >
+                      <Copy className="w-3 h-3" /> {reviewCopySuccess ? 'Copied to Clipboard!' : 'Copy Link'}
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    readOnly
+                    value={reviewPreviewData.reviewUrl}
+                    className="w-full bg-[#06191B] border border-[#D4AF37]/20 rounded-xl p-2.5 text-xs text-[#FAF8F5]/80 font-mono select-all focus:outline-none"
+                  />
+                </div>
+
+                {/* WhatsApp Message Preview Bubble */}
+                <div className="space-y-1.5">
+                  <span className="text-[10px] uppercase font-bold text-[#D4AF37] tracking-wider block">
+                    WhatsApp Message Preview
+                  </span>
+                  <div className="bg-[#0b141a] border border-emerald-900/60 rounded-xl p-4 text-xs text-white/90 font-sans space-y-2 leading-relaxed shadow-inner">
+                    <div className="text-[11px] text-emerald-400 font-bold flex items-center gap-1 mb-1">
+                      <MessageSquare className="w-3.5 h-3.5" /> WearOMNIA Official WhatsApp Dispatch
+                    </div>
+                    <div className="whitespace-pre-line text-xs font-sans text-[#FAF8F5]/90 bg-[#1f2c34] p-3 rounded-lg border border-white/5">
+                      {reviewPreviewData.messageText}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Dispatch Controls */}
+                <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2">
+                  {reviewPreviewData.directWhatsAppUrl && (
+                    <a
+                      href={reviewPreviewData.directWhatsAppUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-full sm:w-auto px-4 py-2.5 bg-[#06191B] hover:bg-white/5 text-[#FAF8F5]/80 border border-[#D4AF37]/30 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 text-center transition-all"
+                    >
+                      <ExternalLink className="w-3.5 h-3.5" /> WhatsApp Web
+                    </a>
+                  )}
+
+                  <button
+                    onClick={handleSendReviewRequest}
+                    disabled={sendingReviewWa}
+                    className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 shadow transition-all disabled:opacity-50 cursor-pointer"
+                  >
+                    {sendingReviewWa ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Dispatching...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-3.5 h-3.5" />
+                        {order.reviewWhatsAppSentAt ? 'Confirm & Resend via WhatsApp' : 'Confirm & Send via WhatsApp'}
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         </div>
       )}
