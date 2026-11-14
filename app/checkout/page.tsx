@@ -393,6 +393,7 @@ export default function CheckoutPage() {
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setHasSubmitted(true);
     setFormErrors({});
 

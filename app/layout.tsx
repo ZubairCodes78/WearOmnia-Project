@@ -17,11 +17,11 @@ import { getLiveCampaigns } from '@/lib/campaigns';
 import { getCategoriesCached } from '@/lib/storefront-cache';
 import { GoogleAnalytics } from '@/components/analytics/GoogleAnalytics';
 
-// ─── Fonts via next/font (self-hosted, no render-blocking external requests) ──
+// ─── Fonts via next/font (self-hosted, streamlined weights to eliminate unused font payloads) ──
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700', '800'],
-  style: ['normal', 'italic'],
+  weight: ['400', '500', '600', '700'],
+  style: ['normal'],
   variable: '--font-jakarta',
   display: 'swap',
 });
@@ -36,7 +36,7 @@ const instrumentSerif = Instrument_Serif({
 
 const jost = Jost({
   subsets: ['latin'],
-  weight: ['300', '400', '500', '600', '700'],
+  weight: ['400', '500', '600', '700'],
   variable: '--font-jost',
   display: 'swap',
 });
@@ -168,6 +168,8 @@ export default async function RootLayout({
     return (
       <html lang="en" suppressHydrationWarning>
         <head>
+          <link rel="preconnect" href="https://media.wearomnia.com" crossOrigin="anonymous" />
+          <link rel="dns-prefetch" href="https://media.wearomnia.com" />
           {siteSchemas.map((schema, idx) => (
             <script
               key={idx}
@@ -198,6 +200,8 @@ export default async function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
+        <link rel="preconnect" href="https://media.wearomnia.com" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://media.wearomnia.com" />
         {siteSchemas.map((schema, idx) => (
           <script
             key={idx}

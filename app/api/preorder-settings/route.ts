@@ -51,16 +51,23 @@ export async function GET() {
       siteSettings.full_advance_payment_enabled !== false &&
       sanitizedMethods.length > 0;
 
-    return NextResponse.json({
-      success: true,
-      enabled: settings.preorder_enabled,
-      advanceEnabled: isAdvanceEnabled,
-      advancePercent: isAdvanceEnabled ? (settings.preorder_advance_percent || 50) : 0,
-      instructions: settings.preorder_payment_instructions || '',
-      fullAdvanceEnabled: isFullAdvanceEnabled,
-      fullAdvanceInstructions: siteSettings.full_advance_payment_instructions || '',
-      paymentMethods: sanitizedMethods,
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        enabled: settings.preorder_enabled,
+        advanceEnabled: isAdvanceEnabled,
+        advancePercent: isAdvanceEnabled ? (settings.preorder_advance_percent || 50) : 0,
+        instructions: settings.preorder_payment_instructions || '',
+        fullAdvanceEnabled: isFullAdvanceEnabled,
+        fullAdvanceInstructions: siteSettings.full_advance_payment_instructions || '',
+        paymentMethods: sanitizedMethods,
+      },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+        },
+      }
+    );
   } catch (error) {
     console.error('Error fetching public pre-order settings:', error);
     return NextResponse.json(

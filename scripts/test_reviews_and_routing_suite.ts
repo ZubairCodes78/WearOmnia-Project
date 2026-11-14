@@ -385,10 +385,10 @@ async function runReviewAndRoutingSuite() {
     const sampleReviewUrl = 'https://www.wearomnia.com/review/a1b2c3d4e5f678901234567890abcdef1234567890abcdef';
     const waMessage = buildReviewRequestWhatsAppMessage('Fatima Ahmed', 'WO-10492', sampleReviewUrl);
 
-    assert('WhatsApp', 'WhatsApp message contains Assalam-o-Alaikum greeting', waMessage.includes('Assalam-o-Alaikum Fatima Ahmed'));
-    assert('WhatsApp', 'WhatsApp message contains order number reference', waMessage.includes('WO-10492'));
-    assert('WhatsApp', 'WhatsApp message contains full review URL', waMessage.includes(sampleReviewUrl));
-    assert('WhatsApp', 'WhatsApp message contains brand sign-off', waMessage.includes('WearOMNIA — Modesty With Functionality'));
+    assert('WhatsApp', 'WhatsApp message contains Assalam-o-Alaikum greeting with customer name and heart emoji', waMessage.includes('Assalam-o-Alaikum Fatima Ahmed! ❤️'));
+    assert('WhatsApp', 'WhatsApp message contains feedback appreciation and request', waMessage.includes('We hope you\'ve received your WearOMNIA order and loved your purchase!'));
+    assert('WhatsApp', 'WhatsApp message contains star bullet with full review URL', waMessage.includes('⭐ Share Your Review:\n' + sampleReviewUrl));
+    assert('WhatsApp', 'WhatsApp message contains brand closing gratitude', waMessage.includes('Thank you for choosing WearOMNIA!'));
     assert('WhatsApp', 'WhatsApp message has no unresolved {placeholders}', !waMessage.includes('{') && !waMessage.includes('}'));
 
     // -------------------------------------------------------------
@@ -433,18 +433,51 @@ async function runReviewAndRoutingSuite() {
     }
 
     // -------------------------------------------------------------
-    // SUITE 8: ORDER MODEL REVIEW DISPATCH PERSISTENCE
+    // SUITE 8: MANUAL REVIEW MESSAGE GENERATION & DISPATCH PERSISTENCE
     // -------------------------------------------------------------
-    console.log('\nSUITE 8: ORDER MODEL REVIEW DISPATCH PERSISTENCE');
+    console.log('\nSUITE 8: MANUAL REVIEW MESSAGE GENERATION & DISPATCH PERSISTENCE');
 
+    const manualReviewUrl = `https://www.wearomnia.com/review/${tokenResult.token}`;
+    const generatedMsg = buildReviewRequestWhatsAppMessage('Ayesha Khan', 'WO-8899', manualReviewUrl);
+
+    assert('Manual Review Msg', 'Message includes warm Islamic greeting with customer name and heart emoji',
+      generatedMsg.includes('Assalam-o-Alaikum Ayesha Khan! ❤️'),
+      'Greeting validated'
+    );
+    assert('Manual Review Msg', 'Message includes Star emoji bullet for review link',
+      generatedMsg.includes('⭐ Share Your Review:\n' + manualReviewUrl),
+      'Star bullet validated'
+    );
+    assert('Manual Review Msg', 'Message concludes with brand thank you',
+      generatedMsg.includes('Thank you for choosing WearOMNIA!'),
+      'Closing signoff validated'
+    );
+
+    // Test transition to COPIED
+    const copiedOrder = await prisma.order.update({
+      where: { id: testOrderId },
+      data: {
+        reviewWhatsAppMessageId: 'COPIED',
+      },
+      select: {
+        id: true,
+        reviewWhatsAppSentAt: true,
+        reviewWhatsAppMessageId: true,
+      },
+    });
+
+    assert('Manual Review Dispatch', 'Dispatch state COPIED persisted without sent timestamp',
+      copiedOrder.reviewWhatsAppMessageId === 'COPIED' && copiedOrder.reviewWhatsAppSentAt === null,
+      'COPIED verified'
+    );
+
+    // Test transition to MARKED_AS_SENT
     const dispatchTime = new Date();
-    const dispatchMsgId = `wamid.HBgLMjIzMzAwMTIzNDU2NxUCABEYEjEyMzQ1Njc4OTBBQkNERUY4OTA=`;
-
-    const updatedOrder = await prisma.order.update({
+    const sentOrder = await prisma.order.update({
       where: { id: testOrderId },
       data: {
         reviewWhatsAppSentAt: dispatchTime,
-        reviewWhatsAppMessageId: dispatchMsgId,
+        reviewWhatsAppMessageId: 'MARKED_AS_SENT',
       },
       select: {
         id: true,
@@ -454,13 +487,13 @@ async function runReviewAndRoutingSuite() {
       },
     });
 
-    assert('Order Persistence', 'reviewWhatsAppSentAt timestamp saved correctly',
-      updatedOrder.reviewWhatsAppSentAt !== null,
-      updatedOrder.reviewWhatsAppSentAt?.toISOString()
+    assert('Manual Review Dispatch', 'reviewWhatsAppSentAt timestamp saved correctly upon MARKED_AS_SENT',
+      sentOrder.reviewWhatsAppSentAt !== null,
+      sentOrder.reviewWhatsAppSentAt?.toISOString()
     );
-    assert('Order Persistence', 'reviewWhatsAppMessageId saved correctly',
-      updatedOrder.reviewWhatsAppMessageId === dispatchMsgId,
-      updatedOrder.reviewWhatsAppMessageId
+    assert('Manual Review Dispatch', 'reviewWhatsAppMessageId set to MARKED_AS_SENT',
+      sentOrder.reviewWhatsAppMessageId === 'MARKED_AS_SENT',
+      sentOrder.reviewWhatsAppMessageId
     );
 
   } catch (err: any) {

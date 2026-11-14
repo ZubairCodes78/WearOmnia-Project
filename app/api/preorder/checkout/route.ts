@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { recordAuditLog } from '@/lib/audit';
 import { NotificationService } from '@/lib/notifications/notification-service';
@@ -344,59 +344,78 @@ export async function POST(req: Request) {
       }
     }
 
-    // 15. Notifications (Phase 4 Detailed Pre-Order Confirmation)
-    try {
-      const fullOrder = await prisma.order.findUnique({
-        where: { id: order.id },
-        include: { items: true },
-      });
-      if (fullOrder) {
-        await NotificationService.sendOrderConfirmation(fullOrder);
-      }
-    } catch (e) {
-      console.error('[Pre-Order WhatsApp Error - Non-fatal]', e);
-    }
-
-    const adminNotif = await prisma.adminNotification.create({
-      data: {
-        orderId: order.id,
-        type: 'PREORDER_PAYMENT_PENDING',
-        title: `⏳ Pre-Order Payment Review ${orderNumber}`,
-        message: `Pre-Order ${orderNumber} placed by ${fullName}. Advance of Rs. ${advanceAmount.toLocaleString()} awaiting verification.`,
-      },
-    }).catch(() => null);
-
-    broadcastAdminEvent({
-      type: 'NEW_ORDER',
-      order,
-      notification: adminNotif,
-      sound: true,
-      timestamp: new Date().toISOString(),
+function safeAfter(fn: () => Promise<void> | void) {
+  try {
+    after(fn);
+  } catch {
+    setImmediate(() => {
+      Promise.resolve()
+        .then(fn)
+        .catch((err) => console.error('[Background Task Error in fallback]', err));
     });
+  }
+}
 
-    // Send instant FCM push notification to all active admin devices (deduplicated)
-    sendAdminPushNotification({
-      idempotencyKey: `PRE_ORDER:${order.id}`,
-      type: 'NEW_ORDER',
-      orderId: order.id,
-      title: `⏳ Pre-Order #${orderNumber}`,
-      body: `Advance Rs. ${advanceAmount.toLocaleString()} • ${fullName} (${city})`,
-      data: {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        customerName: fullName,
-        city: city,
-        amount: String(totalAmount),
-        isPreOrder: 'true',
-      },
-    }).catch(err => console.error('[FCM Push Error]', err));
+// Asynchronously dispatch WhatsApp confirmation, SSE, and FCM push notifications
+// via Next.js 15 native after() with safe fallback for test scripts - decouples background I/O from customer order response time
+safeAfter(async () => {
+      try {
+        const fullOrder = await prisma.order.findUnique({
+          where: { id: order.id },
+          include: { items: true },
+        });
+        if (fullOrder) {
+          await NotificationService.sendOrderConfirmation(fullOrder);
+        }
+      } catch (e) {
+        console.error('[Pre-Order WhatsApp Error - Non-fatal]', e);
+      }
 
-    await recordAuditLog(
-      'PRE_ORDER_PLACED',
-      'Order',
-      order.id,
-      `Pre-Order ${orderNumber} placed for total Rs. ${totalAmount} (Advance Rs. ${advanceAmount} pending review)`
-    );
+      try {
+        const adminNotif = await prisma.adminNotification.create({
+          data: {
+            orderId: order.id,
+            type: 'PREORDER_PAYMENT_PENDING',
+            title: `⏳ Pre-Order Payment Review ${orderNumber}`,
+            message: `Pre-Order ${orderNumber} placed by ${fullName}. Advance of Rs. ${advanceAmount.toLocaleString()} awaiting verification.`,
+          },
+        }).catch(() => null);
+
+        broadcastAdminEvent({
+          type: 'NEW_ORDER',
+          order,
+          notification: adminNotif,
+          sound: true,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Send instant FCM push notification to all active admin devices (deduplicated)
+        await sendAdminPushNotification({
+          idempotencyKey: `PRE_ORDER:${order.id}`,
+          type: 'NEW_ORDER',
+          orderId: order.id,
+          title: `⏳ Pre-Order #${orderNumber}`,
+          body: `Advance Rs. ${advanceAmount.toLocaleString()} • ${fullName} (${city})`,
+          data: {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            customerName: fullName,
+            city: city,
+            amount: String(totalAmount),
+            isPreOrder: 'true',
+          },
+        }).catch((err) => console.error('[FCM Push Error]', err));
+
+        await recordAuditLog(
+          'PRE_ORDER_PLACED',
+          'Order',
+          order.id,
+          `Pre-Order ${orderNumber} placed for total Rs. ${totalAmount} (Advance Rs. ${advanceAmount} pending review)`
+        );
+      } catch (postPreOrderErr) {
+        console.error('[Post-PreOrder Background Tasks Error]', postPreOrderErr);
+      }
+    });
 
     return NextResponse.json({
       success: true,

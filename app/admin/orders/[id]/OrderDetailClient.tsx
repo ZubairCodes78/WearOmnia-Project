@@ -81,17 +81,30 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
   const [confirmingOrder, setConfirmingOrder] = useState(false);
   const [sendingLifecycleWa, setSendingLifecycleWa] = useState(false);
 
-  // Customer Review WhatsApp Invitation State
+  // Customer Review WhatsApp Invitation State (Completely Manual Workflow)
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [loadingReviewPreview, setLoadingReviewPreview] = useState(false);
-  const [sendingReviewWa, setSendingReviewWa] = useState(false);
+  const [markingReviewSent, setMarkingReviewSent] = useState(false);
   const [reviewCopySuccess, setReviewCopySuccess] = useState(false);
+  const [messageCopySuccess, setMessageCopySuccess] = useState(false);
   const [reviewPreviewData, setReviewPreviewData] = useState<{
     reviewUrl: string;
     reviewToken?: string;
     recipientPhone: string;
+    customerName: string;
+    orderNumber: string;
+    eligibleProducts: Array<{
+      itemId: string;
+      productId: string;
+      title: string;
+      slug: string;
+      variantInfo?: string | null;
+      price: number;
+      quantity: number;
+    }>;
     messageText: string;
     directWhatsAppUrl?: string;
+    reviewStatus: 'NOT_SENT' | 'COPIED' | 'MARKED_AS_SENT';
     reviewWhatsAppSentAt?: string | null;
     reviewWhatsAppMessageId?: string | null;
   } | null>(null);
@@ -108,13 +121,17 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
         setShowReviewModal(false);
       } else {
         setReviewPreviewData({
-          reviewUrl: data.order?.reviewUrl,
-          reviewToken: data.order?.reviewToken,
-          recipientPhone: data.preview?.recipientPhone || order.customerPhone,
-          messageText: data.preview?.messageText || '',
-          directWhatsAppUrl: data.preview?.directWhatsAppUrl,
-          reviewWhatsAppSentAt: data.order?.reviewWhatsAppSentAt || order.reviewWhatsAppSentAt,
-          reviewWhatsAppMessageId: data.order?.reviewWhatsAppMessageId || order.reviewWhatsAppMessageId,
+          reviewUrl: data.reviewUrl,
+          reviewToken: data.reviewToken,
+          recipientPhone: data.customerPhone || order.customerPhone,
+          customerName: data.customerName || order.customerName,
+          orderNumber: data.orderNumber || order.orderNumber,
+          eligibleProducts: data.eligibleProducts || [],
+          messageText: data.defaultMessage || '',
+          directWhatsAppUrl: data.directWhatsAppUrl,
+          reviewStatus: data.reviewStatus || 'NOT_SENT',
+          reviewWhatsAppSentAt: data.reviewWhatsAppSentAt || order.reviewWhatsAppSentAt,
+          reviewWhatsAppMessageId: data.reviewWhatsAppMessageId || order.reviewWhatsAppMessageId,
         });
       }
     } catch {
@@ -125,38 +142,70 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
     }
   };
 
-  const handleSendReviewRequest = async () => {
-    setSendingReviewWa(true);
+  const handleCopyMessage = async () => {
+    if (!reviewPreviewData) return;
+    try {
+      await navigator.clipboard.writeText(reviewPreviewData.messageText);
+      setMessageCopySuccess(true);
+      setTimeout(() => setMessageCopySuccess(false), 2000);
+
+      // Record COPIED state in background
+      if (reviewPreviewData.reviewStatus !== 'MARKED_AS_SENT') {
+        fetch(`/api/admin/orders/${order.id}/send-review-whatsapp`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'MARK_COPIED' }),
+        }).catch(() => {});
+
+        setReviewPreviewData((prev) =>
+          prev && prev.reviewStatus !== 'MARKED_AS_SENT'
+            ? { ...prev, reviewStatus: 'COPIED', reviewWhatsAppMessageId: 'COPIED' }
+            : prev
+        );
+        setOrder((prev: any) => ({
+          ...prev,
+          reviewWhatsAppMessageId: prev.reviewWhatsAppSentAt ? prev.reviewWhatsAppMessageId : 'COPIED',
+        }));
+      }
+    } catch {
+      setError('Failed to copy message to clipboard');
+    }
+  };
+
+  const handleMarkReviewSent = async () => {
+    setMarkingReviewSent(true);
     setError('');
     try {
       const res = await fetch(`/api/admin/orders/${order.id}/send-review-whatsapp`, {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'MARK_SENT' }),
       });
       const data = await res.json();
-      if (!res.ok || !data.sent) {
-        setError(data.error || 'Failed to dispatch WhatsApp review request');
+      if (!res.ok || !data.success) {
+        setError(data.error || 'Failed to update review status');
       } else {
-        const sentAt = data.reviewWhatsAppSentAt || new Date().toISOString();
+        const sentAt = data.sentAt || new Date().toISOString();
         setOrder((prev: any) => ({
           ...prev,
           reviewWhatsAppSentAt: sentAt,
-          reviewWhatsAppMessageId: data.reviewWhatsAppMessageId,
+          reviewWhatsAppMessageId: 'MARKED_AS_SENT',
         }));
         if (reviewPreviewData) {
           setReviewPreviewData({
             ...reviewPreviewData,
+            reviewStatus: 'MARKED_AS_SENT',
             reviewWhatsAppSentAt: sentAt,
-            reviewWhatsAppMessageId: data.reviewWhatsAppMessageId,
+            reviewWhatsAppMessageId: 'MARKED_AS_SENT',
           });
         }
-        setShipmentMessage(`Customer review request sent successfully via WhatsApp to ${order.customerName}.`);
-        setShowReviewModal(false);
+        setShipmentMessage(`Review invitation marked as sent via WhatsApp to ${order.customerName}.`);
         router.refresh();
       }
     } catch {
-      setError('Network error dispatching review request');
+      setError('Network error marking review as sent');
     } finally {
-      setSendingReviewWa(false);
+      setMarkingReviewSent(false);
     }
   };
 
@@ -648,10 +697,10 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
             <button
               onClick={handleOpenReviewModal}
               className="bg-[#D4AF37] hover:bg-white text-black px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 shadow cursor-pointer"
-              title="Send manual WhatsApp review invitation to customer"
+              title="Generate manual WhatsApp review invitation for customer"
             >
               <Star className="w-3.5 h-3.5 fill-black" />
-              {order.reviewWhatsAppSentAt ? 'Resend Review Request' : 'Send Review Request'}
+              GENERATE REVIEW MESSAGE
             </button>
           )}
 
@@ -1250,32 +1299,41 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                 <h2 className="font-serif text-base font-bold text-[#FAF8F5] flex items-center gap-2">
                   <Star className="w-4 h-4 text-[#D4AF37] fill-[#D4AF37]" /> Customer Review Invitation
                 </h2>
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                  order.reviewWhatsAppSentAt
-                    ? 'bg-emerald-950 text-emerald-300 border border-emerald-800/40'
-                    : 'bg-amber-950 text-amber-300 border border-amber-800/40'
-                }`}>
-                  {order.reviewWhatsAppSentAt ? 'Dispatched' : 'Awaiting Request'}
-                </span>
+                {(() => {
+                  if (order.reviewWhatsAppSentAt) {
+                    return (
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-800/40">
+                        MARKED AS SENT
+                      </span>
+                    );
+                  }
+                  if (order.reviewWhatsAppMessageId === 'COPIED') {
+                    return (
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-blue-950 text-blue-300 border border-blue-800/40">
+                        COPIED
+                      </span>
+                    );
+                  }
+                  return (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-950 text-amber-300 border border-amber-800/40">
+                      NOT SENT
+                    </span>
+                  );
+                })()}
               </div>
 
               <p className="text-xs text-[#FAF8F5]/70 leading-relaxed">
-                Send a secure, tokenized review invitation via WhatsApp to <strong className="text-white">{order.customerName}</strong> ({order.customerPhone}) to collect verified buyer feedback.
+                Generate a personalized WhatsApp review request with a secure, 192-bit per-order link for <strong className="text-white">{order.customerName}</strong> ({order.customerPhone}).
               </p>
 
               {order.reviewWhatsAppSentAt && (
                 <div className="bg-[#06191B] p-3 rounded-xl border border-emerald-500/20 text-xs text-emerald-300/90 space-y-1">
                   <div className="flex items-center gap-1.5 font-bold">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Review Request Dispatched
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" /> Review Invitation Marked as Sent
                   </div>
                   <div className="text-[10px] text-[#FAF8F5]/50">
                     Sent at: {new Date(order.reviewWhatsAppSentAt).toLocaleString('en-PK')}
                   </div>
-                  {order.reviewWhatsAppMessageId && (
-                    <div className="text-[10px] font-mono text-[#D4AF37]/70 truncate">
-                      Msg ID: {order.reviewWhatsAppMessageId}
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -1285,7 +1343,7 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                   className="w-full bg-[#D4AF37] hover:bg-[#FAF8F5] text-black font-bold py-2.5 rounded-xl text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow cursor-pointer"
                 >
                   <MessageSquare className="w-3.5 h-3.5" />
-                  {order.reviewWhatsAppSentAt ? 'Resend Review Request' : 'Send Review Request'}
+                  GENERATE REVIEW MESSAGE
                 </button>
               </div>
             </div>
@@ -1452,14 +1510,14 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
         </div>
       )}
 
-      {/* Customer Review WhatsApp Invitation Modal */}
+      {/* Customer Review WhatsApp Invitation Modal (Completely Manual Workflow) */}
       {showReviewModal && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-[#0A2528] border border-[#D4AF37]/40 rounded-2xl p-6 max-w-lg w-full shadow-2xl space-y-4">
+          <div className="bg-[#0A2528] border border-[#D4AF37]/40 rounded-2xl p-6 max-w-xl w-full shadow-2xl space-y-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-[#D4AF37]/20 pb-3">
               <div className="flex items-center gap-2.5 text-[#D4AF37]">
                 <Star className="w-5 h-5 fill-[#D4AF37]" />
-                <h3 className="font-serif font-bold text-base text-[#FAF8F5]">Customer Review Invitation</h3>
+                <h3 className="font-serif font-bold text-base text-[#FAF8F5]">Customer Review Message Generator</h3>
               </div>
               <button
                 onClick={() => setShowReviewModal(false)}
@@ -1476,32 +1534,53 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
               </div>
             ) : reviewPreviewData ? (
               <div className="space-y-4">
-                <div className="bg-[#06191B] p-3 rounded-xl border border-[#D4AF37]/15 space-y-2 text-xs">
+                {/* Customer & Order Metadata */}
+                <div className="bg-[#06191B] p-3.5 rounded-xl border border-[#D4AF37]/15 space-y-2 text-xs">
                   <div className="flex justify-between items-center text-[#FAF8F5]/70">
-                    <span>Recipient Customer:</span>
-                    <strong className="text-white">{order.customerName}</strong>
+                    <span>Customer Name:</span>
+                    <strong className="text-white">{reviewPreviewData.customerName}</strong>
                   </div>
                   <div className="flex justify-between items-center text-[#FAF8F5]/70">
-                    <span>Phone Number:</span>
+                    <span>WhatsApp / Phone:</span>
                     <strong className="font-mono text-emerald-400">{reviewPreviewData.recipientPhone}</strong>
                   </div>
-                  {order.reviewWhatsAppSentAt && (
-                    <div className="flex justify-between items-center text-emerald-400 text-[11px] pt-1 border-t border-white/5">
-                      <span>Last Dispatched:</span>
-                      <span>{new Date(order.reviewWhatsAppSentAt).toLocaleString('en-PK')}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between items-center text-[#FAF8F5]/70">
+                    <span>Order Reference:</span>
+                    <strong className="font-mono text-[#D4AF37]">#{reviewPreviewData.orderNumber}</strong>
+                  </div>
+                  <div className="flex justify-between items-center text-[#FAF8F5]/70">
+                    <span>Eligible Products:</span>
+                    <span className="text-right text-[#FAF8F5]/90 max-w-[65%] truncate">
+                      {reviewPreviewData.eligibleProducts?.map((p) => p.title).join(', ') || 'Delivered Item'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center pt-2 border-t border-white/5">
+                    <span className="text-[#FAF8F5]/70">Dispatch Status:</span>
+                    {reviewPreviewData.reviewStatus === 'MARKED_AS_SENT' ? (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-950 text-emerald-300 border border-emerald-800/40">
+                        MARKED AS SENT {reviewPreviewData.reviewWhatsAppSentAt ? `(${new Date(reviewPreviewData.reviewWhatsAppSentAt).toLocaleTimeString('en-PK', { hour: '2-digit', minute: '2-digit' })})` : ''}
+                      </span>
+                    ) : reviewPreviewData.reviewStatus === 'COPIED' ? (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-blue-950 text-blue-300 border border-blue-800/40">
+                        MESSAGE COPIED
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-950 text-amber-300 border border-amber-800/40">
+                        NOT SENT
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Tokenized URL Copy Field */}
                 <div className="space-y-1.5">
                   <div className="flex items-center justify-between text-xs">
-                    <span className="text-[10px] uppercase font-bold text-[#D4AF37] tracking-wider">Secure Review URL</span>
+                    <span className="text-[10px] uppercase font-bold text-[#D4AF37] tracking-wider">Unique Review Link (192-bit Token)</span>
                     <button
                       onClick={() => handleCopyReviewLink(reviewPreviewData.reviewUrl)}
                       className="text-[11px] text-[#D4AF37] hover:underline flex items-center gap-1 cursor-pointer"
                     >
-                      <Copy className="w-3 h-3" /> {reviewCopySuccess ? 'Copied to Clipboard!' : 'Copy Link'}
+                      <Copy className="w-3 h-3" /> {reviewCopySuccess ? 'Copied!' : 'Copy Review Link'}
                     </button>
                   </div>
                   <input
@@ -1512,47 +1591,79 @@ export function OrderDetailClient({ order: initialOrder }: OrderDetailClientProp
                   />
                 </div>
 
-                {/* WhatsApp Message Preview Bubble */}
+                {/* Editable WhatsApp Message Area */}
                 <div className="space-y-1.5">
-                  <span className="text-[10px] uppercase font-bold text-[#D4AF37] tracking-wider block">
-                    WhatsApp Message Preview
-                  </span>
-                  <div className="bg-[#0b141a] border border-emerald-900/60 rounded-xl p-4 text-xs text-white/90 font-sans space-y-2 leading-relaxed shadow-inner">
-                    <div className="text-[11px] text-emerald-400 font-bold flex items-center gap-1 mb-1">
-                      <MessageSquare className="w-3.5 h-3.5" /> WearOMNIA Official WhatsApp Dispatch
-                    </div>
-                    <div className="whitespace-pre-line text-xs font-sans text-[#FAF8F5]/90 bg-[#1f2c34] p-3 rounded-lg border border-white/5">
-                      {reviewPreviewData.messageText}
-                    </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-[10px] uppercase font-bold text-[#D4AF37] tracking-wider">
+                      Editable WhatsApp Message
+                    </span>
+                    <button
+                      onClick={handleCopyMessage}
+                      className="text-[11px] text-emerald-400 hover:underline flex items-center gap-1 cursor-pointer font-bold"
+                    >
+                      <Copy className="w-3 h-3" /> {messageCopySuccess ? 'Copied Message!' : 'Copy Message'}
+                    </button>
                   </div>
+                  <textarea
+                    rows={8}
+                    value={reviewPreviewData.messageText}
+                    onChange={(e) =>
+                      setReviewPreviewData({
+                        ...reviewPreviewData,
+                        messageText: e.target.value,
+                      })
+                    }
+                    className="w-full bg-[#06191B] border border-[#D4AF37]/30 rounded-xl p-3 text-xs text-[#FAF8F5]/90 font-sans leading-relaxed focus:outline-none focus:border-[#D4AF37]"
+                    placeholder="Enter customer message..."
+                  />
+                  <p className="text-[10px] text-[#FAF8F5]/50 italic">
+                    Tip: You can edit or personalize this message before copying or sending via WhatsApp.
+                  </p>
                 </div>
 
-                {/* Dispatch Controls */}
-                <div className="flex flex-col sm:flex-row items-center justify-end gap-2.5 pt-2">
-                  {reviewPreviewData.directWhatsAppUrl && (
+                {/* Action Buttons */}
+                <div className="flex flex-wrap items-center justify-end gap-2 pt-2 border-t border-[#D4AF37]/20">
+                  <button
+                    onClick={() => setShowReviewModal(false)}
+                    className="px-3.5 py-2 bg-[#06191B] hover:bg-white/5 text-[#FAF8F5]/70 rounded-xl text-xs font-bold"
+                  >
+                    Close
+                  </button>
+
+                  <button
+                    onClick={handleCopyMessage}
+                    className="px-3.5 py-2 bg-[#06191B] hover:bg-white/10 text-[#D4AF37] border border-[#D4AF37]/40 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5"
+                  >
+                    <Copy className="w-3.5 h-3.5" />
+                    {messageCopySuccess ? 'Copied!' : 'Copy Message'}
+                  </button>
+
+                  {reviewPreviewData.recipientPhone && (
                     <a
-                      href={reviewPreviewData.directWhatsAppUrl}
+                      href={`https://wa.me/${reviewPreviewData.recipientPhone.replace(/\D/g, '')}?text=${encodeURIComponent(
+                        reviewPreviewData.messageText
+                      )}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="w-full sm:w-auto px-4 py-2.5 bg-[#06191B] hover:bg-white/5 text-[#FAF8F5]/80 border border-[#D4AF37]/30 rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 text-center transition-all"
+                      className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center gap-1.5 shadow transition-all"
                     >
-                      <ExternalLink className="w-3.5 h-3.5" /> WhatsApp Web
+                      <ExternalLink className="w-3.5 h-3.5" /> Open WhatsApp
                     </a>
                   )}
 
                   <button
-                    onClick={handleSendReviewRequest}
-                    disabled={sendingReviewWa}
-                    className="w-full sm:w-auto px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 shadow transition-all disabled:opacity-50 cursor-pointer"
+                    onClick={handleMarkReviewSent}
+                    disabled={markingReviewSent || reviewPreviewData.reviewStatus === 'MARKED_AS_SENT'}
+                    className="px-4 py-2 bg-[#D4AF37] hover:bg-[#FAF8F5] text-black font-bold rounded-xl text-xs uppercase tracking-wider flex items-center gap-1.5 shadow transition-all disabled:opacity-50 cursor-pointer"
                   >
-                    {sendingReviewWa ? (
+                    {markingReviewSent ? (
                       <>
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Dispatching...
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Saving...
                       </>
                     ) : (
                       <>
-                        <Send className="w-3.5 h-3.5" />
-                        {order.reviewWhatsAppSentAt ? 'Confirm & Resend via WhatsApp' : 'Confirm & Send via WhatsApp'}
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        {reviewPreviewData.reviewStatus === 'MARKED_AS_SENT' ? 'Marked as Sent' : 'Mark as Sent'}
                       </>
                     )}
                   </button>

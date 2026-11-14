@@ -607,13 +607,16 @@ export class WhatsAppProvider implements INotificationProvider {
 
 /**
  * Format the official Post-Delivery Customer Review Request WhatsApp message
+ * Follows luxury brand tone, customer warmth, and exact message structure.
  */
 export function buildReviewRequestWhatsAppMessage(customerName: string, orderNumber: string, reviewLink: string): string {
+  const name = customerName?.trim() || 'Valued Customer';
   return (
-    `Assalam-o-Alaikum ${customerName || 'Customer'},\n\n` +
-    `Thank you for shopping with WearOMNIA! We hope you loved your order (#${orderNumber}). We'd appreciate it if you could share your experience with us:\n\n` +
+    `Assalam-o-Alaikum ${name}! ❤️\n\n` +
+    `We hope you've received your WearOMNIA order and loved your purchase!\n\n` +
+    `We'd really appreciate your feedback. Please take a moment to rate your purchased product and share your experience with us.\n\n` +
+    `⭐ Share Your Review:\n` +
     `${reviewLink}\n\n` +
-    `Your feedback helps us improve.\n\n` +
-    `WearOMNIA — Modesty With Functionality.`
+    `Thank you for choosing WearOMNIA!`
   );
 }

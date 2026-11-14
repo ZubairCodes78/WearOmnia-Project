@@ -138,13 +138,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
   };
 
   return (
-    <motion.div
+    <div
       ref={cardRef}
-      initial={{ opacity: 0, y: 15 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true }}
-      transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-      className="group relative bg-offwhite flex flex-col justify-between card-3d-subtle rounded-2xl p-2 sm:p-2.5 border border-sand/40 hover:border-champagne/40 hover:bg-white transition-all duration-400"
+      className="group relative bg-offwhite flex flex-col justify-between card-3d-subtle rounded-2xl p-2 sm:p-2.5 border border-sand/40 hover:border-champagne/40 hover:bg-white transition-all duration-300"
     >
       <div>
         {/* Image Container with Smooth Crossfade Hover and 3D Depth */}
@@ -156,8 +152,9 @@ export const ProductCard: React.FC<ProductCardProps> = ({
               alt={images[0]?.altText || `${title} product image`}
               fill
               sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-              loading="lazy"
-              quality={85}
+              priority={typeof index === 'number' && index < 2}
+              loading={typeof index === 'number' && index < 2 ? 'eager' : 'lazy'}
+              quality={75}
               className={`object-cover object-center card-image-primary-swap transition-opacity duration-500 ease-out will-change-[opacity] ${
                 hasSecondaryImage ? 'card-has-swap' : ''
               }`}
@@ -170,7 +167,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 fill
                 sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
                 loading="lazy"
-                quality={85}
+                quality={75}
                 className="object-cover object-center card-image-secondary-swap transition-opacity duration-500 ease-out absolute inset-0 opacity-0 pointer-events-none will-change-[opacity]"
               />
             )}
@@ -306,6 +303,6 @@ export const ProductCard: React.FC<ProductCardProps> = ({
           Good choice. Your wardrobe approves.
         </p>
       </div>
-    </motion.div>
+    </div>
   );
 };

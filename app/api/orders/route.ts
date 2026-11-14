@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { defaultPaymentGateway } from '@/lib/payments/cod';
 import { recordAuditLog } from '@/lib/audit';
@@ -332,65 +332,88 @@ export async function POST(req: Request) {
         }
       }
     }
-    revalidateCatalogCaches();
-
-    // 8. Dispatch Official Phase 4 WhatsApp Order Confirmation & Real-Time SSE
-    try {
-      const fullOrder = await prisma.order.findUnique({
-        where: { id: order.id },
-        include: { items: true },
-      });
-      if (fullOrder) {
-        await NotificationService.sendOrderConfirmation(fullOrder);
-      }
-    } catch (e) {
-      console.error('[WhatsApp Order Confirmation Trigger Failed - Fault Tolerant Catch]', e);
-    }
-
-    const adminNotif = await prisma.adminNotification.create({
-      data: {
-        orderId: order.id,
-        type: isFullAdvance ? 'PAYMENT_REVIEW_PENDING' : 'NEW_ORDER',
-        title: isFullAdvance ? `⏳ Payment Review: ${orderNumber}` : `🛍️ New Order ${orderNumber}`,
-        message: isFullAdvance
-          ? `Order ${orderNumber} placed by ${fullName} with 100% Full Advance Payment of Rs. ${totalAmount.toLocaleString()} via ${activePaymentMethodRecord.displayName}. Payment screenshot pending review.`
-          : `New Order ${orderNumber} placed by ${fullName} from ${city} for Rs. ${totalAmount.toLocaleString()}`,
-      },
-    }).catch(() => null);
-
-    // Broadcast SSE Real-Time event to Admin Console
-    broadcastAdminEvent({
-      type: isFullAdvance ? 'PAYMENT_PROOF_RESUBMITTED' : 'NEW_ORDER',
-      order,
-      notification: adminNotif,
-      sound: true,
-      timestamp: new Date().toISOString(),
+function safeAfter(fn: () => Promise<void> | void) {
+  try {
+    after(fn);
+  } catch {
+    setImmediate(() => {
+      Promise.resolve()
+        .then(fn)
+        .catch((err) => console.error('[Background Task Error in fallback]', err));
     });
+  }
+}
 
-    // Send instant FCM push notification to all active admin devices (deduplicated)
-    sendAdminPushNotification({
-      idempotencyKey: `NEW_ORDER:${order.id}`,
-      type: 'NEW_ORDER',
-      orderId: order.id,
-      title: isFullAdvance ? `⏳ Payment Review: #${orderNumber}` : `🛍️ New Order #${orderNumber}`,
-      body: isFullAdvance
-        ? `Rs. ${totalAmount.toLocaleString()} Full Advance • ${fullName} (${city}) - Review Proof`
-        : `Rs. ${totalAmount.toLocaleString()} • ${fullName} (${city})`,
-      data: {
-        orderId: order.id,
-        orderNumber: order.orderNumber,
-        customerName: fullName,
-        city: city,
-        amount: String(totalAmount),
-      },
-    }).catch(err => console.error('[FCM Push Error]', err));
+// Asynchronously dispatch catalog revalidation, WhatsApp confirmation, SSE, and FCM push notifications
+// via Next.js 15 native after() with safe fallback for test scripts - decouples external I/O from customer order response time
+safeAfter(async () => {
+      try {
+        revalidateCatalogCaches();
+      } catch (err) {
+        console.error('[Catalog Revalidation Error]', err);
+      }
 
-    await recordAuditLog(
-      isFullAdvance ? 'ORDER_PLACED_FULL_ADVANCE' : 'ORDER_PLACED',
-      'Order',
-      order.id,
-      `Order ${orderNumber} placed for Rs. ${totalAmount} via ${isFullAdvance ? `Full Advance (${activePaymentMethodRecord.displayName})` : 'COD'}`
-    );
+      try {
+        const fullOrder = await prisma.order.findUnique({
+          where: { id: order.id },
+          include: { items: true },
+        });
+        if (fullOrder) {
+          await NotificationService.sendOrderConfirmation(fullOrder);
+        }
+      } catch (e) {
+        console.error('[WhatsApp Order Confirmation Trigger Failed - Fault Tolerant Catch]', e);
+      }
+
+      try {
+        const adminNotif = await prisma.adminNotification.create({
+          data: {
+            orderId: order.id,
+            type: isFullAdvance ? 'PAYMENT_REVIEW_PENDING' : 'NEW_ORDER',
+            title: isFullAdvance ? `⏳ Payment Review: ${orderNumber}` : `🛍️ New Order ${orderNumber}`,
+            message: isFullAdvance
+              ? `Order ${orderNumber} placed by ${fullName} with 100% Full Advance Payment of Rs. ${totalAmount.toLocaleString()} via ${activePaymentMethodRecord.displayName}. Payment screenshot pending review.`
+              : `New Order ${orderNumber} placed by ${fullName} from ${city} for Rs. ${totalAmount.toLocaleString()}`,
+          },
+        }).catch(() => null);
+
+        // Broadcast SSE Real-Time event to Admin Console
+        broadcastAdminEvent({
+          type: isFullAdvance ? 'PAYMENT_PROOF_RESUBMITTED' : 'NEW_ORDER',
+          order,
+          notification: adminNotif,
+          sound: true,
+          timestamp: new Date().toISOString(),
+        });
+
+        // Send instant FCM push notification to all active admin devices (deduplicated)
+        await sendAdminPushNotification({
+          idempotencyKey: `NEW_ORDER:${order.id}`,
+          type: 'NEW_ORDER',
+          orderId: order.id,
+          title: isFullAdvance ? `⏳ Payment Review: #${orderNumber}` : `🛍️ New Order #${orderNumber}`,
+          body: isFullAdvance
+            ? `Rs. ${totalAmount.toLocaleString()} Full Advance • ${fullName} (${city}) - Review Proof`
+            : `Rs. ${totalAmount.toLocaleString()} • ${fullName} (${city})`,
+          data: {
+            orderId: order.id,
+            orderNumber: order.orderNumber,
+            customerName: fullName,
+            city: city,
+            amount: String(totalAmount),
+          },
+        }).catch((err) => console.error('[FCM Push Error]', err));
+
+        await recordAuditLog(
+          isFullAdvance ? 'ORDER_PLACED_FULL_ADVANCE' : 'ORDER_PLACED',
+          'Order',
+          order.id,
+          `Order ${orderNumber} placed for Rs. ${totalAmount} via ${isFullAdvance ? `Full Advance (${activePaymentMethodRecord.displayName})` : 'COD'}`
+        );
+      } catch (postOrderErr) {
+        console.error('[Post-Order Background Tasks Error]', postOrderErr);
+      }
+    });
 
     return NextResponse.json({
       success: true,

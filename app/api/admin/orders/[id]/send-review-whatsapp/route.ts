@@ -3,7 +3,6 @@ import { cookies } from 'next/headers';
 import { prisma } from '@/lib/prisma';
 import { verifyAdminSession } from '@/lib/auth';
 import { recordAuditLog } from '@/lib/audit';
-import { NotificationService } from '@/lib/notifications/notification-service';
 import { buildReviewRequestWhatsAppMessage } from '@/lib/notifications/whatsapp-provider';
 import { validatePhone, normalizePhone } from '@/lib/phone';
 import { getOrCreateOrderReviewToken } from '@/lib/reviews';
@@ -16,7 +15,7 @@ interface RouteContext {
 }
 
 /**
- * GET: Retrieve review invitation preview, tokenized URL, and dispatch history
+ * GET: Retrieve manual review invitation preview, tokenized URL, eligible products, and status
  */
 export async function GET(req: NextRequest, context: RouteContext) {
   try {
@@ -28,18 +27,19 @@ export async function GET(req: NextRequest, context: RouteContext) {
     const { id } = await context.params;
     const order = await prisma.order.findUnique({
       where: { id },
-      select: {
-        id: true,
-        orderNumber: true,
-        customerName: true,
-        customerPhone: true,
-        customerWhatsapp: true,
-        status: true,
-        reviewToken: true,
-        reviewTokenExpiresAt: true,
-        reviewWhatsAppSentAt: true,
-        reviewWhatsAppMessageId: true,
-        deliveredAt: true,
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                title: true,
+                slug: true,
+                images: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     if (order.status !== 'DELIVERED') {
       return NextResponse.json(
         {
-          error: `Review requests can only be sent for DELIVERED orders. Current status: ${order.status}`,
+          error: `Review invitations can only be generated for DELIVERED orders. Current status: ${order.status}`,
           eligible: false,
         },
         { status: 400 }
@@ -61,10 +61,27 @@ export async function GET(req: NextRequest, context: RouteContext) {
     const normalized = normalizePhone(rawPhone);
 
     const { token, reviewUrl } = await getOrCreateOrderReviewToken(order.id);
-    const previewMessage = buildReviewRequestWhatsAppMessage(order.customerName, order.orderNumber, reviewUrl);
+    const defaultMessage = buildReviewRequestWhatsAppMessage(order.customerName, order.orderNumber, reviewUrl);
     const directWhatsAppUrl = normalized
-      ? `https://wa.me/${normalized}?text=${encodeURIComponent(previewMessage)}`
+      ? `https://wa.me/${normalized}?text=${encodeURIComponent(defaultMessage)}`
       : null;
+
+    let reviewStatus: 'NOT_SENT' | 'COPIED' | 'MARKED_AS_SENT' = 'NOT_SENT';
+    if (order.reviewWhatsAppSentAt) {
+      reviewStatus = 'MARKED_AS_SENT';
+    } else if (order.reviewWhatsAppMessageId === 'COPIED') {
+      reviewStatus = 'COPIED';
+    }
+
+    const eligibleProducts = (order.items || []).map((item) => ({
+      itemId: item.id,
+      productId: item.productId,
+      title: item.product?.title || item.productTitle || 'Product',
+      slug: item.product?.slug || '',
+      variantInfo: item.variantInfo,
+      price: item.unitPrice,
+      quantity: item.quantity,
+    }));
 
     return NextResponse.json({
       eligible: true,
@@ -75,11 +92,13 @@ export async function GET(req: NextRequest, context: RouteContext) {
       normalizedPhone: normalized,
       isPhoneValid: Boolean(normalized && validatePhone(normalized)),
       status: order.status,
+      eligibleProducts,
       reviewToken: token,
       reviewUrl,
+      reviewStatus,
       reviewWhatsAppSentAt: order.reviewWhatsAppSentAt,
       reviewWhatsAppMessageId: order.reviewWhatsAppMessageId,
-      previewMessage,
+      defaultMessage,
       directWhatsAppUrl,
     });
   } catch (error: any) {
@@ -89,7 +108,8 @@ export async function GET(req: NextRequest, context: RouteContext) {
 }
 
 /**
- * POST: Manually dispatch post-delivery review invitation WhatsApp message
+ * POST: Record manual dispatch status (MARK_COPIED or MARK_SENT)
+ * ZERO automated Meta WhatsApp Cloud API calls are executed.
  */
 export async function POST(req: NextRequest, context: RouteContext) {
   try {
@@ -99,11 +119,11 @@ export async function POST(req: NextRequest, context: RouteContext) {
     }
 
     const { id } = await context.params;
+    const body = await req.json().catch(() => ({}));
+    const action = body.action || 'MARK_SENT'; // 'MARK_COPIED' | 'MARK_SENT'
+
     const order = await prisma.order.findUnique({
       where: { id },
-      include: {
-        items: true,
-      },
     });
 
     if (!order) {
@@ -112,22 +132,13 @@ export async function POST(req: NextRequest, context: RouteContext) {
 
     if (order.status !== 'DELIVERED') {
       return NextResponse.json(
-        { error: `Review requests can only be sent for DELIVERED orders. Current status: ${order.status}` },
+        { error: `Review requests can only be managed for DELIVERED orders. Current status: ${order.status}` },
         { status: 400 }
       );
     }
 
     const rawPhone = order.customerWhatsapp || order.customerPhone || '';
     const normalized = normalizePhone(rawPhone);
-
-    if (!normalized || !validatePhone(normalized)) {
-      return NextResponse.json(
-        {
-          error: `Invalid Pakistani phone number: "${rawPhone}". Expected 03XXXXXXXXX (11 digits) or 923XXXXXXXXX (12 digits).`,
-        },
-        { status: 400 }
-      );
-    }
 
     const cookieStore = await cookies();
     const adminId = cookieStore.get('wearomnia_admin_session')?.value;
@@ -140,43 +151,44 @@ export async function POST(req: NextRequest, context: RouteContext) {
       if (admin) adminName = admin.name || admin.email;
     }
 
-    // Generate or retrieve the cryptographic token
+    // Ensure review token is ready
     const { token, reviewUrl } = await getOrCreateOrderReviewToken(order.id);
+    const defaultMessage = buildReviewRequestWhatsAppMessage(order.customerName, order.orderNumber, reviewUrl);
+    const directWhatsAppUrl = normalized
+      ? `https://wa.me/${normalized}?text=${encodeURIComponent(defaultMessage)}`
+      : null;
 
-    // Send through existing WhatsApp integration
-    const sendResult = (await NotificationService.sendReviewRequest(order, reviewUrl)) as {
-      success: boolean;
-      messageId?: string;
-      simulated?: boolean;
-      error?: string;
-    } | undefined;
+    if (action === 'MARK_COPIED') {
+      // Only set COPIED if not already marked as sent
+      if (!order.reviewWhatsAppSentAt) {
+        await prisma.order.update({
+          where: { id: order.id },
+          data: {
+            reviewWhatsAppMessageId: 'COPIED',
+          },
+        });
+      }
 
-    const previewMessage = buildReviewRequestWhatsAppMessage(order.customerName, order.orderNumber, reviewUrl);
-    const directWhatsAppUrl = `https://wa.me/${normalized}?text=${encodeURIComponent(previewMessage)}`;
-
-    if (!sendResult || !sendResult.success) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: sendResult?.error || 'Failed to dispatch WhatsApp review request via Meta Cloud API.',
-          directWhatsAppUrl,
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        success: true,
+        action: 'MARK_COPIED',
+        reviewStatus: order.reviewWhatsAppSentAt ? 'MARKED_AS_SENT' : 'COPIED',
+        reviewUrl,
+        directWhatsAppUrl,
+      });
     }
 
+    // Action === 'MARK_SENT'
     const now = new Date();
-
-    // Persist dispatch status, timestamp, timeline note, and audit log
     await prisma.order.update({
       where: { id: order.id },
       data: {
         reviewWhatsAppSentAt: now,
-        reviewWhatsAppMessageId: sendResult.messageId || 'sent',
+        reviewWhatsAppMessageId: 'MARKED_AS_SENT',
         timeline: {
           create: {
             status: 'DELIVERED',
-            note: `Official Review Request WhatsApp sent to ${rawPhone} by ${adminName}.${sendResult.simulated ? ' (Simulated Mode)' : ''}`,
+            note: `Manual review invitation marked as sent to ${rawPhone || 'customer'} via WhatsApp by ${adminName}.`,
             updatedBy: adminName,
           },
         },
@@ -187,19 +199,19 @@ export async function POST(req: NextRequest, context: RouteContext) {
       'MANUAL_WHATSAPP_REVIEW_REQUEST_SENT',
       'Order',
       order.id,
-      `Manual review request WhatsApp sent for order ${order.orderNumber} to ${rawPhone} by ${adminName}. Message ID: ${sendResult.messageId || 'simulated'}`
+      `Manual review message marked as sent for order ${order.orderNumber} to ${rawPhone || 'customer'} by ${adminName}.`
     );
 
     return NextResponse.json({
       success: true,
-      messageId: sendResult.messageId,
+      action: 'MARK_SENT',
+      reviewStatus: 'MARKED_AS_SENT',
       sentAt: now.toISOString(),
       reviewUrl,
-      simulated: sendResult.simulated,
       directWhatsAppUrl,
     });
   } catch (error: any) {
-    console.error('Error dispatching review WhatsApp message:', error);
+    console.error('Error updating review WhatsApp status:', error);
     return NextResponse.json({ error: error.message || 'Internal server error.' }, { status: 500 });
   }
 }
