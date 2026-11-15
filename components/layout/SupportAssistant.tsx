@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageSquare, MessageCircle, X, Send, Headphones, ShieldCheck, User, ChevronRight, PhoneCall, Package, Loader2 } from 'lucide-react';
 import { useSettings } from '@/context/SettingsContext';
@@ -35,6 +35,7 @@ type TrackingState = 'idle' | 'awaiting_order_number' | 'awaiting_phone' | 'load
 
 export const SupportAssistant = () => {
   const pathname = usePathname();
+  const router = useRouter();
   const { settings } = useSettings();
   const [isOpen, setIsOpen] = useState(false);
   const [inputMessage, setInputMessage] = useState('');
@@ -298,7 +299,12 @@ export const SupportAssistant = () => {
   };
 
   const handleActionLink = (url: string) => {
-    window.location.href = url;
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      setIsOpen(false);
+      router.push(url);
+    }
   };
 
   const whatsappUrl = `https://wa.me/${whatsappPhone}?text=${encodeURIComponent(defaultWhatsAppMsg)}`;
@@ -484,15 +490,21 @@ export const SupportAssistant = () => {
               </div>
               <div className="flex items-center gap-4 mt-3 text-[10px] text-[#A3A3A3]">
                 <button
-                  onClick={() => window.location.href = '/track-order'}
-                  className="flex items-center gap-1 hover:text-[#D4AF37] transition-colors"
+                  onClick={() => {
+                    setIsOpen(false);
+                    router.push('/track-order');
+                  }}
+                  className="flex items-center gap-1 hover:text-[#D4AF37] transition-colors cursor-pointer"
                 >
                   <Package className="w-3 h-3" />
                   Track Order
                 </button>
                 <button
-                  onClick={() => window.location.href = '/contact'}
-                  className="flex items-center gap-1 hover:text-[#D4AF37] transition-colors"
+                  onClick={() => {
+                    setIsOpen(false);
+                    router.push('/contact');
+                  }}
+                  className="flex items-center gap-1 hover:text-[#D4AF37] transition-colors cursor-pointer"
                 >
                   <PhoneCall className="w-3 h-3" />
                   Contact Us

@@ -1,5 +1,6 @@
 import React from 'react';
 import type { Metadata } from 'next';
+import Link from 'next/link';
 
 import { getCampaignPhase } from '@/lib/preorder';
 import { getLiveCampaigns, applyCampaignsToProducts } from '@/lib/campaigns';
@@ -129,7 +130,7 @@ export default async function HomePage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-            {launchProducts.map((product) => (
+            {launchProducts.map((product, idx) => (
               <ProductCard
                 key={product.id}
                 id={product.id}
@@ -147,17 +148,19 @@ export default async function HomePage() {
                 categoryName={product.category?.name}
                 variants={product.variants}
                 campaignPricing={product.campaignPricing}
+                index={idx}
               />
             ))}
           </div>
 
           <div className="text-center pt-10 sm:pt-12">
-            <a
+            <Link
               href="/shop"
+              prefetch={true}
               className="inline-flex items-center gap-2 px-8 py-3.5 rounded-xl bg-teal text-champagne font-bold text-xs uppercase tracking-widest hover:bg-teal-900 transition-all duration-300 shadow-md border border-champagne/30 hover:-translate-y-0.5"
             >
               Explore Full Collection →
-            </a>
+            </Link>
           </div>
         </section>
 

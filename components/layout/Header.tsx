@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Heart, Search, Menu, X, Truck, MapPin, Phone } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
@@ -18,6 +18,7 @@ export const Header: React.FC<{
   initialCategories = [],
 }) => {
   const pathname = usePathname();
+  const router = useRouter();
   const { settings } = useSettings();
   const { cart, setIsCartOpen } = useCart();
   const { wishlist } = useWishlist();
@@ -223,7 +224,8 @@ export const Header: React.FC<{
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && searchQuery.trim()) {
-                    window.location.href = `/shop?search=${encodeURIComponent(searchQuery.trim())}`;
+                    setSearchOpen(false);
+                    router.push(`/shop?search=${encodeURIComponent(searchQuery.trim())}`);
                   }
                 }}
                 className="w-full bg-transparent text-sm sm:text-base text-teal placeholder-charcoal-muted focus:outline-none font-serif"

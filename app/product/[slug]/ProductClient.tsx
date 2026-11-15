@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Star,
   ShoppingBag,
@@ -12,6 +13,7 @@ import {
   ShieldCheck,
   RotateCcw,
   Check,
+  ChevronLeft,
   ChevronRight,
   Maximize2,
   X,
@@ -46,11 +48,14 @@ export const ProductClient: React.FC<ProductClientProps> = ({
   defaultAdvancePercent = 50,
   serverTimeMs,
 }) => {
+  const router = useRouter();
   const { settings } = useSettings();
   const { addToCart } = useCart();
   const { toggleWishlist, isInWishlist } = useWishlist();
   const { triggerFlyToCart } = useFlyToCart();
   const mainImageRef = useRef<HTMLDivElement>(null);
+  const touchStartXRef = useRef<number | null>(null);
+  const touchStartYRef = useRef<number | null>(null);
 
   const rawVariants = Array.isArray(product?.variants) ? product.variants : [];
   const rawImages = Array.isArray(product?.images) && product.images.length > 0
@@ -62,6 +67,30 @@ export const ProductClient: React.FC<ProductClientProps> = ({
     : 0;
 
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartXRef.current = e.touches[0].clientX;
+    touchStartYRef.current = e.touches[0].clientY;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartXRef.current === null || touchStartYRef.current === null) return;
+    const diffX = touchStartXRef.current - e.changedTouches[0].clientX;
+    const diffY = touchStartYRef.current - e.changedTouches[0].clientY;
+
+    // Trigger only if horizontal swipe dominates over vertical scroll and exceeds threshold
+    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 40) {
+      if (diffX > 0) {
+        // Swiped left -> next image
+        setSelectedImageIndex((prev) => (prev + 1) % rawImages.length);
+      } else {
+        // Swiped right -> previous image
+        setSelectedImageIndex((prev) => (prev - 1 + rawImages.length) % rawImages.length);
+      }
+    }
+    touchStartXRef.current = null;
+    touchStartYRef.current = null;
+  };
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string>(rawVariants[0]?.size || 'Standard');
   const [selectedColor, setSelectedColor] = useState<string>(rawVariants[0]?.color || 'Default');
@@ -169,7 +198,7 @@ export const ProductClient: React.FC<ProductClientProps> = ({
       item_category: product.category?.name,
       item_variant: `${selectedSize} / ${selectedColor}`,
     });
-    window.location.href = '/checkout';
+    router.push('/checkout');
   };
 
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
@@ -201,12 +230,12 @@ export const ProductClient: React.FC<ProductClientProps> = ({
           <div className="lg:col-span-7 flex flex-col-reverse sm:flex-row gap-3 sm:gap-4">
             {/* Thumbnails */}
             {images.length > 1 && (
-              <div className="flex sm:flex-col gap-2 sm:gap-3 overflow-x-auto sm:overflow-x-hidden sm:overflow-y-auto shrink-0 sm:max-h-[600px] pb-1 sm:pb-0 pr-16 sm:pr-0 no-scrollbar">
+              <div className="flex sm:flex-col gap-2 sm:gap-3 overflow-x-auto sm:overflow-x-hidden sm:overflow-y-auto shrink-0 sm:max-h-[600px] pb-1 sm:pb-0 no-scrollbar snap-x snap-mandatory">
                 {images.map((img: any, i: number) => (
                   <button
                     key={i}
                     onClick={() => setSelectedImageIndex(i)}
-                    className={`relative w-16 h-20 sm:w-20 sm:h-24 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${selectedImageIndex === i
+                    className={`relative w-16 h-20 sm:w-20 sm:h-24 rounded-xl overflow-hidden border-2 transition-all shrink-0 snap-start ${selectedImageIndex === i
                       ? 'border-teal shadow-md scale-105'
                       : 'border-sand opacity-70 hover:opacity-100'
                       }`}
@@ -225,14 +254,28 @@ export const ProductClient: React.FC<ProductClientProps> = ({
               </div>
             )}
 
-            {/* Main Image with Zoom & Lightbox Trigger */}
-            <div ref={mainImageRef} className="flex-1">
+            {/* Main Image with Zoom, Mobile Touch Swipe & Lightbox Trigger */}
+            <div
+              ref={mainImageRef}
+              className="flex-1 relative group touch-pan-y"
+              onTouchStart={handleTouchStart}
+              onTouchEnd={handleTouchEnd}
+            >
               <ProductImageZoom
                 src={images[selectedImageIndex]?.url}
                 alt={product.title}
                 priority
                 onOpenLightbox={() => setLightboxOpen(true)}
               />
+
+              {/* Mobile Slide Position Badge */}
+              {images.length > 1 && (
+                <div className="sm:hidden absolute bottom-3 left-3 z-20 flex items-center gap-1 px-2.5 py-1 rounded-full bg-teal-950/75 backdrop-blur-xs text-champagne text-[11px] font-sans font-bold shadow-md pointer-events-none">
+                  <span>{selectedImageIndex + 1}</span>
+                  <span className="opacity-50">/</span>
+                  <span className="opacity-80">{images.length}</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -673,14 +716,45 @@ export const ProductClient: React.FC<ProductClientProps> = ({
 
       {/* Lightbox Modal */}
       {lightboxOpen && (
-        <div className="fixed inset-0 z-50 bg-charcoal/90 backdrop-blur-md flex items-center justify-center p-4">
+        <div
+          className="fixed inset-0 z-50 bg-charcoal/95 backdrop-blur-md flex items-center justify-center p-4 touch-pan-y"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <button
             onClick={() => setLightboxOpen(false)}
-            className="absolute top-6 right-6 text-offwhite hover:text-champagne p-2"
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 text-offwhite hover:text-champagne p-2.5 rounded-full bg-black/40 min-h-[44px] min-w-[44px] flex items-center justify-center z-50 cursor-pointer"
+            aria-label="Close image viewer"
           >
-            <X className="w-8 h-8" />
+            <X className="w-6 h-6" />
           </button>
-          <div className="relative w-full max-w-4xl h-[85vh]">
+
+          {images.length > 1 && (
+            <>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedImageIndex((prev) => (prev - 1 + images.length) % images.length);
+                }}
+                className="absolute left-2 sm:left-6 top-1/2 -translate-y-1/2 text-offwhite hover:text-champagne p-2.5 rounded-full bg-black/40 min-h-[44px] min-w-[44px] flex items-center justify-center z-50 transition-all hover:scale-105 cursor-pointer"
+                aria-label="Previous image"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setSelectedImageIndex((prev) => (prev + 1) % images.length);
+                }}
+                className="absolute right-2 sm:right-6 top-1/2 -translate-y-1/2 text-offwhite hover:text-champagne p-2.5 rounded-full bg-black/40 min-h-[44px] min-w-[44px] flex items-center justify-center z-50 transition-all hover:scale-105 cursor-pointer"
+                aria-label="Next image"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
+            </>
+          )}
+
+          <div className="relative w-full max-w-4xl h-[80vh] sm:h-[85vh]">
             <Image
               src={images[selectedImageIndex]?.url}
               alt={product.title}
@@ -688,6 +762,12 @@ export const ProductClient: React.FC<ProductClientProps> = ({
               className="object-contain"
             />
           </div>
+
+          {images.length > 1 && (
+            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 px-3 py-1 rounded-full bg-black/60 text-white text-xs font-mono font-bold pointer-events-none">
+              {selectedImageIndex + 1} / {images.length}
+            </div>
+          )}
         </div>
       )}
 

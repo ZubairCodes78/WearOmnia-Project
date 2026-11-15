@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useCart } from '@/context/CartContext';
 import { useSettings } from '@/context/SettingsContext';
@@ -53,6 +54,7 @@ const CITIES: Record<string, string[]> = {
 };
 
 export default function CheckoutPage() {
+  const router = useRouter();
   const { cart, subtotal, appliedCoupon, applyCoupon, discountAmount, clearCart, updateQuantity, removeFromCart, setIsCartOpen } = useCart();
 
   const [formData, setFormData] = useState({
@@ -481,7 +483,7 @@ export default function CheckoutPage() {
         setIsSubmitting(false);
       } else {
         clearCart();
-        window.location.href = `/order-success/${data.orderNumber}`;
+        router.push(`/order-success/${data.orderNumber}`);
       }
     } catch (err) {
       console.error('Order submit error:', err);
@@ -790,6 +792,7 @@ export default function CheckoutPage() {
                     <input
                       type="text"
                       required
+                      autoComplete="name"
                       placeholder="e.g. Fatima Khan"
                       value={formData.fullName}
                       onChange={(e) => {
@@ -814,6 +817,8 @@ export default function CheckoutPage() {
                       </label>
                       <input
                         type="tel"
+                        inputMode="tel"
+                        autoComplete="tel"
                         required
                         placeholder="03XX XXXXXXX"
                         value={formData.phone}
@@ -837,6 +842,8 @@ export default function CheckoutPage() {
                       </label>
                       <input
                         type="tel"
+                        inputMode="tel"
+                        autoComplete="tel"
                         placeholder="e.g. 03123456789"
                         value={formData.whatsapp}
                         onChange={(e) => {
@@ -861,6 +868,8 @@ export default function CheckoutPage() {
                     </label>
                     <input
                       type="email"
+                      inputMode="email"
+                      autoComplete="email"
                       placeholder="e.g. fatima@example.com"
                       value={formData.email}
                       onChange={(e) => {
@@ -933,6 +942,7 @@ export default function CheckoutPage() {
                     <textarea
                       required
                       rows={3}
+                      autoComplete="street-address"
                       placeholder="House #, Street #, Sector, Area Landmark..."
                       value={formData.address}
                       onChange={(e) => {
@@ -957,6 +967,8 @@ export default function CheckoutPage() {
                       </label>
                       <input
                         type="text"
+                        inputMode="numeric"
+                        autoComplete="postal-code"
                         placeholder="e.g. 54000"
                         value={formData.postalCode}
                         onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}

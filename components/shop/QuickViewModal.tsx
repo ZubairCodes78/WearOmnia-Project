@@ -3,6 +3,7 @@
 import React, { useState, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, ShoppingBag, Zap, Check, ShieldCheck, Truck, Ruler } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
@@ -30,6 +31,7 @@ interface QuickViewModalProps {
 }
 
 export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose }) => {
+  const router = useRouter();
   const { addToCart } = useCart();
   const { triggerFlyToCart } = useFlyToCart();
   const { settings } = useSettings();
@@ -81,7 +83,8 @@ export const QuickViewModal: React.FC<QuickViewModalProps> = ({ product, onClose
 
   const handleBuyNow = () => {
     handleAddToCart();
-    window.location.href = '/checkout';
+    onClose();
+    router.push('/checkout');
   };
 
   return (

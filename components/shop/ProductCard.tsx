@@ -145,7 +145,13 @@ export const ProductCard: React.FC<ProductCardProps> = ({
       <div>
         {/* Image Container with Smooth Crossfade Hover and 3D Depth */}
         <div className="relative aspect-[3/4] w-full bg-sand/40 overflow-hidden rounded-xl border border-sand/60 transition-all duration-500 group-hover:border-champagne/50 group-hover:shadow-lg group-hover:shadow-champagne/10">
-          <Link href={`/product/${slug}`} onClick={handleProductClick} className="block w-full h-full relative" aria-label={`View ${title}`}>
+          <Link
+            href={`/product/${slug}`}
+            onClick={handleProductClick}
+            prefetch={typeof index === 'number' && index < 6 ? true : undefined}
+            className="block w-full h-full relative"
+            aria-label={`View ${title}`}
+          >
             {/* Primary Image */}
             <Image
               src={primaryImage}
@@ -218,7 +224,7 @@ export const ProductCard: React.FC<ProductCardProps> = ({
                 sku,
               });
             }}
-            className="absolute top-2.5 right-2.5 z-10 w-8 h-8 rounded-full bg-offwhite/90 backdrop-blur-md flex items-center justify-center text-charcoal hover:text-red-600 transition-all duration-300 shadow-sm hover:scale-110"
+            className="absolute top-2.5 right-2.5 z-10 w-9 h-9 sm:w-8 sm:h-8 rounded-full bg-offwhite/90 backdrop-blur-md flex items-center justify-center text-charcoal hover:text-red-600 transition-all duration-300 shadow-sm hover:scale-110 cursor-pointer"
             title="Wishlist"
             aria-label="Save to wishlist"
           >

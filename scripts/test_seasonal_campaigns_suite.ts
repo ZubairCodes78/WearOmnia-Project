@@ -752,9 +752,7 @@ async function runSuite() {
     for (const cid of createdCustomerIds) {
       await prisma.customer.delete({ where: { id: cid } }).catch(() => {});
     }
-    for (const campId of createdCampaignIds) {
-      await prisma.campaign.delete({ where: { id: campId } }).catch(() => {});
-    }
+    await prisma.campaign.deleteMany({ where: { id: { in: createdCampaignIds } } }).catch(() => {});
     for (const pid of createdProductIds) {
       await prisma.product.delete({ where: { id: pid } }).catch(() => {});
     }

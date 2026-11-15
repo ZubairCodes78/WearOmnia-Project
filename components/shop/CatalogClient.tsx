@@ -388,7 +388,7 @@ export const CatalogClient: React.FC<CatalogClientProps> = ({
           </button>
         </div>
       ) : (
-        <div className={`grid ${gridClass} gap-6 sm:gap-8`}>
+        <div className={`grid ${gridClass} gap-3 sm:gap-6 lg:gap-8`}>
           {visibleProducts.map((product, idx) => (
             <ProductCard
               key={product.id}

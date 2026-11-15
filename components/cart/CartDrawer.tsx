@@ -331,6 +331,7 @@ export const CartDrawer: React.FC = () => {
                 {/* Express Checkout Button */}
                 <Link
                   href="/checkout"
+                  prefetch={true}
                   onClick={() => setIsCartOpen(false)}
                   className="block w-full"
                 >

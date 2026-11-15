@@ -119,7 +119,7 @@ export const HeroSlider: React.FC = () => {
               exit={{ opacity: 0, y: -4 }}
               transition={{ duration: 0.3, ease: 'easeOut' }}
             >
-              <Link href={slide.ctaLink} className="inline-block">
+              <Link href={slide.ctaLink} prefetch={true} className="inline-block">
                 <span className="group flex items-center justify-center gap-1.5 sm:gap-2.5 px-3 py-1.5 sm:px-6 sm:py-3 rounded-lg sm:rounded-xl bg-[#06191B]/90 hover:bg-[#06191B] text-champagne hover:text-offwhite border border-champagne/60 hover:border-champagne text-[11px] sm:text-xs uppercase font-bold tracking-[0.14em] sm:tracking-[0.16em] transition-all duration-300 shadow-xl backdrop-blur-xs cursor-pointer">
                   <span>{slide.ctaText}</span>
                   <ArrowRight className="w-3 h-3 sm:w-4 sm:h-4 group-hover:translate-x-1 transition-transform duration-300" />
